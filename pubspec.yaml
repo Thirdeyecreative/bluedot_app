@@ -36,6 +36,7 @@ dependencies:
 
   # QR Code
   qr_flutter: ^4.1.0
+  mobile_scanner: ^5.0.0
 
   # Networking
   http: ^1.2.2

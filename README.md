@@ -1,16 +1,20 @@
-# bluedot_app
+# BlueDot Flutter Mobile Client 📱
 
-A new Flutter project.
+This repository contains the Flutter mobile application codebase for the BlueDot Foundation environmental movement. It features **The Green Lens** (AI-powered botanical identifier), the **Eco Garden Map** (geospatial markers), and the **Boarding Pass Ticket** RSVP engine.
 
-## Getting Started
+---
 
-This project is a starting point for a Flutter application.
+## 📖 Central System Documentation
 
-A few resources to get you started if this is your first Flutter project:
+To prevent out-of-sync guidelines and maintain a **Single Source of Truth**, the system-wide architecture, database schemas, API specs, and setup instructions are managed centrally in the backend API repository.
 
-- [Lab: Write your first Flutter app](https://docs.flutter.dev/get-started/codelab)
-- [Cookbook: Useful Flutter samples](https://docs.flutter.dev/cookbook)
+> [!IMPORTANT]
+> For the complete architectural blueprints, UI feature details, and local installation guides, please consult the **[Central Documentation Hub](https://github.com/Thirdeyecreative/bluedot_apis/tree/main/Documentation)** inside the `bluedot_apis` repository.
+>
+> Specifically, see the mobile-facing guides:
+> *   **[Mobile App UI & State Guide](https://github.com/Thirdeyecreative/bluedot_apis/blob/main/Documentation/Mobile_App.md)**: Explains the Riverpod 3 state management, custom camera painter canvas, map layout structures, and local API connections.
+> *   **[DevOps & Local Run Guide](https://github.com/Thirdeyecreative/bluedot_apis/blob/main/Documentation/DevOps_Setup.md)**: Details how to clone and configure the API endpoints on your local testing machine or Android emulator.
 
-For help getting started with Flutter development, view the
-[online documentation](https://docs.flutter.dev/), which offers tutorials,
-samples, guidance on mobile development, and a full API reference.
+---
+
+*For mobile client package definitions, see the [pubspec.yaml](file:///c:/Users/avish/OneDrive/Desktop/Third%20Eye/BlueDot/bluedot_app/pubspec.yaml) file.*

@@ -135,7 +135,7 @@ class DemoData {
       eventStatus: 'Upcoming',
       siteName: 'Eco Park, Gurugram',
       maxParticipants: 80,
-      participantsCount: 46,
+      attendeesCount: 46,
       treesTarget: 350,
       treesPlanted: 0,
       mediaUrls: [
@@ -152,7 +152,7 @@ class DemoData {
       eventStatus: 'Open',
       siteName: 'Sector 54 Lake',
       maxParticipants: 40,
-      participantsCount: 28,
+      attendeesCount: 28,
       treesTarget: 120,
       treesPlanted: 35,
       mediaUrls: [

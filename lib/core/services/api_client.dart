@@ -53,6 +53,17 @@ class ApiClient {
     return _handle(res);
   }
 
+  Future<dynamic> delete(
+    String url, {
+    bool requireAuth = true,
+  }) async {
+    final res = await _guard(() async => http.delete(
+          Uri.parse(url),
+          headers: await _headers(requireAuth: requireAuth),
+        ));
+    return _handle(res);
+  }
+
   Future<dynamic> multipartPost(
     String url, {
     required Map<String, String> fields,

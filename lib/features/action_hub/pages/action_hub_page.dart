@@ -120,7 +120,7 @@ class _EventDriveCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final filled = event.maxParticipants > 0 ? event.participantsCount / event.maxParticipants : 0.0;
+    final filled = (event.maxParticipants != null && event.maxParticipants! > 0) ? event.attendeesCount / event.maxParticipants! : 0.0;
     final isNearFull = filled >= 0.85;
 
     return GestureDetector(
@@ -158,11 +158,11 @@ class _EventDriveCard extends StatelessWidget {
                   Row(
                     children: [
                       _Tag(label: event.eventStatus ?? 'Upcoming', color: AppColors.primaryBlue),
-                      if (isNearFull && !event.isFull) ...[
+                      if (isNearFull && !event.isAttendeeFull) ...[
                         const SizedBox(width: 8),
                         _Tag(label: 'Almost Full', color: AppColors.terracotta),
                       ],
-                      if (event.isFull) ...[
+                      if (event.isAttendeeFull) ...[
                         const SizedBox(width: 8),
                         _Tag(label: 'Full', color: AppColors.errorRed),
                       ],
@@ -194,7 +194,7 @@ class _EventDriveCard extends StatelessWidget {
                     mainAxisAlignment: MainAxisAlignment.spaceBetween,
                     children: [
                       Text(
-                        '${event.participantsCount}/${event.maxParticipants} Slots Filled',
+                        '${event.attendeesCount}/${event.maxParticipants ?? '∞'} Slots Filled',
                         style: TextStyle(fontWeight: FontWeight.w600, fontSize: 12, color: isNearFull ? AppColors.terracotta : AppColors.textMedium),
                       ),
                       Text(

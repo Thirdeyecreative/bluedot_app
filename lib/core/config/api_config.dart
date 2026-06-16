@@ -56,6 +56,14 @@ class ApiConfig {
   // Crowdsourced Site Suggestions
   static String get suggestions => '$_app/suggestions';
 
+  // Events / Upcoming Drives
+  static String get appEvents => '$_app/events';
+  static String appEventDetail(String id) => '$_app/events/$id';
+  static String appEventRsvp(String id) => '$_app/events/$id/rsvp';
+  static String appEventVolunteer(String id) => '$_app/events/$id/volunteer';
+  static String get appEventCheckin => '$_app/events/checkin';
+  static String appEventDonate(String id) => '$_app/events/$id/donate';
+
   // Content (Admin-served public content)
   static String get blogs => '$_admin/blogs';
   static String get banners => '$_admin/content/banners';

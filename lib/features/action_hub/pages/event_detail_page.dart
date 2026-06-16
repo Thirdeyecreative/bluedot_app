@@ -1,26 +1,64 @@
 import 'package:cached_network_image/cached_network_image.dart';
 import 'package:flutter/material.dart';
-import 'package:flutter/services.dart';
 import 'package:flutter_animate/flutter_animate.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:qr_flutter/qr_flutter.dart';
+import 'package:go_router/go_router.dart';
 import '../../../core/constants/app_colors.dart';
+import '../../../core/widgets/app_feedback.dart';
 import '../../../core/widgets/skeletons.dart';
+import '../data/action_repository.dart';
 import '../models/event_model.dart';
 import '../providers/action_provider.dart';
 
-class EventDetailPage extends ConsumerWidget {
+class EventDetailPage extends ConsumerStatefulWidget {
   final String eventId;
   const EventDetailPage({super.key, required this.eventId});
 
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
-    final event = ref.watch(eventDetailProvider(eventId));
+  ConsumerState<EventDetailPage> createState() => _EventDetailPageState();
+}
+
+class _EventDetailPageState extends ConsumerState<EventDetailPage> {
+  @override
+  void initState() {
+    super.initState();
+    // Seed notifier states once the event detail loads
+    Future.microtask(() {
+      final event = ref.read(eventDetailProvider(widget.eventId));
+      event.whenData((e) {
+        ref.read(rsvpStateProvider.notifier).seed(e.isUserRsvped);
+        ref.read(volunteerStateProvider.notifier).seed(e.isUserVolunteered);
+      });
+    });
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final eventAsync = ref.watch(eventDetailProvider(widget.eventId));
     final rsvpState = ref.watch(rsvpStateProvider);
-    final hasRsvpd = rsvpState.value == true;
+    final volunteerState = ref.watch(volunteerStateProvider);
+
+    // Seed states when event detail first arrives
+    ref.listen(eventDetailProvider(widget.eventId), (_, next) {
+      next.whenData((e) {
+        final rsvpNotifier = ref.read(rsvpStateProvider.notifier);
+        final volNotifier = ref.read(volunteerStateProvider.notifier);
+        // Only seed if notifier is still at default (avoid overwriting in-flight changes)
+        if (rsvpState is AsyncData<bool> && rsvpState.value == false && e.isUserRsvped) {
+          rsvpNotifier.seed(true);
+        }
+        if (volunteerState is AsyncData<bool> && volunteerState.value == false && e.isUserVolunteered) {
+          volNotifier.seed(true);
+        }
+      });
+    });
+
+    final isRsvped = switch (rsvpState) { AsyncData(:final value) => value, _ => false };
+    final isVolunteered = switch (volunteerState) { AsyncData(:final value) => value, _ => false };
+    final isRegistered = isRsvped || isVolunteered;
 
     return Scaffold(
-      body: event.when(
+      body: eventAsync.when(
         data: (e) => CustomScrollView(
           slivers: [
             SliverAppBar(
@@ -43,6 +81,7 @@ class EventDetailPage extends ConsumerWidget {
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
+                    // Status tags
                     Row(
                       children: [
                         _Tag(label: e.eventStatus ?? 'Upcoming', color: AppColors.primaryBlue),
@@ -72,14 +111,23 @@ class EventDetailPage extends ConsumerWidget {
                       ),
                     ],
                     const Divider(height: 32),
-                    Row(
-                      children: [
-                        _StatTile(icon: Icons.people_rounded, label: 'Joined', value: '${e.participantsCount}/${e.maxParticipants}', color: AppColors.primaryBlue),
-                        _StatTile(icon: Icons.park_rounded, label: 'Trees', value: '${e.treesTarget}', color: AppColors.forestGreen),
-                        _StatTile(icon: Icons.eco_rounded, label: 'Planted', value: '${e.treesPlanted}', color: AppColors.sageGreen),
-                      ],
-                    ).animate().fadeIn(delay: 100.ms),
+
+                    // ── Capacity stats row ──────────────────────────────────
+                    _CapacityRow(event: e).animate().fadeIn(delay: 100.ms),
                     const Divider(height: 32),
+
+                    // ── Tree stats (plantation drives) ──────────────────────
+                    if (e.isPlantationDrive && e.treesTarget > 0) ...[
+                      Row(
+                        children: [
+                          _StatTile(icon: Icons.park_rounded, label: 'Trees Target', value: '${e.treesTarget}', color: AppColors.forestGreen),
+                          _StatTile(icon: Icons.eco_rounded, label: 'Trees Planted', value: '${e.treesPlanted}', color: AppColors.sageGreen),
+                        ],
+                      ).animate().fadeIn(delay: 150.ms),
+                      const Divider(height: 32),
+                    ],
+
+                    // ── About section ───────────────────────────────────────
                     if (e.description != null) ...[
                       Text('About this Drive', style: Theme.of(context).textTheme.titleMedium?.copyWith(fontWeight: FontWeight.w700)),
                       const SizedBox(height: 10),
@@ -87,12 +135,20 @@ class EventDetailPage extends ConsumerWidget {
                       const SizedBox(height: 28),
                     ],
 
-                    // Boarding-pass QR pass — appears after RSVP
-                    if (hasRsvpd)
-                      _BoardingPassQr(event: e)
+                    // ── Plantation drive donation tile ──────────────────────
+                    if (e.isPlantationDrive)
+                      _DonationTile(eventId: widget.eventId)
                           .animate()
-                          .fadeIn(duration: 400.ms)
-                          .slideY(begin: 0.15, end: 0, curve: Curves.easeOut),
+                          .fadeIn(delay: 200.ms),
+
+                    // ── Scan QR button (only after registered) ─────────────
+                    if (isRegistered) ...[
+                      const SizedBox(height: 16),
+                      _ScanQrButton(eventId: widget.eventId, role: isVolunteered ? 'Volunteer' : 'Attendee')
+                          .animate()
+                          .fadeIn(delay: 250.ms)
+                          .slideY(begin: 0.1, end: 0),
+                    ],
 
                     const SizedBox(height: 100),
                   ],
@@ -104,29 +160,20 @@ class EventDetailPage extends ConsumerWidget {
         loading: () => const SkeletonDetailPage(),
         error: (e, _) => Center(child: Text('Error: $e')),
       ),
-      bottomNavigationBar: event.maybeWhen(
+
+      // ── Bottom action bar ──────────────────────────────────────────────────
+      bottomNavigationBar: eventAsync.maybeWhen(
         data: (e) => SafeArea(
           child: Padding(
-            // Raised above the shell's floating nav bar.
             padding: const EdgeInsets.fromLTRB(16, 8, 16, 96),
-            child: ElevatedButton(
-              onPressed: e.isFull || rsvpState.isLoading || hasRsvpd
-                  ? null
-                  : () => ref.read(rsvpStateProvider.notifier).rsvp(eventId),
-              style: ElevatedButton.styleFrom(
-                backgroundColor: hasRsvpd ? AppColors.forestGreen : AppColors.primaryBlue,
-                disabledBackgroundColor: hasRsvpd ? AppColors.forestGreen.withAlpha(180) : null,
-              ),
-              child: rsvpState.isLoading
-                  ? const SizedBox(width: 20, height: 20, child: CircularProgressIndicator(color: Colors.white, strokeWidth: 2))
-                  : Row(
-                      mainAxisAlignment: MainAxisAlignment.center,
-                      children: [
-                        Icon(hasRsvpd ? Icons.check_circle_rounded : e.isFull ? Icons.block_rounded : Icons.qr_code_2_rounded, size: 20),
-                        const SizedBox(width: 8),
-                        Text(hasRsvpd ? "RSVP'd — View My Pass" : e.isFull ? 'Event Full' : 'Join as Volunteer — Get QR Pass'),
-                      ],
-                    ),
+            child: _ActionBar(
+              event: e,
+              isRsvped: isRsvped,
+              isVolunteered: isVolunteered,
+              rsvpLoading: rsvpState.isLoading,
+              volunteerLoading: volunteerState.isLoading,
+              onRsvp: () => _handleRsvp(e),
+              onVolunteer: () => _handleVolunteer(e),
             ),
           ),
         ),
@@ -134,159 +181,305 @@ class EventDetailPage extends ConsumerWidget {
       ),
     );
   }
-}
 
-// ── Boarding Pass ─────────────────────────────────────────────────────────────
-
-class _BoardingPassQr extends StatefulWidget {
-  final PlantationEvent event;
-  const _BoardingPassQr({required this.event});
-
-  @override
-  State<_BoardingPassQr> createState() => _BoardingPassQrState();
-}
-
-class _BoardingPassQrState extends State<_BoardingPassQr> {
-  @override
-  void initState() {
-    super.initState();
-    SystemChrome.setSystemUIOverlayStyle(SystemUiOverlayStyle.dark);
+  Future<void> _handleRsvp(PlantationEvent e) async {
+    try {
+      await ref.read(rsvpStateProvider.notifier).toggle(widget.eventId);
+      if (!mounted) return;
+      final isNowRsvped = switch (ref.read(rsvpStateProvider)) {
+        AsyncData(:final value) => value,
+        _ => false,
+      };
+      AppFeedback.showSuccess(context, isNowRsvped ? 'RSVP confirmed! See you there.' : 'RSVP cancelled.');
+    } catch (err) {
+      if (!mounted) return;
+      AppFeedback.showError(context, err);
+    }
   }
+
+  Future<void> _handleVolunteer(PlantationEvent e) async {
+    try {
+      await ref.read(volunteerStateProvider.notifier).toggle(widget.eventId);
+      if (!mounted) return;
+      final isNowVol = switch (ref.read(volunteerStateProvider)) {
+        AsyncData(:final value) => value,
+        _ => false,
+      };
+      AppFeedback.showSuccess(context, isNowVol ? "You're registered as a Volunteer!" : 'Volunteer registration cancelled.');
+    } catch (err) {
+      if (!mounted) return;
+      AppFeedback.showError(context, err);
+    }
+  }
+}
+
+// ── Capacity row ──────────────────────────────────────────────────────────────
+
+class _CapacityRow extends StatelessWidget {
+  final PlantationEvent event;
+  const _CapacityRow({required this.event});
 
   @override
   Widget build(BuildContext context) {
+    return Row(
+      children: [
+        Expanded(
+          child: _CapacityChip(
+            icon: Icons.people_rounded,
+            label: 'Attendees',
+            count: event.attendeesCount,
+            max: event.maxParticipants,
+            color: AppColors.primaryBlue,
+          ),
+        ),
+        const SizedBox(width: 12),
+        Expanded(
+          child: _CapacityChip(
+            icon: Icons.volunteer_activism_rounded,
+            label: 'Volunteers',
+            count: event.volunteersCount,
+            max: event.volunteersRequired,
+            color: AppColors.forestGreen,
+          ),
+        ),
+      ],
+    );
+  }
+}
+
+class _CapacityChip extends StatelessWidget {
+  final IconData icon;
+  final String label;
+  final int count;
+  final int? max;
+  final Color color;
+  const _CapacityChip({required this.icon, required this.label, required this.count, this.max, required this.color});
+
+  @override
+  Widget build(BuildContext context) {
+    final isFull = max != null && count >= max!;
+    final text = max != null ? '$count / $max' : '$count';
     return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
       decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(20),
-        boxShadow: [BoxShadow(color: AppColors.primaryBlue.withAlpha(30), blurRadius: 24, offset: const Offset(0, 8))],
+        color: color.withAlpha(15),
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(color: color.withAlpha(40)),
       ),
-      clipBehavior: Clip.antiAlias,
-      child: Column(
+      child: Row(
         children: [
-          // Role header (Blue = Volunteer)
-          Container(
-            width: double.infinity,
-            padding: const EdgeInsets.symmetric(vertical: 16, horizontal: 24),
-            decoration: const BoxDecoration(
-              gradient: LinearGradient(
-                colors: [AppColors.primaryBlue, Color(0xFF2D3A8C)],
-                begin: Alignment.topLeft,
-                end: Alignment.bottomRight,
-              ),
-            ),
-            child: Row(
-              children: [
-                const Icon(Icons.volunteer_activism_rounded, color: Colors.white, size: 20),
-                const SizedBox(width: 10),
-                const Text('VOLUNTEER PASS', style: TextStyle(color: Colors.white, fontWeight: FontWeight.w800, fontSize: 14, letterSpacing: 2)),
-                const Spacer(),
-                Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
-                  decoration: BoxDecoration(color: AppColors.primaryYellow, borderRadius: BorderRadius.circular(6)),
-                  child: const Text('CONFIRMED', style: TextStyle(color: AppColors.textDark, fontWeight: FontWeight.w800, fontSize: 10, letterSpacing: 1)),
-                ),
-              ],
-            ),
+          Icon(isFull ? Icons.block_rounded : icon, color: color, size: 18),
+          const SizedBox(width: 8),
+          Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(label, style: TextStyle(color: color, fontSize: 11, fontWeight: FontWeight.w600)),
+              Text(isFull ? 'Full' : text, style: TextStyle(color: isFull ? AppColors.terracotta : color, fontSize: 13, fontWeight: FontWeight.w700)),
+            ],
           ),
-
-          // Event name + date
-          Padding(
-            padding: const EdgeInsets.fromLTRB(24, 20, 24, 4),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(widget.event.title, style: const TextStyle(fontWeight: FontWeight.w700, fontSize: 17, color: AppColors.textDark)),
-                const SizedBox(height: 6),
-                Row(
-                  children: [
-                    const Icon(Icons.calendar_today_rounded, size: 13, color: AppColors.textMedium),
-                    const SizedBox(width: 6),
-                    Text(widget.event.formattedDate, style: const TextStyle(color: AppColors.textMedium, fontSize: 13)),
-                    if (widget.event.siteName != null) ...[
-                      const SizedBox(width: 14),
-                      const Icon(Icons.location_on_rounded, size: 13, color: AppColors.textMedium),
-                      const SizedBox(width: 4),
-                      Expanded(
-                        child: Text(widget.event.siteName!, overflow: TextOverflow.ellipsis, style: const TextStyle(color: AppColors.textMedium, fontSize: 13)),
-                      ),
-                    ],
-                  ],
-                ),
-              ],
-            ),
-          ),
-
-          // Perforation divider
-          Padding(
-            padding: const EdgeInsets.symmetric(vertical: 16),
-            child: Row(
-              children: [
-                _DashEdge(left: true),
-                Expanded(
-                  child: LayoutBuilder(
-                    builder: (_, c) => Row(
-                      children: List.generate(
-                        (c.maxWidth / 8).floor(),
-                        (_) => Expanded(child: Container(height: 1, color: AppColors.borderLight, margin: const EdgeInsets.symmetric(horizontal: 2))),
-                      ),
-                    ),
-                  ),
-                ),
-                _DashEdge(left: false),
-              ],
-            ),
-          ),
-
-          // QR Code — large, high-contrast for sunlight scanning
-          Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 32),
-            child: Container(
-              padding: const EdgeInsets.all(16),
-              decoration: BoxDecoration(
-                color: Colors.white,
-                border: Border.all(color: AppColors.borderLight, width: 1.5),
-                borderRadius: BorderRadius.circular(16),
-              ),
-              child: QrImageView(
-                data: 'bluedot://event/${widget.event.id}/attend',
-                version: QrVersions.auto,
-                size: 200,
-                backgroundColor: Colors.white,
-                eyeStyle: const QrEyeStyle(eyeShape: QrEyeShape.square, color: AppColors.textDark),
-                dataModuleStyle: const QrDataModuleStyle(dataModuleShape: QrDataModuleShape.square, color: AppColors.textDark),
-              ),
-            ),
-          ),
-
-          const SizedBox(height: 12),
-          const Text('Show this to the coordinator at the venue entrance', textAlign: TextAlign.center, style: TextStyle(color: AppColors.textLight, fontSize: 12)),
-          const SizedBox(height: 6),
-          Text('ID: ${widget.event.id}', style: const TextStyle(color: AppColors.borderMedium, fontSize: 10, fontFamily: 'monospace')),
-          const SizedBox(height: 20),
         ],
       ),
     );
   }
 }
 
-class _DashEdge extends StatelessWidget {
-  final bool left;
-  const _DashEdge({required this.left});
+// ── Bottom action bar ─────────────────────────────────────────────────────────
+
+class _ActionBar extends StatelessWidget {
+  final PlantationEvent event;
+  final bool isRsvped;
+  final bool isVolunteered;
+  final bool rsvpLoading;
+  final bool volunteerLoading;
+  final VoidCallback onRsvp;
+  final VoidCallback onVolunteer;
+
+  const _ActionBar({
+    required this.event,
+    required this.isRsvped,
+    required this.isVolunteered,
+    required this.rsvpLoading,
+    required this.volunteerLoading,
+    required this.onRsvp,
+    required this.onVolunteer,
+  });
 
   @override
-  Widget build(BuildContext context) => Transform.translate(
-        offset: Offset(left ? -12 : 12, 0),
-        child: Container(
-          width: 24,
-          height: 24,
-          decoration: BoxDecoration(
-            color: AppColors.backgroundCream,
-            shape: BoxShape.circle,
-            border: Border.all(color: AppColors.borderLight),
+  Widget build(BuildContext context) {
+    final isRegistered = isRsvped || isVolunteered;
+
+    if (isRegistered) {
+      return _RegisteredBadge(isVolunteer: isVolunteered);
+    }
+
+    return Row(
+      children: [
+        // RSVP as Attendee
+        Expanded(
+          child: OutlinedButton.icon(
+            onPressed: event.isAttendeeFull || rsvpLoading ? null : onRsvp,
+            icon: rsvpLoading
+                ? const SizedBox(width: 16, height: 16, child: CircularProgressIndicator(strokeWidth: 2))
+                : Icon(event.isAttendeeFull ? Icons.block_rounded : Icons.how_to_reg_rounded, size: 18),
+            label: Text(event.isAttendeeFull ? 'Full' : 'RSVP'),
+            style: OutlinedButton.styleFrom(
+              side: const BorderSide(color: AppColors.primaryBlue),
+              foregroundColor: AppColors.primaryBlue,
+            ),
           ),
         ),
+        const SizedBox(width: 10),
+        // Join as Volunteer
+        Expanded(
+          flex: 2,
+          child: ElevatedButton.icon(
+            onPressed: event.isVolunteerFull || volunteerLoading ? null : onVolunteer,
+            icon: volunteerLoading
+                ? const SizedBox(width: 16, height: 16, child: CircularProgressIndicator(color: Colors.white, strokeWidth: 2))
+                : Icon(event.isVolunteerFull ? Icons.block_rounded : Icons.volunteer_activism_rounded, size: 18),
+            label: Text(event.isVolunteerFull ? 'Volunteer Full' : 'Join as Volunteer'),
+            style: ElevatedButton.styleFrom(backgroundColor: AppColors.forestGreen),
+          ),
+        ),
+      ],
+    );
+  }
+}
+
+class _RegisteredBadge extends StatelessWidget {
+  final bool isVolunteer;
+  const _RegisteredBadge({required this.isVolunteer});
+
+  @override
+  Widget build(BuildContext context) => Container(
+        padding: const EdgeInsets.symmetric(vertical: 14),
+        decoration: BoxDecoration(
+          color: (isVolunteer ? AppColors.forestGreen : AppColors.primaryBlue).withAlpha(15),
+          borderRadius: BorderRadius.circular(14),
+          border: Border.all(color: (isVolunteer ? AppColors.forestGreen : AppColors.primaryBlue).withAlpha(60)),
+        ),
+        child: Row(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            Icon(
+              isVolunteer ? Icons.volunteer_activism_rounded : Icons.how_to_reg_rounded,
+              color: isVolunteer ? AppColors.forestGreen : AppColors.primaryBlue,
+              size: 20,
+            ),
+            const SizedBox(width: 10),
+            Text(
+              isVolunteer ? "Registered as Volunteer" : "RSVP'd as Attendee",
+              style: TextStyle(
+                color: isVolunteer ? AppColors.forestGreen : AppColors.primaryBlue,
+                fontWeight: FontWeight.w700,
+                fontSize: 14,
+              ),
+            ),
+          ],
+        ),
       );
+}
+
+// ── Scan QR button ────────────────────────────────────────────────────────────
+
+class _ScanQrButton extends StatelessWidget {
+  final String eventId;
+  final String role;
+  const _ScanQrButton({required this.eventId, required this.role});
+
+  @override
+  Widget build(BuildContext context) => ElevatedButton.icon(
+        onPressed: () => context.push('/action-hub/event/$eventId/checkin'),
+        icon: const Icon(Icons.qr_code_scanner_rounded, size: 20),
+        label: Text('Scan QR at Venue to Check In ($role)'),
+        style: ElevatedButton.styleFrom(
+          backgroundColor: AppColors.primaryBlue,
+          minimumSize: const Size(double.infinity, 52),
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
+        ),
+      );
+}
+
+// ── Donation tile (plantation drives only) ────────────────────────────────────
+
+class _DonationTile extends StatefulWidget {
+  final String eventId;
+  const _DonationTile({required this.eventId});
+
+  @override
+  State<_DonationTile> createState() => _DonationTileState();
+}
+
+class _DonationTileState extends State<_DonationTile> {
+  static const _amounts = [500, 1000, 2500, 5000];
+  bool _loading = false;
+
+  Future<void> _donate(BuildContext context, WidgetRef ref, int amount) async {
+    if (_loading) return;
+    setState(() => _loading = true);
+    try {
+      final repo = ref.read(actionRepositoryProvider);
+      await repo.donateForEvent(widget.eventId, amount);
+      if (!context.mounted) return;
+      await AppFeedback.showThankYou(
+        context,
+        title: 'Thank You! 🌳',
+        message: 'Your ₹$amount donation will help plant trees at this drive.',
+        xpLabel: 'Impact recorded',
+      );
+    } catch (e) {
+      if (!context.mounted) return;
+      AppFeedback.showError(context, e);
+    } finally {
+      if (mounted) setState(() => _loading = false);
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Consumer(
+      builder: (context, ref, _) => Container(
+        padding: const EdgeInsets.all(16),
+        decoration: BoxDecoration(
+          color: AppColors.forestGreen.withAlpha(10),
+          borderRadius: BorderRadius.circular(16),
+          border: Border.all(color: AppColors.forestGreen.withAlpha(40)),
+        ),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Row(
+              children: [
+                const Icon(Icons.park_rounded, color: AppColors.forestGreen, size: 20),
+                const SizedBox(width: 8),
+                const Text('Donate for Trees', style: TextStyle(color: AppColors.forestGreen, fontWeight: FontWeight.w700, fontSize: 15)),
+              ],
+            ),
+            const SizedBox(height: 4),
+            const Text('Funds this event\'s plantation directly', style: TextStyle(color: AppColors.textMedium, fontSize: 12)),
+            const SizedBox(height: 14),
+            Row(
+              children: _amounts.map((amt) => Expanded(
+                child: Padding(
+                  padding: const EdgeInsets.only(right: 6),
+                  child: OutlinedButton(
+                    onPressed: _loading ? null : () => _donate(context, ref, amt),
+                    style: OutlinedButton.styleFrom(
+                      side: const BorderSide(color: AppColors.forestGreen),
+                      foregroundColor: AppColors.forestGreen,
+                      padding: EdgeInsets.zero,
+                      tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                    ),
+                    child: Text('₹$amt', style: const TextStyle(fontSize: 12, fontWeight: FontWeight.w600)),
+                  ),
+                ),
+              )).toList(),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
 }
 
 // ── Supporting widgets ────────────────────────────────────────────────────────

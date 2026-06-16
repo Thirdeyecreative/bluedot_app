@@ -12,6 +12,7 @@ import '../../features/home/pages/blog_detail_page.dart';
 import '../../features/home/pages/notifications_page.dart';
 import '../../features/action_hub/pages/action_hub_page.dart';
 import '../../features/action_hub/pages/event_detail_page.dart';
+import '../../features/action_hub/pages/event_checkin_page.dart';
 import '../../features/action_hub/pages/suggest_site_page.dart';
 import '../../features/directory/pages/directory_page.dart';
 import '../../features/directory/pages/species_detail_page.dart';
@@ -73,6 +74,12 @@ final routerProvider = Provider<GoRouter>((ref) {
               GoRoute(
                 path: 'event/:id',
                 builder: (_, state) => EventDetailPage(eventId: state.pathParameters['id']!),
+                routes: [
+                  GoRoute(
+                    path: 'checkin',
+                    builder: (_, state) => EventCheckinPage(eventId: state.pathParameters['id']!),
+                  ),
+                ],
               ),
               GoRoute(
                 path: 'suggest-site',
