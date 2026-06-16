@@ -3,9 +3,11 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:geolocator/geolocator.dart';
 import 'package:go_router/go_router.dart';
-import 'package:image_picker/image_picker.dart';
 import 'package:permission_handler/permission_handler.dart';
 import '../../../core/constants/app_colors.dart';
+import '../../../core/services/api_client.dart';
+import '../../../core/widgets/app_feedback.dart';
+import '../../../core/widgets/in_app_camera_page.dart';
 import '../data/action_repository.dart';
 
 class SuggestSitePage extends ConsumerStatefulWidget {
@@ -18,10 +20,12 @@ class SuggestSitePage extends ConsumerStatefulWidget {
 class _SuggestSitePageState extends ConsumerState<SuggestSitePage> {
   final _formKey = GlobalKey<FormState>();
   final _descController = TextEditingController();
-  File? _photo;
+  final List<File> _photos = [];
   Position? _position;
   bool _isSubmitting = false;
   bool _locationFetched = false;
+
+  static const int _maxPhotos = 5;
 
   @override
   void initState() {
@@ -50,16 +54,26 @@ class _SuggestSitePageState extends ConsumerState<SuggestSitePage> {
     }
   }
 
-  Future<void> _pickPhoto() async {
-    final picker = ImagePicker();
-    final xFile = await picker.pickImage(source: ImageSource.camera, imageQuality: 80);
-    if (xFile != null) setState(() => _photo = File(xFile.path));
+  Future<void> _capturePhotos() async {
+    final remaining = _maxPhotos - _photos.length;
+    if (remaining <= 0) return;
+    final shots = await openInAppCamera(
+      context,
+      maxImages: remaining,
+      title: 'Photograph the Site',
+    );
+    if (shots.isNotEmpty) {
+      setState(() => _photos.addAll(shots.take(remaining)));
+    }
   }
 
   Future<void> _submit() async {
     if (!(_formKey.currentState?.validate() ?? false)) return;
     if (_position == null) {
-      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Location not available. Please try again.')));
+      AppFeedback.showError(
+        context,
+        'We couldn\'t get your location. Tap the refresh icon to try again.',
+      );
       return;
     }
     setState(() => _isSubmitting = true);
@@ -68,19 +82,36 @@ class _SuggestSitePageState extends ConsumerState<SuggestSitePage> {
             description: _descController.text.trim(),
             lat: _position!.latitude,
             lng: _position!.longitude,
-            image: _photo,
+            images: _photos,
           );
-      if (mounted) {
-        final message = result['message'] as String? ??
-            'Site suggested! Our team will review it — you earn 20 XP when it is approved.';
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text(message), backgroundColor: AppColors.forestGreen),
-        );
-        context.pop();
-      }
+      if (!mounted) return;
+
+      final message = result['message'] as String? ??
+          'Our team will review your suggestion. You\'ll earn more XP when it\'s approved!';
+      final awarded = result['points_awarded'];
+
+      // Thank the contributor before returning to the Action Hub.
+      await AppFeedback.showThankYou(
+        context,
+        title: 'Thank You! 🌱',
+        message: message,
+        xpLabel: (awarded is num && awarded > 0) ? '+$awarded XP earned' : null,
+      );
+      if (mounted) context.pop();
     } catch (e) {
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(e.toString()), backgroundColor: AppColors.errorRed));
+      if (!mounted) return;
+      // A 409 means this spot is already a suggestion/site — not a user error.
+      // Reassure them it's being looked at rather than showing a red error.
+      if (e is ApiException && e.statusCode == 409) {
+        await AppFeedback.showThankYou(
+          context,
+          title: 'Already on Our Radar 🌍',
+          message: 'Thanks for spotting this! This location is already under '
+              'consideration — our team is reviewing it for proper use.',
+        );
+        if (mounted) context.pop();
+      } else {
+        AppFeedback.showError(context, e);
       }
     } finally {
       if (mounted) setState(() => _isSubmitting = false);
@@ -125,34 +156,90 @@ class _SuggestSitePageState extends ConsumerState<SuggestSitePage> {
               ),
               const SizedBox(height: 24),
 
-              // Photo capture
-              Text('Photo', style: Theme.of(context).textTheme.bodyMedium?.copyWith(fontWeight: FontWeight.w600)),
-              const SizedBox(height: 8),
-              GestureDetector(
-                onTap: _pickPhoto,
-                child: Container(
-                  height: 180,
-                  width: double.infinity,
-                  decoration: BoxDecoration(
-                    color: AppColors.surfaceCard,
-                    borderRadius: BorderRadius.circular(14),
-                    border: Border.all(color: AppColors.borderLight, width: 1.5),
-                  ),
-                  child: _photo != null
-                      ? ClipRRect(
-                          borderRadius: BorderRadius.circular(13),
-                          child: Image.file(_photo!, fit: BoxFit.cover),
-                        )
-                      : Column(
-                          mainAxisAlignment: MainAxisAlignment.center,
-                          children: [
-                            Icon(Icons.camera_alt_rounded, size: 40, color: AppColors.slateBlue.withAlpha(150)),
-                            const SizedBox(height: 8),
-                            const Text('Tap to take a photo', style: TextStyle(color: AppColors.textMedium)),
-                          ],
-                        ),
-                ),
+              // Photo capture (in-app camera, up to _maxPhotos)
+              Row(
+                children: [
+                  Text('Photos', style: Theme.of(context).textTheme.bodyMedium?.copyWith(fontWeight: FontWeight.w600)),
+                  const SizedBox(width: 6),
+                  Text('(${_photos.length}/$_maxPhotos)', style: const TextStyle(color: AppColors.textLight, fontSize: 13)),
+                ],
               ),
+              const SizedBox(height: 8),
+              if (_photos.isEmpty)
+                GestureDetector(
+                  onTap: _capturePhotos,
+                  child: Container(
+                    height: 160,
+                    width: double.infinity,
+                    decoration: BoxDecoration(
+                      color: AppColors.surfaceCard,
+                      borderRadius: BorderRadius.circular(14),
+                      border: Border.all(color: AppColors.borderLight, width: 1.5),
+                    ),
+                    child: Column(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      children: [
+                        Icon(Icons.add_a_photo_rounded, size: 40, color: AppColors.slateBlue.withAlpha(150)),
+                        const SizedBox(height: 8),
+                        const Text('Tap to take photos', style: TextStyle(color: AppColors.textMedium)),
+                      ],
+                    ),
+                  ),
+                )
+              else
+                SizedBox(
+                  height: 110,
+                  child: ListView.separated(
+                    scrollDirection: Axis.horizontal,
+                    itemCount: _photos.length + (_photos.length < _maxPhotos ? 1 : 0),
+                    separatorBuilder: (_, _) => const SizedBox(width: 10),
+                    itemBuilder: (_, i) {
+                      // Trailing "add more" tile
+                      if (i == _photos.length) {
+                        return GestureDetector(
+                          onTap: _capturePhotos,
+                          child: Container(
+                            width: 110,
+                            height: 110,
+                            decoration: BoxDecoration(
+                              color: AppColors.surfaceCard,
+                              borderRadius: BorderRadius.circular(14),
+                              border: Border.all(color: AppColors.borderLight, width: 1.5),
+                            ),
+                            child: const Column(
+                              mainAxisAlignment: MainAxisAlignment.center,
+                              children: [
+                                Icon(Icons.add_a_photo_rounded, color: AppColors.slateBlue),
+                                SizedBox(height: 6),
+                                Text('Add', style: TextStyle(color: AppColors.textMedium, fontSize: 12)),
+                              ],
+                            ),
+                          ),
+                        );
+                      }
+                      return Stack(
+                        children: [
+                          ClipRRect(
+                            borderRadius: BorderRadius.circular(14),
+                            child: Image.file(_photos[i], width: 110, height: 110, fit: BoxFit.cover),
+                          ),
+                          Positioned(
+                            top: 2,
+                            right: 2,
+                            child: GestureDetector(
+                              onTap: () => setState(() => _photos.removeAt(i)),
+                              child: Container(
+                                decoration: const BoxDecoration(color: Colors.black54, shape: BoxShape.circle),
+                                padding: const EdgeInsets.all(3),
+                                child: const Icon(Icons.close_rounded, color: Colors.white, size: 16),
+                              ),
+                            ),
+                          ),
+                        ],
+                      );
+                    },
+                  ),
+                ),
               const SizedBox(height: 20),
 
               // GPS location

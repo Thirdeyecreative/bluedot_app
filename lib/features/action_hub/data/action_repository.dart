@@ -35,7 +35,7 @@ class ActionRepository {
   }
 
   /// Submits a crowdsourced site suggestion as multipart form data
-  /// (description + GPS coords + optional photo).
+  /// (description + GPS coords + optional photos).
   ///
   /// Returns the API response, which includes a user-facing `message`
   /// and the XP awarded.
@@ -43,7 +43,7 @@ class ActionRepository {
     required String description,
     required double lat,
     required double lng,
-    File? image,
+    List<File> images = const [],
   }) async {
     final response = await _api.multipartPost(
       ApiConfig.suggestions,
@@ -52,7 +52,8 @@ class ActionRepository {
         'lat': lat.toString(),
         'lng': lng.toString(),
       },
-      imageFile: image,
+      files: images,
+      fileField: 'images',
     );
     return (response as Map<String, dynamic>?) ?? <String, dynamic>{};
   }
