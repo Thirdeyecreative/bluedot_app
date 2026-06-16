@@ -108,3 +108,35 @@ class CheckInNotifier extends Notifier<AsyncValue<CheckInResult?>> {
     state = const AsyncValue.data(null);
   }
 }
+
+// ── Check-out notifier ────────────────────────────────────────────────────────
+
+class CheckOutResult {
+  final String role;
+  final int durationMinutes;
+  final String message;
+  const CheckOutResult({required this.role, required this.durationMinutes, required this.message});
+}
+
+final checkOutProvider =
+    NotifierProvider<CheckOutNotifier, AsyncValue<CheckOutResult?>>(CheckOutNotifier.new);
+
+class CheckOutNotifier extends Notifier<AsyncValue<CheckOutResult?>> {
+  @override
+  AsyncValue<CheckOutResult?> build() => const AsyncValue.data(null);
+
+  Future<void> checkOut(String eventId) async {
+    state = const AsyncValue.loading();
+    state = await AsyncValue.guard(() async {
+      final data = await ref.read(actionRepositoryProvider).checkOutEvent(eventId);
+      return CheckOutResult(
+        role: data['role'] as String? ?? 'Attendee',
+        durationMinutes: data['duration_minutes'] as int? ?? 0,
+        message: data['message'] as String? ?? 'Checked out!',
+      );
+    });
+    ref.invalidate(eventDetailProvider(eventId));
+  }
+
+  void reset() => state = const AsyncValue.data(null);
+}

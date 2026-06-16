@@ -22,7 +22,6 @@ class _EventDetailPageState extends ConsumerState<EventDetailPage> {
   @override
   void initState() {
     super.initState();
-    // Seed notifier states once the event detail loads
     Future.microtask(() {
       final event = ref.read(eventDetailProvider(widget.eventId));
       event.whenData((e) {
@@ -37,13 +36,12 @@ class _EventDetailPageState extends ConsumerState<EventDetailPage> {
     final eventAsync = ref.watch(eventDetailProvider(widget.eventId));
     final rsvpState = ref.watch(rsvpStateProvider);
     final volunteerState = ref.watch(volunteerStateProvider);
+    final checkOutState = ref.watch(checkOutProvider);
 
-    // Seed states when event detail first arrives
     ref.listen(eventDetailProvider(widget.eventId), (_, next) {
       next.whenData((e) {
         final rsvpNotifier = ref.read(rsvpStateProvider.notifier);
         final volNotifier = ref.read(volunteerStateProvider.notifier);
-        // Only seed if notifier is still at default (avoid overwriting in-flight changes)
         if (rsvpState is AsyncData<bool> && rsvpState.value == false && e.isUserRsvped) {
           rsvpNotifier.seed(true);
         }
@@ -59,121 +57,144 @@ class _EventDetailPageState extends ConsumerState<EventDetailPage> {
 
     return Scaffold(
       body: eventAsync.when(
-        data: (e) => CustomScrollView(
-          slivers: [
-            SliverAppBar(
-              expandedHeight: 240,
-              pinned: true,
-              flexibleSpace: FlexibleSpaceBar(
-                background: e.thumbnailUrl != null
-                    ? CachedNetworkImage(
-                        imageUrl: e.thumbnailUrl!,
-                        fit: BoxFit.cover,
-                        placeholder: (_, _) => Container(color: AppColors.borderLight),
-                        errorWidget: (_, _, _) => _DefaultEventHeader(),
-                      )
-                    : _DefaultEventHeader(),
-              ),
-            ),
-            SliverToBoxAdapter(
-              child: Padding(
-                padding: const EdgeInsets.all(24),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    // Status tags
-                    Row(
-                      children: [
-                        _Tag(label: e.eventStatus ?? 'Upcoming', color: AppColors.primaryBlue),
-                        if (e.isPlantationDrive) ...[
-                          const SizedBox(width: 8),
-                          _Tag(label: 'Plantation Drive', color: AppColors.forestGreen),
-                        ],
-                        const Spacer(),
-                        const Icon(Icons.calendar_today_rounded, size: 13, color: AppColors.textMedium),
-                        const SizedBox(width: 6),
-                        Text(e.formattedDate, style: const TextStyle(color: AppColors.textMedium, fontSize: 13)),
-                      ],
-                    ),
-                    const SizedBox(height: 14),
-                    Text(
-                      e.title,
-                      style: Theme.of(context).textTheme.headlineSmall?.copyWith(fontWeight: FontWeight.w700, height: 1.2),
-                    ).animate().fadeIn().slideY(begin: 0.1, end: 0),
-                    if (e.siteName != null) ...[
-                      const SizedBox(height: 8),
-                      Row(
-                        children: [
-                          const Icon(Icons.location_on_rounded, color: AppColors.terracotta, size: 16),
-                          const SizedBox(width: 6),
-                          Text(e.siteName!, style: const TextStyle(color: AppColors.textMedium, fontSize: 14)),
-                        ],
-                      ),
-                    ],
-                    const Divider(height: 32),
-
-                    // ── Capacity stats row ──────────────────────────────────
-                    _CapacityRow(event: e).animate().fadeIn(delay: 100.ms),
-                    const Divider(height: 32),
-
-                    // ── Tree stats (plantation drives) ──────────────────────
-                    if (e.isPlantationDrive && e.treesTarget > 0) ...[
-                      Row(
-                        children: [
-                          _StatTile(icon: Icons.park_rounded, label: 'Trees Target', value: '${e.treesTarget}', color: AppColors.forestGreen),
-                          _StatTile(icon: Icons.eco_rounded, label: 'Trees Planted', value: '${e.treesPlanted}', color: AppColors.sageGreen),
-                        ],
-                      ).animate().fadeIn(delay: 150.ms),
-                      const Divider(height: 32),
-                    ],
-
-                    // ── About section ───────────────────────────────────────
-                    if (e.description != null) ...[
-                      Text('About this Drive', style: Theme.of(context).textTheme.titleMedium?.copyWith(fontWeight: FontWeight.w700)),
-                      const SizedBox(height: 10),
-                      Text(e.description!, style: const TextStyle(color: AppColors.textMedium, height: 1.6, fontSize: 14)),
-                      const SizedBox(height: 28),
-                    ],
-
-                    // ── Plantation drive donation tile ──────────────────────
-                    if (e.isPlantationDrive)
-                      _DonationTile(eventId: widget.eventId)
-                          .animate()
-                          .fadeIn(delay: 200.ms),
-
-                    // ── Scan QR button (only after registered) ─────────────
-                    if (isRegistered) ...[
-                      const SizedBox(height: 16),
-                      _ScanQrButton(eventId: widget.eventId, role: isVolunteered ? 'Volunteer' : 'Attendee')
-                          .animate()
-                          .fadeIn(delay: 250.ms)
-                          .slideY(begin: 0.1, end: 0),
-                    ],
-
-                    const SizedBox(height: 100),
-                  ],
+        data: (e) => RefreshIndicator(
+          onRefresh: () => ref.refresh(eventDetailProvider(widget.eventId).future),
+          color: AppColors.primaryBlue,
+          backgroundColor: AppColors.surfaceCard,
+          child: CustomScrollView(
+            physics: const AlwaysScrollableScrollPhysics(),
+            slivers: [
+              SliverAppBar(
+                expandedHeight: 240,
+                pinned: true,
+                flexibleSpace: FlexibleSpaceBar(
+                  background: e.thumbnailUrl != null
+                      ? CachedNetworkImage(
+                          imageUrl: e.thumbnailUrl!,
+                          fit: BoxFit.cover,
+                          placeholder: (_, _) => Container(color: AppColors.borderLight),
+                          errorWidget: (_, _, _) => _DefaultEventHeader(),
+                        )
+                      : _DefaultEventHeader(),
                 ),
               ),
-            ),
-          ],
+              SliverToBoxAdapter(
+                child: Padding(
+                  padding: const EdgeInsets.all(24),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      // Status tags
+                      Row(
+                        children: [
+                          _Tag(label: e.eventStatus ?? 'Upcoming', color: AppColors.primaryBlue),
+                          if (e.isPlantationDrive) ...[
+                            const SizedBox(width: 8),
+                            _Tag(label: 'Plantation Drive', color: AppColors.forestGreen),
+                          ],
+                          const Spacer(),
+                          const Icon(Icons.calendar_today_rounded, size: 13, color: AppColors.textMedium),
+                          const SizedBox(width: 6),
+                          Text(e.formattedDate, style: const TextStyle(color: AppColors.textMedium, fontSize: 13)),
+                        ],
+                      ),
+                      const SizedBox(height: 14),
+                      Text(
+                        e.title,
+                        style: Theme.of(context).textTheme.headlineSmall?.copyWith(fontWeight: FontWeight.w700, height: 1.2),
+                      ).animate().fadeIn().slideY(begin: 0.1, end: 0),
+                      if (e.siteName != null) ...[
+                        const SizedBox(height: 8),
+                        Row(
+                          children: [
+                            const Icon(Icons.location_on_rounded, color: AppColors.terracotta, size: 16),
+                            const SizedBox(width: 6),
+                            Text(e.siteName!, style: const TextStyle(color: AppColors.textMedium, fontSize: 14)),
+                          ],
+                        ),
+                      ],
+                      const Divider(height: 32),
+
+                      // ── Capacity stats row ──────────────────────────────────
+                      _CapacityRow(event: e).animate().fadeIn(delay: 100.ms),
+                      const Divider(height: 32),
+
+                      // ── Tree stats (plantation drives) ──────────────────────
+                      if (e.isPlantationDrive && e.treesTarget > 0) ...[
+                        Row(
+                          children: [
+                            _StatTile(icon: Icons.park_rounded, label: 'Trees Target', value: '${e.treesTarget}', color: AppColors.forestGreen),
+                            _StatTile(icon: Icons.eco_rounded, label: 'Trees Planted', value: '${e.treesPlanted}', color: AppColors.sageGreen),
+                          ],
+                        ).animate().fadeIn(delay: 150.ms),
+                        const Divider(height: 32),
+                      ],
+
+                      // ── About section ───────────────────────────────────────
+                      if (e.description != null) ...[
+                        Text('About this Drive', style: Theme.of(context).textTheme.titleMedium?.copyWith(fontWeight: FontWeight.w700)),
+                        const SizedBox(height: 10),
+                        Text(e.description!, style: const TextStyle(color: AppColors.textMedium, height: 1.6, fontSize: 14)),
+                        const SizedBox(height: 28),
+                      ],
+
+                      // ── Plantation drive donation tile ──────────────────────
+                      if (e.isPlantationDrive)
+                        _DonationTile(eventId: widget.eventId).animate().fadeIn(delay: 200.ms),
+
+                      // ── Scan QR (only when registered and NOT yet checked in) ──
+                      if (isRegistered && !e.isUserCheckedIn) ...[
+                        const SizedBox(height: 16),
+                        _ScanQrButton(eventId: widget.eventId, role: isVolunteered ? 'Volunteer' : 'Attendee')
+                            .animate()
+                            .fadeIn(delay: 250.ms)
+                            .slideY(begin: 0.1, end: 0),
+                      ],
+
+                      // ── Check-in / checkout status card ────────────────────
+                      if (e.isUserCheckedIn) ...[
+                        const SizedBox(height: 16),
+                        _CheckInStatusCard(event: e).animate().fadeIn(delay: 250.ms),
+                      ],
+
+                      const SizedBox(height: 24),
+                    ],
+                  ),
+                ),
+              ),
+            ],
+          ),
         ),
         loading: () => const SkeletonDetailPage(),
-        error: (e, _) => Center(child: Text('Error: $e')),
+        error: (e, _) => RefreshIndicator(
+          onRefresh: () => ref.refresh(eventDetailProvider(widget.eventId).future),
+          color: AppColors.primaryBlue,
+          backgroundColor: AppColors.surfaceCard,
+          child: ListView(
+            physics: const AlwaysScrollableScrollPhysics(),
+            children: [
+              const SizedBox(height: 100),
+              Center(child: Text('Error: $e')),
+            ],
+          ),
+        ),
       ),
 
       // ── Bottom action bar ──────────────────────────────────────────────────
       bottomNavigationBar: eventAsync.maybeWhen(
         data: (e) => SafeArea(
           child: Padding(
-            padding: const EdgeInsets.fromLTRB(16, 8, 16, 96),
+            padding: const EdgeInsets.fromLTRB(16, 8, 16, 32),
             child: _ActionBar(
               event: e,
               isRsvped: isRsvped,
               isVolunteered: isVolunteered,
               rsvpLoading: rsvpState.isLoading,
               volunteerLoading: volunteerState.isLoading,
+              checkOutLoading: checkOutState.isLoading,
               onRsvp: () => _handleRsvp(e),
               onVolunteer: () => _handleVolunteer(e),
+              onCheckOut: () => _handleCheckOut(e),
             ),
           ),
         ),
@@ -206,6 +227,31 @@ class _EventDetailPageState extends ConsumerState<EventDetailPage> {
         _ => false,
       };
       AppFeedback.showSuccess(context, isNowVol ? "You're registered as a Volunteer!" : 'Volunteer registration cancelled.');
+    } catch (err) {
+      if (!mounted) return;
+      AppFeedback.showError(context, err);
+    }
+  }
+
+  Future<void> _handleCheckOut(PlantationEvent e) async {
+    try {
+      await ref.read(checkOutProvider.notifier).checkOut(widget.eventId);
+      if (!mounted) return;
+      final result = switch (ref.read(checkOutProvider)) {
+        AsyncData(:final value) => value,
+        _ => null,
+      };
+      if (result != null) {
+        final h = result.durationMinutes ~/ 60;
+        final m = result.durationMinutes % 60;
+        final durationText = h > 0 ? '${h}h ${m}m' : '${m}m';
+        await AppFeedback.showThankYou(
+          context,
+          title: 'Thanks for showing up! 🌱',
+          message: result.message,
+          xpLabel: 'Duration: $durationText',
+        );
+      }
     } catch (err) {
       if (!mounted) return;
       AppFeedback.showError(context, err);
@@ -284,6 +330,7 @@ class _CapacityChip extends StatelessWidget {
 }
 
 // ── Bottom action bar ─────────────────────────────────────────────────────────
+// State machine: checked-out → checked-in → registered → unregistered
 
 class _ActionBar extends StatelessWidget {
   final PlantationEvent event;
@@ -291,8 +338,10 @@ class _ActionBar extends StatelessWidget {
   final bool isVolunteered;
   final bool rsvpLoading;
   final bool volunteerLoading;
+  final bool checkOutLoading;
   final VoidCallback onRsvp;
   final VoidCallback onVolunteer;
+  final VoidCallback onCheckOut;
 
   const _ActionBar({
     required this.event,
@@ -300,21 +349,28 @@ class _ActionBar extends StatelessWidget {
     required this.isVolunteered,
     required this.rsvpLoading,
     required this.volunteerLoading,
+    required this.checkOutLoading,
     required this.onRsvp,
     required this.onVolunteer,
+    required this.onCheckOut,
   });
 
   @override
   Widget build(BuildContext context) {
-    final isRegistered = isRsvped || isVolunteered;
+    if (event.isUserCheckedOut) {
+      return _DurationBadge(duration: event.formattedDuration);
+    }
 
-    if (isRegistered) {
+    if (event.isUserCheckedIn) {
+      return _CheckOutButton(loading: checkOutLoading, onCheckOut: onCheckOut);
+    }
+
+    if (isRsvped || isVolunteered) {
       return _RegisteredBadge(isVolunteer: isVolunteered);
     }
 
     return Row(
       children: [
-        // RSVP as Attendee
         Expanded(
           child: OutlinedButton.icon(
             onPressed: event.isAttendeeFull || rsvpLoading ? null : onRsvp,
@@ -329,7 +385,6 @@ class _ActionBar extends StatelessWidget {
           ),
         ),
         const SizedBox(width: 10),
-        // Join as Volunteer
         Expanded(
           flex: 2,
           child: ElevatedButton.icon(
@@ -378,6 +433,121 @@ class _RegisteredBadge extends StatelessWidget {
           ],
         ),
       );
+}
+
+class _CheckOutButton extends StatelessWidget {
+  final bool loading;
+  final VoidCallback onCheckOut;
+  const _CheckOutButton({required this.loading, required this.onCheckOut});
+
+  @override
+  Widget build(BuildContext context) => ElevatedButton.icon(
+        onPressed: loading ? null : onCheckOut,
+        icon: loading
+            ? const SizedBox(width: 16, height: 16, child: CircularProgressIndicator(color: Colors.white, strokeWidth: 2))
+            : const Icon(Icons.logout_rounded, size: 18),
+        label: Text(loading ? 'Checking out…' : 'Check Out'),
+        style: ElevatedButton.styleFrom(
+          backgroundColor: AppColors.terracotta,
+          minimumSize: const Size(double.infinity, 52),
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
+        ),
+      );
+}
+
+class _DurationBadge extends StatelessWidget {
+  final String? duration;
+  const _DurationBadge({this.duration});
+
+  @override
+  Widget build(BuildContext context) => Container(
+        padding: const EdgeInsets.symmetric(vertical: 14, horizontal: 16),
+        decoration: BoxDecoration(
+          color: AppColors.sageGreen.withAlpha(15),
+          borderRadius: BorderRadius.circular(14),
+          border: Border.all(color: AppColors.sageGreen.withAlpha(60)),
+        ),
+        child: Row(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            const Icon(Icons.verified_rounded, color: AppColors.sageGreen, size: 20),
+            const SizedBox(width: 10),
+            Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                const Text('Attendance Recorded', style: TextStyle(color: AppColors.sageGreen, fontWeight: FontWeight.w700, fontSize: 14)),
+                Text(
+                  duration != null ? 'Duration: $duration' : 'Duration pending',
+                  style: const TextStyle(color: AppColors.textMedium, fontSize: 12),
+                ),
+              ],
+            ),
+          ],
+        ),
+      );
+}
+
+// ── Check-in status card (body) ───────────────────────────────────────────────
+
+class _CheckInStatusCard extends StatelessWidget {
+  final PlantationEvent event;
+  const _CheckInStatusCard({required this.event});
+
+  @override
+  Widget build(BuildContext context) {
+    if (event.isUserCheckedOut) {
+      return Container(
+        padding: const EdgeInsets.all(16),
+        decoration: BoxDecoration(
+          color: AppColors.sageGreen.withAlpha(12),
+          borderRadius: BorderRadius.circular(14),
+          border: Border.all(color: AppColors.sageGreen.withAlpha(50)),
+        ),
+        child: Row(
+          children: [
+            const Icon(Icons.verified_rounded, color: AppColors.sageGreen, size: 24),
+            const SizedBox(width: 12),
+            Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                const Text('Attendance Complete', style: TextStyle(fontWeight: FontWeight.w700, color: AppColors.sageGreen, fontSize: 14)),
+                Text(
+                  event.formattedDuration != null ? 'Duration: ${event.formattedDuration}' : 'Duration will appear on your certificate.',
+                  style: const TextStyle(color: AppColors.textMedium, fontSize: 12),
+                ),
+              ],
+            ),
+          ],
+        ),
+      );
+    }
+
+    // Checked in, not yet checked out
+    return Container(
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        color: AppColors.primaryBlue.withAlpha(10),
+        borderRadius: BorderRadius.circular(14),
+        border: Border.all(color: AppColors.primaryBlue.withAlpha(40)),
+      ),
+      child: const Row(
+        children: [
+          Icon(Icons.check_circle_rounded, color: AppColors.primaryBlue, size: 24),
+          SizedBox(width: 12),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text('You are Checked In!', style: TextStyle(fontWeight: FontWeight.w700, color: AppColors.primaryBlue, fontSize: 14)),
+                Text('Tap "Check Out" below when you leave — your duration is logged for the certificate.', style: TextStyle(color: AppColors.textMedium, fontSize: 12)),
+              ],
+            ),
+          ),
+        ],
+      ),
+    );
+  }
 }
 
 // ── Scan QR button ────────────────────────────────────────────────────────────

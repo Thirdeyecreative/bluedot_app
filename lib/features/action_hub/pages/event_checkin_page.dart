@@ -44,9 +44,9 @@ class _EventCheckinPageState extends ConsumerState<EventCheckinPage> with Widget
   }
 
   @override
-  Future<void> dispose() async {
+  void dispose() {
     WidgetsBinding.instance.removeObserver(this);
-    await _scanner.dispose();
+    _scanner.dispose();
     super.dispose();
   }
 

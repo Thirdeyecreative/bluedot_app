@@ -3,6 +3,7 @@ class PlantationEvent {
   final String title;
   final String? description;
   final String? eventDate;
+  final String? eventEndTime;
   final String? eventStatus;
   final String? siteName;
   final String? eventTypeName;
@@ -19,12 +20,17 @@ class PlantationEvent {
   final bool isUserRsvped;
   final bool isUserVolunteered;
   final bool isUserCheckedIn;
+  final bool isUserCheckedOut;
+  final String? userCheckedInAt;
+  final String? userCheckedOutAt;
+  final int? certificateDurationMinutes;
 
   const PlantationEvent({
     required this.id,
     required this.title,
     this.description,
     this.eventDate,
+    this.eventEndTime,
     this.eventStatus,
     this.siteName,
     this.eventTypeName,
@@ -41,6 +47,10 @@ class PlantationEvent {
     this.isUserRsvped = false,
     this.isUserVolunteered = false,
     this.isUserCheckedIn = false,
+    this.isUserCheckedOut = false,
+    this.userCheckedInAt,
+    this.userCheckedOutAt,
+    this.certificateDurationMinutes,
   });
 
   factory PlantationEvent.fromJson(Map<String, dynamic> json) => PlantationEvent(
@@ -48,6 +58,7 @@ class PlantationEvent {
         title: json['title'] as String? ?? '',
         description: json['description'] as String?,
         eventDate: json['event_date'] as String?,
+        eventEndTime: json['event_end_time'] as String?,
         eventStatus: json['event_status'] as String?,
         siteName: json['site_name'] as String?,
         eventTypeName: json['event_type_name'] as String?,
@@ -64,6 +75,10 @@ class PlantationEvent {
         isUserRsvped: json['is_user_rsvped'] as bool? ?? false,
         isUserVolunteered: json['is_user_volunteered'] as bool? ?? false,
         isUserCheckedIn: json['is_user_checked_in'] as bool? ?? false,
+        isUserCheckedOut: json['is_user_checked_out'] as bool? ?? false,
+        userCheckedInAt: json['user_checked_in_at'] as String?,
+        userCheckedOutAt: json['user_checked_out_at'] as String?,
+        certificateDurationMinutes: json['certificate_duration_minutes'] as int?,
       );
 
   String? get thumbnailUrl => mediaUrls.isNotEmpty ? mediaUrls.first : null;
@@ -82,20 +97,31 @@ class PlantationEvent {
   bool get isAttendeeFull => maxParticipants != null && attendeesCount >= maxParticipants!;
   bool get isVolunteerFull => volunteersRequired != null && volunteersCount >= volunteersRequired!;
 
+  /// Human-readable duration string, e.g. "2h 30m" or "45m".
+  String? get formattedDuration {
+    if (certificateDurationMinutes == null) return null;
+    final h = certificateDurationMinutes! ~/ 60;
+    final m = certificateDurationMinutes! % 60;
+    return h > 0 ? '${h}h ${m}m' : '${m}m';
+  }
+
   PlantationEvent copyWith({
     bool? isUserRsvped,
     bool? isUserVolunteered,
     bool? isUserCheckedIn,
+    bool? isUserCheckedOut,
     int? attendeesCount,
     int? volunteersCount,
     int? spotsLeft,
     int? volunteerSpotsLeft,
+    int? certificateDurationMinutes,
   }) =>
       PlantationEvent(
         id: id,
         title: title,
         description: description,
         eventDate: eventDate,
+        eventEndTime: eventEndTime,
         eventStatus: eventStatus,
         siteName: siteName,
         eventTypeName: eventTypeName,
@@ -112,5 +138,9 @@ class PlantationEvent {
         isUserRsvped: isUserRsvped ?? this.isUserRsvped,
         isUserVolunteered: isUserVolunteered ?? this.isUserVolunteered,
         isUserCheckedIn: isUserCheckedIn ?? this.isUserCheckedIn,
+        isUserCheckedOut: isUserCheckedOut ?? this.isUserCheckedOut,
+        userCheckedInAt: userCheckedInAt,
+        userCheckedOutAt: userCheckedOutAt,
+        certificateDurationMinutes: certificateDurationMinutes ?? this.certificateDurationMinutes,
       );
 }

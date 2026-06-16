@@ -19,35 +19,14 @@ const _fullLeaderboard = [
   {'rank': 10, 'name': 'Meera Das', 'city': 'Kolkata', 'points': 150, 'trees': 2, 'level': 'Seedling'},
 ];
 
-class LeaderboardPage extends ConsumerStatefulWidget {
+class LeaderboardPage extends ConsumerWidget {
   const LeaderboardPage({super.key});
 
   @override
-  ConsumerState<LeaderboardPage> createState() => _LeaderboardPageState();
-}
-
-class _LeaderboardPageState extends ConsumerState<LeaderboardPage>
-    with SingleTickerProviderStateMixin {
-  late TabController _tab;
-
-  @override
-  void initState() {
-    super.initState();
-    _tab = TabController(length: 2, vsync: this);
-  }
-
-  @override
-  void dispose() {
-    _tab.dispose();
-    super.dispose();
-  }
-
-  @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
     final currentUser = ref.watch(currentUserProvider);
     final currentName = currentUser?.fullName ?? DemoData.user.fullName ?? 'You';
 
-    // Find current user in leaderboard
     final userEntry = _fullLeaderboard.firstWhere(
       (e) => (e['name'] as String) == currentName,
       orElse: () => {'rank': 99, 'name': currentName, 'city': 'Unknown', 'points': currentUser?.totalPoints ?? 0, 'trees': currentUser?.treesTagged ?? 0, 'level': currentUser?.levelTitle ?? 'Seedling'},
@@ -85,25 +64,6 @@ class _LeaderboardPageState extends ConsumerState<LeaderboardPage>
                       const SizedBox(width: 48),
                     ],
                   ),
-                  const SizedBox(height: 16),
-
-                  // Tab switcher
-                  Container(
-                    decoration: BoxDecoration(
-                      color: Colors.white.withAlpha(25),
-                      borderRadius: BorderRadius.circular(12),
-                    ),
-                    child: TabBar(
-                      controller: _tab,
-                      indicator: BoxDecoration(color: Colors.white, borderRadius: BorderRadius.circular(10)),
-                      indicatorSize: TabBarIndicatorSize.tab,
-                      labelColor: AppColors.primaryBlue,
-                      unselectedLabelColor: Colors.white.withAlpha(180),
-                      labelStyle: const TextStyle(fontWeight: FontWeight.w700, fontSize: 13),
-                      dividerColor: Colors.transparent,
-                      tabs: const [Tab(text: 'Global Impact'), Tab(text: 'My City')],
-                    ),
-                  ),
                   const SizedBox(height: 24),
 
                   // ── Podium (top 3) ──────────────────────────────────
@@ -121,13 +81,7 @@ class _LeaderboardPageState extends ConsumerState<LeaderboardPage>
                 color: AppColors.backgroundCream,
                 borderRadius: BorderRadius.vertical(top: Radius.circular(28)),
               ),
-              child: TabBarView(
-                controller: _tab,
-                children: [
-                  _LeaderList(entries: _fullLeaderboard.skip(3).toList(), currentName: currentName),
-                  _LeaderList(entries: _fullLeaderboard.where((e) => e['city'] == 'Mumbai').skip(1).toList(), currentName: currentName),
-                ],
-              ),
+              child: _LeaderList(entries: _fullLeaderboard.skip(3).toList(), currentName: currentName),
             ),
           ),
 

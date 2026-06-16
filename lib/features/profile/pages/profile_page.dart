@@ -187,58 +187,30 @@ class _ImpactStats extends StatelessWidget {
   }
 }
 
-// Quick navigation row: Leaderboard + Eco Garden map
 class _QuickActions extends StatelessWidget {
   @override
   Widget build(BuildContext context) => Padding(
         padding: const EdgeInsets.fromLTRB(16, 0, 16, 0),
-        child: Column(
+        child: Row(
           children: [
-            Row(
-              children: [
-                Expanded(
-                  child: _QuickActionCard(
-                    icon: Icons.leaderboard_rounded,
-                    label: 'Leaderboard',
-                    sublabel: 'See your rank',
-                    color: AppColors.primaryBlue,
-                    onTap: () => context.push('/profile/leaderboard'),
-                  ),
-                ),
-                const SizedBox(width: 12),
-                Expanded(
-                  child: _QuickActionCard(
-                    icon: Icons.map_rounded,
-                    label: 'Eco Garden',
-                    sublabel: 'View your trees',
-                    color: AppColors.forestGreen,
-                    onTap: () => context.push('/map'),
-                  ),
-                ),
-              ],
+            Expanded(
+              child: _QuickActionCard(
+                icon: Icons.leaderboard_rounded,
+                label: 'Leaderboard',
+                sublabel: 'See your rank',
+                color: AppColors.primaryBlue,
+                onTap: () => context.push('/profile/leaderboard'),
+              ),
             ),
-            Row(
-              children: [
-                Expanded(
-                  child: _QuickActionCard(
-                    icon: Icons.workspace_premium_rounded,
-                    label: 'Certificates',
-                    sublabel: 'Your contributions',
-                    color: AppColors.terracotta,
-                    onTap: () => context.push('/profile/certificates'),
-                  ),
-                ),
-                const SizedBox(width: 12),
-                Expanded(
-                  child: _QuickActionCard(
-                    icon: Icons.badge_rounded,
-                    label: 'Badges',
-                    sublabel: 'Achievements',
-                    color: AppColors.slateBlue,
-                    onTap: () => context.push('/profile/badges'),
-                  ),
-                ),
-              ],
+            const SizedBox(width: 12),
+            Expanded(
+              child: _QuickActionCard(
+                icon: Icons.workspace_premium_rounded,
+                label: 'Certificates',
+                sublabel: 'Your contributions',
+                color: AppColors.terracotta,
+                onTap: () => context.push('/profile/certificates'),
+              ),
             ),
           ],
         ),

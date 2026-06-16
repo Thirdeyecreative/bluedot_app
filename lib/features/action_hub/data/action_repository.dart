@@ -53,6 +53,11 @@ class ActionRepository {
     return (data as Map<String, dynamic>?) ?? {};
   }
 
+  Future<Map<String, dynamic>> checkOutEvent(String eventId) async {
+    final data = await _api.post(ApiConfig.appEventCheckout, body: {'event_id': eventId});
+    return (data as Map<String, dynamic>?) ?? {};
+  }
+
   Future<Map<String, dynamic>> donateForEvent(
     String eventId,
     int amount, {

@@ -62,6 +62,7 @@ class ApiConfig {
   static String appEventRsvp(String id) => '$_app/events/$id/rsvp';
   static String appEventVolunteer(String id) => '$_app/events/$id/volunteer';
   static String get appEventCheckin => '$_app/events/checkin';
+  static String get appEventCheckout => '$_app/events/checkout';
   static String appEventDonate(String id) => '$_app/events/$id/donate';
 
   // Content (Admin-served public content)

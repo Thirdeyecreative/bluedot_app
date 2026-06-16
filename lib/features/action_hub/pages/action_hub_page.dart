@@ -73,8 +73,8 @@ class _ActionHubPageState extends ConsumerState<ActionHubPage> with SingleTicker
               labelStyle: const TextStyle(fontWeight: FontWeight.w700, fontSize: 14),
               unselectedLabelStyle: const TextStyle(fontWeight: FontWeight.w400, fontSize: 14),
               tabs: const [
-                Tab(text: 'Active Campaigns'),
-                Tab(text: 'Upcoming Drives'),
+                Tab(text: 'Campaigns'),
+                Tab(text: 'Events'),
               ],
             ),
           ),
@@ -97,19 +97,37 @@ class _DrivesTab extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final events = ref.watch(eventsProvider);
-    return events.when(
-      data: (list) => list.isEmpty
-          ? const Center(child: Text('No upcoming drives. Check back soon!'))
-          : ListView.builder(
-              padding: const EdgeInsets.fromLTRB(16, 12, 16, 120),
-              itemCount: list.length,
-              itemBuilder: (_, i) => _EventDriveCard(event: list[i])
-                  .animate()
-                  .fadeIn(delay: (80 * i).ms)
-                  .slideY(begin: 0.05, end: 0, delay: (80 * i).ms),
-            ),
-      loading: () => const SkeletonCardList(count: 3, height: 220),
-      error: (e, _) => Center(child: Text('Error: $e')),
+    return RefreshIndicator(
+      onRefresh: () => ref.refresh(eventsProvider.future),
+      color: AppColors.primaryBlue,
+      backgroundColor: AppColors.surfaceCard,
+      child: events.when(
+        data: (list) => list.isEmpty
+            ? ListView(
+                physics: const AlwaysScrollableScrollPhysics(),
+                children: const [
+                  SizedBox(height: 100),
+                  Center(child: Text('No upcoming drives. Check back soon!')),
+                ],
+              )
+            : ListView.builder(
+                physics: const AlwaysScrollableScrollPhysics(),
+                padding: const EdgeInsets.fromLTRB(16, 12, 16, 120),
+                itemCount: list.length,
+                itemBuilder: (_, i) => _EventDriveCard(event: list[i])
+                    .animate()
+                    .fadeIn(delay: (80 * i).ms)
+                    .slideY(begin: 0.05, end: 0, delay: (80 * i).ms),
+              ),
+        loading: () => const SkeletonCardList(count: 3, height: 220),
+        error: (e, _) => ListView(
+          physics: const AlwaysScrollableScrollPhysics(),
+          children: [
+            const SizedBox(height: 100),
+            Center(child: Text('Error: $e')),
+          ],
+        ),
+      ),
     );
   }
 }
@@ -241,19 +259,37 @@ class _CampaignsTab extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final campaigns = ref.watch(campaignsProvider);
-    return campaigns.when(
-      data: (list) => list.isEmpty
-          ? const Center(child: Text('No active campaigns right now.'))
-          : ListView.builder(
-              padding: const EdgeInsets.fromLTRB(16, 12, 16, 120),
-              itemCount: list.length,
-              itemBuilder: (_, i) => _CampaignFundingCard(campaign: list[i])
-                  .animate()
-                  .fadeIn(delay: (80 * i).ms)
-                  .slideY(begin: 0.05, end: 0, delay: (80 * i).ms),
-            ),
-      loading: () => const SkeletonCardList(count: 3, height: 220),
-      error: (_, _) => const Center(child: Text('Could not load campaigns.')),
+    return RefreshIndicator(
+      onRefresh: () => ref.refresh(campaignsProvider.future),
+      color: AppColors.primaryBlue,
+      backgroundColor: AppColors.surfaceCard,
+      child: campaigns.when(
+        data: (list) => list.isEmpty
+            ? ListView(
+                physics: const AlwaysScrollableScrollPhysics(),
+                children: const [
+                  SizedBox(height: 100),
+                  Center(child: Text('No active campaigns right now.')),
+                ],
+              )
+            : ListView.builder(
+                physics: const AlwaysScrollableScrollPhysics(),
+                padding: const EdgeInsets.fromLTRB(16, 12, 16, 120),
+                itemCount: list.length,
+                itemBuilder: (_, i) => _CampaignFundingCard(campaign: list[i])
+                    .animate()
+                    .fadeIn(delay: (80 * i).ms)
+                    .slideY(begin: 0.05, end: 0, delay: (80 * i).ms),
+              ),
+        loading: () => const SkeletonCardList(count: 3, height: 220),
+        error: (e, _) => ListView(
+          physics: const AlwaysScrollableScrollPhysics(),
+          children: [
+            const SizedBox(height: 100),
+            const Center(child: Text('Could not load campaigns.')),
+          ],
+        ),
+      ),
     );
   }
 }
