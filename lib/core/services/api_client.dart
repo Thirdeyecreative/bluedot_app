@@ -70,6 +70,7 @@ class ApiClient {
     List<File> files = const [],
     String fileField = 'images',
     bool requireAuth = true,
+    Duration? timeout,
   }) async {
     final res = await _guard(() async {
       final token = requireAuth ? await _storage.getToken() : null;
@@ -89,15 +90,15 @@ class ApiClient {
       }
       final streamed = await request.send();
       return http.Response.fromStream(streamed);
-    });
+    }, timeout: timeout);
     return _handle(res);
   }
 
   /// Runs a request, applying a timeout and converting connectivity failures
   /// into a friendly [ApiException] so callers never see raw socket errors.
-  Future<http.Response> _guard(Future<http.Response> Function() run) async {
+  Future<http.Response> _guard(Future<http.Response> Function() run, {Duration? timeout}) async {
     try {
-      return await run().timeout(_timeout);
+      return await run().timeout(timeout ?? _timeout);
     } on SocketException {
       throw const ApiException(
         message: 'No internet connection. Please check your network and try again.',

@@ -12,9 +12,9 @@ class ScanResultNotifier extends Notifier<ScanResult?> {
 
   void clear() => state = null;
 
-  Future<ScanResult?> scan({required File image, required double lat, required double lng}) async {
+  Future<ScanResult?> scan({required List<File> images, required double lat, required double lng}) async {
     state = null;
-    final result = await ref.read(scannerRepositoryProvider).scanTree(image: image, lat: lat, lng: lng);
+    final result = await ref.read(scannerRepositoryProvider).scanTree(images: images, lat: lat, lng: lng);
     state = result;
     return result;
   }
