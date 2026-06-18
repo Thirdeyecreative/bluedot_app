@@ -25,27 +25,37 @@ class _AiAnalyzingOverlayState extends State<AiAnalyzingOverlay> with TickerProv
     'Almost there…',
   ];
 
+  static const _lineHeight = 22.0;
+
   late final AnimationController _ringController;
-  int _phraseIndex = 0;
+  late final AnimationController _tickerController;
+  int _currentIndex = 0;
+  int _nextIndex = 1;
 
   @override
   void initState() {
     super.initState();
     _ringController = AnimationController(vsync: this, duration: const Duration(seconds: 3))..repeat();
+    _tickerController = AnimationController(vsync: this, duration: const Duration(milliseconds: 550));
     _cyclePhrases();
   }
 
   Future<void> _cyclePhrases() async {
     while (mounted) {
-      await Future<void>.delayed(const Duration(milliseconds: 1100));
+      await Future<void>.delayed(const Duration(milliseconds: 1800));
       if (!mounted) return;
-      setState(() => _phraseIndex = (_phraseIndex + 1) % _phrases.length);
+      _nextIndex = (_currentIndex + 1) % _phrases.length;
+      await _tickerController.forward(from: 0);
+      if (!mounted) return;
+      setState(() => _currentIndex = _nextIndex);
+      _tickerController.reset();
     }
   }
 
   @override
   void dispose() {
     _ringController.dispose();
+    _tickerController.dispose();
     super.dispose();
   }
 
@@ -104,23 +114,32 @@ class _AiAnalyzingOverlayState extends State<AiAnalyzingOverlay> with TickerProv
                   ),
                 ),
                 const SizedBox(height: 28),
-                AnimatedSwitcher(
-                  duration: const Duration(milliseconds: 350),
-                  transitionBuilder: (child, animation) => FadeTransition(
-                    opacity: animation,
-                    child: SlideTransition(
-                      position: Tween<Offset>(begin: const Offset(0, 0.25), end: Offset.zero).animate(animation),
-                      child: child,
-                    ),
-                  ),
-                  child: Text(
-                    _phrases[_phraseIndex],
-                    key: ValueKey(_phraseIndex),
-                    style: const TextStyle(
-                      color: Colors.white,
-                      fontSize: 15,
-                      fontWeight: FontWeight.w600,
-                      letterSpacing: 0.2,
+                // A clipped vertical ticker: the outgoing line slides fully out
+                // the top while the incoming line slides in from the bottom,
+                // each confined to its own half of the clip so they never
+                // visually overlap (unlike a crossfade, where both are
+                // simultaneously semi-transparent at the same position).
+                ClipRect(
+                  child: SizedBox(
+                    width: double.infinity,
+                    height: _lineHeight,
+                    child: AnimatedBuilder(
+                      animation: _tickerController,
+                      builder: (context, _) {
+                        final t = Curves.easeInOutCubic.transform(_tickerController.value);
+                        return Stack(
+                          children: [
+                            Transform.translate(
+                              offset: Offset(0, -t * _lineHeight),
+                              child: _PhraseLine(_phrases[_currentIndex]),
+                            ),
+                            Transform.translate(
+                              offset: Offset(0, (1 - t) * _lineHeight),
+                              child: _PhraseLine(_phrases[_nextIndex]),
+                            ),
+                          ],
+                        );
+                      },
                     ),
                   ),
                 ),
@@ -136,4 +155,27 @@ class _AiAnalyzingOverlayState extends State<AiAnalyzingOverlay> with TickerProv
       ),
     );
   }
+}
+
+class _PhraseLine extends StatelessWidget {
+  final String text;
+  const _PhraseLine(this.text);
+
+  @override
+  Widget build(BuildContext context) => SizedBox(
+        width: double.infinity,
+        height: _AiAnalyzingOverlayState._lineHeight,
+        child: Center(
+          child: Text(
+            text,
+            textAlign: TextAlign.center,
+            style: const TextStyle(
+              color: Colors.white,
+              fontSize: 15,
+              fontWeight: FontWeight.w600,
+              letterSpacing: 0.2,
+            ),
+          ),
+        ),
+      );
 }

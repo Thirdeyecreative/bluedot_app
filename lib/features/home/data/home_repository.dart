@@ -1,15 +1,31 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import '../../../core/config/api_config.dart';
 import '../../../core/demo/demo_data.dart';
+import '../../../core/services/api_client.dart';
 import '../models/banner_model.dart';
 import '../models/blog_model.dart';
 import '../models/campaign_model.dart';
 
 final homeRepositoryProvider = Provider<HomeRepository>((ref) {
-  return HomeRepository();
+  return HomeRepository(ref.watch(apiClientProvider));
 });
 
 class HomeRepository {
+  final ApiClient _api;
+  HomeRepository(this._api);
+
   Future<void> _demoDelay() => Future<void>.delayed(const Duration(milliseconds: 250));
+
+  static const _defaultScanTagline = 'Every Scan Plants a Story.';
+
+  Future<String> fetchScanTagline() async {
+    try {
+      final json = await _api.get(ApiConfig.homeScreenConfig) as Map<String, dynamic>;
+      return json['scan_tagline'] as String? ?? _defaultScanTagline;
+    } catch (_) {
+      return _defaultScanTagline;
+    }
+  }
 
   Future<List<AppBanner>> fetchBanners() async {
     await _demoDelay();

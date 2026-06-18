@@ -47,6 +47,7 @@ class ApiConfig {
   static String get donations => '$_app/donations';
   static String get userProfile => '$_app/profile';
   static String get leaderboard => '$_app/leaderboard';
+  static String get homeScreenConfig => '$_app/config';
 
   // Scanner / Tree Tagging
   static String get scan => '$_app/tags/scan';

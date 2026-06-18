@@ -40,4 +40,28 @@ class ScannerRepository {
         .map((e) => ScanHistoryItem.fromJson(e as Map<String, dynamic>))
         .toList();
   }
+
+  /// All community-tagged trees within a bounding box, for the map view.
+  Future<List<ScanHistoryItem>> fetchMapTrees({
+    required double minLat,
+    required double minLng,
+    required double maxLat,
+    required double maxLng,
+  }) async {
+    final json = await _api.get(
+      ApiConfig.mapData,
+      requireAuth: false,
+      query: {
+        'min_lat': minLat.toString(),
+        'min_lng': minLng.toString(),
+        'max_lat': maxLat.toString(),
+        'max_lng': maxLng.toString(),
+      },
+    );
+    final data = (json as Map<String, dynamic>)['data'] as List<dynamic>? ?? [];
+    return data
+        .map((e) => ScanHistoryItem.fromJson(e as Map<String, dynamic>))
+        .where((item) => item.hasLocation)
+        .toList();
+  }
 }

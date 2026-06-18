@@ -18,6 +18,10 @@ final campaignsProvider = FutureProvider<List<Campaign>>((ref) {
   return ref.watch(homeRepositoryProvider).fetchCampaigns();
 });
 
+final scanTaglineProvider = FutureProvider<String>((ref) {
+  return ref.watch(homeRepositoryProvider).fetchScanTagline();
+});
+
 final blogDetailProvider = FutureProvider.family<BlogPost, String>((ref, slug) {
   return ref.watch(homeRepositoryProvider).fetchBlogBySlug(slug);
 });

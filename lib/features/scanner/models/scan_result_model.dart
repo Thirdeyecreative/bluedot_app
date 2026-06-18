@@ -41,6 +41,7 @@ class ScanResult {
       );
 
   bool get isNewTag => status == 'new_tag';
+  bool get isNotIdentified => status == 'not_identified';
 }
 
 class SpeciesInfo {
@@ -111,20 +112,41 @@ class PlantNetData {
 class ScanHistoryItem {
   final String id;
   final String? imageUrl;
+  final List<String> imageUrls;
+  final double? lat;
+  final double? lng;
   final String? taggedAt;
   final Map<String, dynamic>? plantnetSummary;
+  final PlantNetData? plantnetData;
+  final SpeciesInfo? species;
 
   const ScanHistoryItem({
     required this.id,
     this.imageUrl,
+    this.imageUrls = const [],
+    this.lat,
+    this.lng,
     this.taggedAt,
     this.plantnetSummary,
+    this.plantnetData,
+    this.species,
   });
+
+  bool get hasLocation => lat != null && lng != null;
 
   factory ScanHistoryItem.fromJson(Map<String, dynamic> json) => ScanHistoryItem(
         id: json['id'] as String,
         imageUrl: json['image_url'] as String?,
+        imageUrls: (json['image_urls'] as List<dynamic>?)?.cast<String>() ?? const [],
+        lat: (json['lat'] as num?)?.toDouble(),
+        lng: (json['lng'] as num?)?.toDouble(),
         taggedAt: json['tagged_at'] as String?,
         plantnetSummary: json['plantnet_data_summary'] as Map<String, dynamic>?,
+        plantnetData: json['plantnet_data'] != null
+            ? PlantNetData.fromJson(json['plantnet_data'] as Map<String, dynamic>)
+            : null,
+        species: json['species'] != null
+            ? SpeciesInfo.fromJson(json['species'] as Map<String, dynamic>)
+            : null,
       );
 }

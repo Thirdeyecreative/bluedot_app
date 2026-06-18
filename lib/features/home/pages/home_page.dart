@@ -227,13 +227,14 @@ class _VortexItemState extends State<_VortexItem> {
 
 // ── Scanner Hero — pinned Primary Blue header with semicircular bottom edge ──
 
-class _ScannerHero extends StatelessWidget {
+class _ScannerHero extends ConsumerWidget {
   final dynamic user;
   final bool taglineFromLeft;
   const _ScannerHero({required this.user, required this.taglineFromLeft});
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
+    final tagline = ref.watch(scanTaglineProvider).value ?? 'Every Scan Plants a Story.';
     return ClipPath(
       clipper: _HeroArcClipper(),
       child: Container(
@@ -251,7 +252,7 @@ class _ScannerHero extends StatelessWidget {
             // corner like a damped pendulum (see _ArcTagline).
             Positioned.fill(
               child: IgnorePointer(
-                child: _ArcTagline(fromLeft: taglineFromLeft),
+                child: _ArcTagline(fromLeft: taglineFromLeft, text: tagline),
               ),
             ),
             SafeArea(
@@ -319,7 +320,8 @@ class _ScannerHero extends StatelessWidget {
 /// it glides along the curve through the bottom and oscillates to rest.
 class _ArcTagline extends StatefulWidget {
   final bool fromLeft;
-  const _ArcTagline({required this.fromLeft});
+  final String text;
+  const _ArcTagline({required this.fromLeft, required this.text});
 
   @override
   State<_ArcTagline> createState() => _ArcTaglineState();
@@ -444,6 +446,7 @@ class _ArcTaglineState extends State<_ArcTagline> with TickerProviderStateMixin 
           progress: _ctrl.value,
           fromLeft: widget.fromLeft,
           sensorSwing: _sensorSwing.value,
+          text: widget.text,
         ),
         size: Size.infinite,
       ),
@@ -458,11 +461,12 @@ class _ArcTextPainter extends CustomPainter {
   /// Extra swing angle from the device-tilt pendulum (radians).
   final double sensorSwing;
 
-  static const String _text = 'Scan the Green to Know the Green !';
+  final String text;
 
   _ArcTextPainter({
     required this.progress,
     required this.fromLeft,
+    required this.text,
     this.sensorSwing = 0,
   });
 
@@ -484,10 +488,14 @@ class _ArcTextPainter extends CustomPainter {
       letterSpacing: 0.3,
     );
 
-    // Lay out each glyph to know its arc length.
+    // Lay out each glyph to know its arc length. Split by Unicode runes, not
+    // UTF-16 code units -- code-unit splitting cuts surrogate-pair emoji in
+    // half, producing a lone surrogate that Flutter rejects as malformed
+    // UTF-16 on every repaint.
     final glyphs = <TextPainter>[];
     double totalWidth = 0;
-    for (final ch in _text.split('')) {
+    for (final rune in text.runes) {
+      final ch = String.fromCharCode(rune);
       final tp = TextPainter(
         text: TextSpan(text: ch, style: style),
         textDirection: TextDirection.ltr,
@@ -527,7 +535,8 @@ class _ArcTextPainter extends CustomPainter {
   bool shouldRepaint(_ArcTextPainter oldDelegate) =>
       oldDelegate.progress != progress ||
       oldDelegate.fromLeft != fromLeft ||
-      oldDelegate.sensorSwing != sensorSwing;
+      oldDelegate.sensorSwing != sensorSwing ||
+      oldDelegate.text != text;
 }
 
 class _NotificationBell extends ConsumerWidget {

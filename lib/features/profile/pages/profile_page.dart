@@ -8,6 +8,7 @@ import '../../../core/widgets/skeletons.dart';
 import '../../auth/models/user_model.dart';
 import '../../auth/providers/auth_provider.dart';
 import '../../scanner/providers/scanner_provider.dart';
+import '../../scanner/widgets/scan_history_detail_sheet.dart';
 import '../models/badge_model.dart';
 import '../providers/profile_provider.dart';
 
@@ -397,35 +398,75 @@ class _ScansHistory extends StatelessWidget {
               separatorBuilder: (_, _) => const SizedBox(height: 8),
               itemBuilder: (_, i) {
                 final item = items[i];
-                return Container(
-                  padding: const EdgeInsets.all(14),
-                  decoration: BoxDecoration(
-                    color: AppColors.surfaceCard,
+                final isPendingReview = item.species?.isPendingReview == true;
+                final scientificName = item.species?.scientificName ?? item.plantnetData?.scientificName;
+                final commonName = item.species?.localName ?? item.plantnetData?.commonName;
+                final primaryLabel = commonName ?? scientificName ?? 'Unidentified plant';
+                final secondaryLabel = [
+                  if (commonName != null && scientificName != null) scientificName,
+                  _formatScanDate(item.taggedAt),
+                ].where((s) => s != null && s.isNotEmpty).join(' · ');
+                return Material(
+                  color: Colors.transparent,
+                  child: InkWell(
                     borderRadius: BorderRadius.circular(14),
-                    border: Border.all(color: AppColors.borderLight),
-                  ),
-                  child: Row(
-                    children: [
-                      if (item.imageUrl != null)
-                        ClipRRect(
-                          borderRadius: BorderRadius.circular(10),
-                          child: Image.network(item.imageUrl!, width: 52, height: 52, fit: BoxFit.cover, errorBuilder: (_, _, _) => const SizedBox(width: 52, height: 52)),
-                        )
-                      else
-                        Container(width: 52, height: 52, decoration: BoxDecoration(color: AppColors.forestGreen.withAlpha(20), borderRadius: BorderRadius.circular(10)), child: const Icon(Icons.eco_rounded, color: AppColors.forestGreen)),
-                      const SizedBox(width: 14),
-                      Expanded(
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            Text(item.plantnetSummary?['scientific_name'] as String? ?? 'Unknown species', style: const TextStyle(fontStyle: FontStyle.italic, fontWeight: FontWeight.w600)),
-                            const SizedBox(height: 2),
-                            Text(item.taggedAt ?? '', style: const TextStyle(color: AppColors.textLight, fontSize: 12)),
-                          ],
-                        ),
+                    onTap: () => showModalBottomSheet(
+                      context: context,
+                      isScrollControlled: true,
+                      backgroundColor: Colors.transparent,
+                      builder: (_) => ScanHistoryDetailSheet(item: item),
+                    ),
+                    child: Container(
+                      padding: const EdgeInsets.all(14),
+                      decoration: BoxDecoration(
+                        color: AppColors.surfaceCard,
+                        borderRadius: BorderRadius.circular(14),
+                        border: Border.all(color: AppColors.borderLight),
                       ),
-                      const Icon(Icons.verified_rounded, color: AppColors.forestGreen, size: 18),
-                    ],
+                      child: Row(
+                        children: [
+                          if (item.imageUrl != null)
+                            ClipRRect(
+                              borderRadius: BorderRadius.circular(10),
+                              child: Image.network(item.imageUrl!, width: 52, height: 52, fit: BoxFit.cover, errorBuilder: (_, _, _) => const SizedBox(width: 52, height: 52)),
+                            )
+                          else
+                            Container(width: 52, height: 52, decoration: BoxDecoration(color: AppColors.forestGreen.withAlpha(20), borderRadius: BorderRadius.circular(10)), child: const Icon(Icons.eco_rounded, color: AppColors.forestGreen)),
+                          const SizedBox(width: 14),
+                          Expanded(
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                Text(
+                                  primaryLabel,
+                                  maxLines: 1,
+                                  overflow: TextOverflow.ellipsis,
+                                  style: const TextStyle(fontWeight: FontWeight.w700, fontSize: 14.5),
+                                ),
+                                const SizedBox(height: 2),
+                                Text(
+                                  secondaryLabel,
+                                  maxLines: 1,
+                                  overflow: TextOverflow.ellipsis,
+                                  style: const TextStyle(
+                                    color: AppColors.textLight,
+                                    fontSize: 12,
+                                    fontStyle: FontStyle.italic,
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ),
+                          Icon(
+                            isPendingReview ? Icons.hourglass_top_rounded : Icons.verified_rounded,
+                            color: isPendingReview ? AppColors.warningAmber : AppColors.forestGreen,
+                            size: 18,
+                          ),
+                          const SizedBox(width: 4),
+                          const Icon(Icons.chevron_right_rounded, color: AppColors.textLight, size: 18),
+                        ],
+                      ),
+                    ),
                   ),
                 );
               },
@@ -436,5 +477,13 @@ class _ScansHistory extends StatelessWidget {
         ),
       ],
     );
+  }
+
+  String? _formatScanDate(String? iso) {
+    if (iso == null) return null;
+    final date = DateTime.tryParse(iso);
+    if (date == null) return iso;
+    const months = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+    return '${date.day} ${months[date.month - 1]} ${date.year}';
   }
 }

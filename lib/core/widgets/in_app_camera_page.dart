@@ -42,6 +42,11 @@ class _InAppCameraPageState extends State<InAppCameraPage> with WidgetsBindingOb
   String? _error;
   FlashMode _flash = FlashMode.off;
 
+  double _minZoom = 1.0;
+  double _maxZoom = 1.0;
+  double _zoom = 1.0;
+  double _baseZoom = 1.0;
+
   @override
   void initState() {
     super.initState();
@@ -82,14 +87,30 @@ class _InAppCameraPageState extends State<InAppCameraPage> with WidgetsBindingOb
       final controller = CameraController(cameras.first, ResolutionPreset.high, enableAudio: false);
       await controller.initialize();
       await controller.setFlashMode(_flash);
+      final minZoom = await controller.getMinZoomLevel();
+      final maxZoom = await controller.getMaxZoomLevel();
       if (!mounted) {
         controller.dispose();
         return;
       }
-      setState(() => _controller = controller);
+      setState(() {
+        _controller = controller;
+        _minZoom = minZoom;
+        _maxZoom = maxZoom;
+        _zoom = minZoom;
+      });
     } catch (e) {
       if (mounted) setState(() => _error = 'Could not start the camera. Please try again.');
     }
+  }
+
+  Future<void> _setZoom(double value) async {
+    final c = _controller;
+    if (c == null) return;
+    final clamped = value.clamp(_minZoom, _maxZoom);
+    if (clamped == _zoom) return;
+    await c.setZoomLevel(clamped);
+    if (mounted) setState(() => _zoom = clamped);
   }
 
   Future<void> _toggleFlash() async {
@@ -162,20 +183,36 @@ class _InAppCameraPageState extends State<InAppCameraPage> with WidgetsBindingOb
                           Expanded(
                             child: ClipRRect(
                               borderRadius: BorderRadius.circular(20),
-                              child: Stack(
-                                fit: StackFit.expand,
-                                children: [
-                                  CameraPreview(_controller!),
-                                  if (atMax)
-                                    Container(
-                                      color: Colors.black54,
-                                      alignment: Alignment.center,
-                                      child: Text(
-                                        'Maximum ${widget.maxImages} photos reached',
-                                        style: const TextStyle(color: Colors.white, fontWeight: FontWeight.w600),
+                              child: GestureDetector(
+                                onScaleStart: (_) => _baseZoom = _zoom,
+                                onScaleUpdate: (details) => _setZoom(_baseZoom * details.scale),
+                                child: Stack(
+                                  fit: StackFit.expand,
+                                  children: [
+                                    CameraPreview(_controller!),
+                                    if (atMax)
+                                      Container(
+                                        color: Colors.black54,
+                                        alignment: Alignment.center,
+                                        child: Text(
+                                          'Maximum ${widget.maxImages} photos reached',
+                                          style: const TextStyle(color: Colors.white, fontWeight: FontWeight.w600),
+                                        ),
                                       ),
-                                    ),
-                                ],
+                                    if (_maxZoom > _minZoom)
+                                      Positioned(
+                                        right: 10,
+                                        top: 16,
+                                        bottom: 16,
+                                        child: _ZoomSlider(
+                                          min: _minZoom,
+                                          max: _maxZoom,
+                                          value: _zoom,
+                                          onChanged: _setZoom,
+                                        ),
+                                      ),
+                                  ],
+                                ),
                               ),
                             ),
                           ),
@@ -262,6 +299,58 @@ class _InAppCameraPageState extends State<InAppCameraPage> with WidgetsBindingOb
                         ],
                       ),
       ),
+    );
+  }
+}
+
+/// Vertical zoom control overlaid on the live preview: drag to set an exact
+/// level, with the current multiplier shown above the thumb.
+class _ZoomSlider extends StatelessWidget {
+  final double min;
+  final double max;
+  final double value;
+  final ValueChanged<double> onChanged;
+  const _ZoomSlider({required this.min, required this.max, required this.value, required this.onChanged});
+
+  @override
+  Widget build(BuildContext context) {
+    return Column(
+      mainAxisAlignment: MainAxisAlignment.center,
+      children: [
+        Container(
+          padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+          decoration: BoxDecoration(
+            color: Colors.black54,
+            borderRadius: BorderRadius.circular(20),
+          ),
+          child: Text(
+            '${value.toStringAsFixed(1)}x',
+            style: const TextStyle(color: Colors.white, fontWeight: FontWeight.w700, fontSize: 11),
+          ),
+        ),
+        const SizedBox(height: 8),
+        Expanded(
+          child: RotatedBox(
+            quarterTurns: 3,
+            child: SliderTheme(
+              data: SliderTheme.of(context).copyWith(
+                trackHeight: 3,
+                activeTrackColor: AppColors.primaryYellow,
+                inactiveTrackColor: Colors.white30,
+                thumbColor: AppColors.primaryYellow,
+                overlayColor: AppColors.primaryYellow.withAlpha(40),
+                thumbShape: const RoundSliderThumbShape(enabledThumbRadius: 7),
+              ),
+              child: Slider(
+                min: min,
+                max: max,
+                value: value.clamp(min, max),
+                onChanged: onChanged,
+              ),
+            ),
+          ),
+        ),
+      ],
     );
   }
 }

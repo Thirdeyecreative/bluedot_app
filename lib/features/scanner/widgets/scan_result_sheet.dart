@@ -4,6 +4,7 @@ import 'package:flutter_animate/flutter_animate.dart';
 import '../../../core/constants/app_colors.dart';
 import '../../../core/widgets/skeletons.dart';
 import '../models/scan_result_model.dart';
+import 'scan_shared_widgets.dart';
 
 class ScanResultSheet extends StatefulWidget {
   final ScanResult result;
@@ -38,8 +39,17 @@ class _ScanResultSheetState extends State<ScanResultSheet> {
 
   @override
   Widget build(BuildContext context) {
+    if (result.isNotIdentified) return _buildNotIdentified(context);
+
     final pn = result.plantnetData;
-    final co2 = _estimateCo2(pn?.scientificName);
+    final species = result.species;
+    // Prefer the real Tree Encyclopedia record (DB-backed) over the raw AI
+    // guess wherever both are available.
+    final displayScientificName = species?.scientificName ?? pn?.scientificName;
+    final displayCommonName = species?.localName ?? pn?.commonName;
+    final co2 = (species?.co2OffsetFactor != null && species!.co2OffsetFactor! > 0)
+        ? species.co2OffsetFactor!
+        : _estimateCo2(pn?.scientificName);
 
     // Taller surface: anchored at the bottom, extending up the screen —
     // 20px shy of the 0.85 mark, consistent across device heights.
@@ -130,25 +140,25 @@ class _ScanResultSheetState extends State<ScanResultSheet> {
                           placeholder: (_, _) => const AppSkeleton(
                             child: Bone(height: 180, width: 220),
                           ),
-                          errorWidget: (_, _, _) => _PlantPlaceholder(),
+                          errorWidget: (_, _, _) => PlantPlaceholder(),
                         ),
                       ),
                     ).animate().fadeIn(delay: 150.ms).slideY(begin: 0.1, end: 0)
                   else
-                    Center(child: _PlantPlaceholder())
+                    Center(child: PlantPlaceholder())
                         .animate()
                         .fadeIn(delay: 150.ms),
 
                   const SizedBox(height: 20),
 
                   // ── Species identity card ──────────────────────────────
-                  if (pn != null) ...[
+                  if (pn != null || species != null) ...[
                     Center(
                       child: Column(
                         children: [
-                          if (pn.scientificName != null)
+                          if (displayScientificName != null)
                             Text(
-                              pn.scientificName!,
+                              displayScientificName,
                               textAlign: TextAlign.center,
                               style: const TextStyle(
                                 fontStyle: FontStyle.italic,
@@ -157,10 +167,10 @@ class _ScanResultSheetState extends State<ScanResultSheet> {
                                 color: AppColors.slateBlue,
                               ),
                             ),
-                          if (pn.commonName != null) ...[
+                          if (displayCommonName != null) ...[
                             const SizedBox(height: 4),
                             Text(
-                              pn.commonName!,
+                              displayCommonName,
                               textAlign: TextAlign.center,
                               style: const TextStyle(
                                 fontSize: 17,
@@ -175,24 +185,30 @@ class _ScanResultSheetState extends State<ScanResultSheet> {
 
                     const SizedBox(height: 16),
 
-                    // Confidence + Family row
-                    Row(
-                      mainAxisAlignment: MainAxisAlignment.center,
+                    // Confidence + Family + pending-review row
+                    Wrap(
+                      alignment: WrapAlignment.center,
+                      spacing: 10,
+                      runSpacing: 8,
                       children: [
-                        if (pn.score != null)
-                          _PillTag(
+                        if (pn?.score != null)
+                          PillTag(
                             icon: Icons.verified_rounded,
-                            label: '${(pn.score! * 100).toInt()}% Match',
+                            label: '${(pn!.score! * 100).toInt()}% Match',
                             color: AppColors.forestGreen,
                           ),
-                        if (pn.family != null) ...[
-                          const SizedBox(width: 10),
-                          _PillTag(
+                        if (pn?.family != null)
+                          PillTag(
                             icon: Icons.category_rounded,
-                            label: pn.family!,
+                            label: pn!.family!,
                             color: AppColors.slateBlue,
                           ),
-                        ],
+                        if (species?.isPendingReview == true)
+                          PillTag(
+                            icon: Icons.hourglass_top_rounded,
+                            label: 'New species — pending review',
+                            color: AppColors.warningAmber,
+                          ),
                       ],
                     ).animate().fadeIn(delay: 250.ms),
                   ],
@@ -200,7 +216,7 @@ class _ScanResultSheetState extends State<ScanResultSheet> {
                   const SizedBox(height: 20),
 
                   // ── CO₂ impact card ────────────────────────────────────
-                  _Co2Card(species: pn?.scientificName, co2: co2)
+                  Co2Card(species: displayScientificName, co2: co2)
                       .animate()
                       .fadeIn(delay: 300.ms)
                       .slideY(begin: 0.06, end: 0),
@@ -210,14 +226,19 @@ class _ScanResultSheetState extends State<ScanResultSheet> {
                   // ── Status message ─────────────────────────────────────
                   Center(
                     child: Text(
-                      result.isNewTag ? '🌱 New Tree Added to Database!' : '✅ Existing Tree Verified!',
+                      result.isNewTag
+                          ? '📍 New Tree Pinned on the Map!'
+                          : '✅ Already Mapped Nearby — No New Pin Added',
+                      textAlign: TextAlign.center,
                       style: Theme.of(context).textTheme.titleMedium?.copyWith(fontWeight: FontWeight.w700),
                     ),
                   ),
                   const SizedBox(height: 4),
                   Center(
                     child: Text(
-                      result.message,
+                      result.isNewTag
+                          ? result.message
+                          : '${result.message} This tree was tagged here before, so we verified your visit instead of creating a duplicate map pin.',
                       textAlign: TextAlign.center,
                       style: const TextStyle(color: AppColors.textMedium, fontSize: 13),
                     ),
@@ -267,6 +288,75 @@ class _ScanResultSheetState extends State<ScanResultSheet> {
     );
   }
 
+  /// Simplified sheet for a failed/low-confidence identification -- no
+  /// points, no species card, no save/geotag CTA, just a clear retry path.
+  Widget _buildNotIdentified(BuildContext context) {
+    return DraggableScrollableSheet(
+      initialChildSize: 0.42,
+      minChildSize: 0.32,
+      maxChildSize: 0.6,
+      builder: (_, controller) => Container(
+        decoration: const BoxDecoration(
+          color: AppColors.backgroundCream,
+          borderRadius: BorderRadius.vertical(top: Radius.circular(28)),
+        ),
+        child: ListView(
+          controller: controller,
+          padding: EdgeInsets.fromLTRB(24, 16, 24, 32 + MediaQuery.of(context).viewPadding.bottom),
+          children: [
+            Container(
+              width: 40,
+              height: 4,
+              margin: const EdgeInsets.only(bottom: 24),
+              decoration: BoxDecoration(
+                color: AppColors.borderMedium,
+                borderRadius: BorderRadius.circular(2),
+              ),
+            ),
+            Center(
+              child: Container(
+                width: 72,
+                height: 72,
+                decoration: BoxDecoration(
+                  color: AppColors.slateBlue.withAlpha(25),
+                  shape: BoxShape.circle,
+                ),
+                child: const Icon(Icons.search_off_rounded, color: AppColors.slateBlue, size: 36),
+              ),
+            ).animate().scaleXY(begin: 0.6, end: 1, curve: Curves.easeOutBack, duration: 500.ms),
+            const SizedBox(height: 18),
+            Text(
+              "We couldn't identify this plant",
+              textAlign: TextAlign.center,
+              style: Theme.of(context).textTheme.titleMedium?.copyWith(fontWeight: FontWeight.w700),
+            ),
+            const SizedBox(height: 6),
+            Text(
+              result.message,
+              textAlign: TextAlign.center,
+              style: const TextStyle(color: AppColors.textMedium, fontSize: 13),
+            ),
+            const SizedBox(height: 24),
+            SizedBox(
+              width: double.infinity,
+              height: 50,
+              child: ElevatedButton.icon(
+                onPressed: () => Navigator.pop(context),
+                icon: const Icon(Icons.camera_alt_rounded, size: 18),
+                label: const Text('Try Again'),
+                style: ElevatedButton.styleFrom(
+                  shape: const StadiumBorder(),
+                  backgroundColor: AppColors.primaryBlue,
+                  textStyle: const TextStyle(fontSize: 15, fontWeight: FontWeight.w600),
+                ),
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
   double _estimateCo2(String? scientificName) {
     // Average annual CO₂ absorption per species
     const map = {
@@ -282,105 +372,4 @@ class _ScanResultSheetState extends State<ScanResultSheet> {
     final key = scientificName?.toLowerCase() ?? '';
     return map[key] ?? 20.0;
   }
-}
-
-// ── Supporting Widgets ────────────────────────────────────────────────────────
-
-class _PlantPlaceholder extends StatelessWidget {
-  @override
-  Widget build(BuildContext context) => Container(
-        height: 160,
-        width: 200,
-        decoration: BoxDecoration(
-          color: AppColors.forestGreen.withAlpha(20),
-          borderRadius: BorderRadius.circular(20),
-          border: Border.all(color: AppColors.forestGreen.withAlpha(40)),
-        ),
-        child: const Center(
-          child: Icon(Icons.eco_rounded, color: AppColors.forestGreen, size: 64),
-        ),
-      );
-}
-
-class _PillTag extends StatelessWidget {
-  final IconData icon;
-  final String label;
-  final Color color;
-  const _PillTag({required this.icon, required this.label, required this.color});
-
-  @override
-  Widget build(BuildContext context) => Container(
-        padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 6),
-        decoration: BoxDecoration(
-          color: color.withAlpha(20),
-          borderRadius: BorderRadius.circular(50),
-          border: Border.all(color: color.withAlpha(80)),
-        ),
-        child: Row(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            Icon(icon, color: color, size: 14),
-            const SizedBox(width: 5),
-            Text(label, style: TextStyle(color: color, fontWeight: FontWeight.w600, fontSize: 13)),
-          ],
-        ),
-      );
-}
-
-class _Co2Card extends StatelessWidget {
-  final String? species;
-  final double co2;
-  const _Co2Card({this.species, required this.co2});
-
-  @override
-  Widget build(BuildContext context) => Container(
-        padding: const EdgeInsets.all(18),
-        decoration: BoxDecoration(
-          gradient: LinearGradient(
-            colors: [AppColors.forestGreen.withAlpha(30), AppColors.sageGreen.withAlpha(15)],
-            begin: Alignment.topLeft,
-            end: Alignment.bottomRight,
-          ),
-          borderRadius: BorderRadius.circular(16),
-          border: Border.all(color: AppColors.forestGreen.withAlpha(50)),
-        ),
-        child: Row(
-          children: [
-            Container(
-              width: 52,
-              height: 52,
-              decoration: BoxDecoration(
-                color: AppColors.forestGreen.withAlpha(30),
-                shape: BoxShape.circle,
-              ),
-              child: const Icon(Icons.cloud_done_rounded, color: AppColors.forestGreen, size: 28),
-            ),
-            const SizedBox(width: 16),
-            Expanded(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  const Text(
-                    'Estimated CO₂ Offset',
-                    style: TextStyle(
-                      fontWeight: FontWeight.w700,
-                      color: AppColors.forestGreen,
-                      fontSize: 13,
-                    ),
-                  ),
-                  const SizedBox(height: 2),
-                  Text(
-                    '~${co2.toStringAsFixed(1)} kg / year',
-                    style: const TextStyle(fontSize: 20, fontWeight: FontWeight.w700, color: AppColors.textDark),
-                  ),
-                  Text(
-                    'Over 20 years: ~${(co2 * 20).toStringAsFixed(0)} kg absorbed',
-                    style: const TextStyle(fontSize: 11, color: AppColors.textMedium),
-                  ),
-                ],
-              ),
-            ),
-          ],
-        ),
-      );
 }

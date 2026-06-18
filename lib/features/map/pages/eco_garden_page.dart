@@ -2,43 +2,14 @@ import 'package:flutter/material.dart';
 import 'package:flutter_animate/flutter_animate.dart';
 import 'package:flutter_map/flutter_map.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:geolocator/geolocator.dart';
 import 'package:go_router/go_router.dart';
 import 'package:latlong2/latlong.dart';
+import 'package:permission_handler/permission_handler.dart';
 import '../../../core/constants/app_colors.dart';
+import '../../scanner/models/scan_result_model.dart';
 import '../../scanner/providers/scanner_provider.dart';
-
-// Demo plantation site polygons (geo-referenced around Mumbai/Pune area)
-const _sites = [
-  _SiteData(
-    name: 'Sanjay Gandhi National Park',
-    center: LatLng(19.2147, 72.9101),
-    color: AppColors.forestGreen,
-    trees: 12450,
-  ),
-  _SiteData(
-    name: 'Bhimashankar Fringe',
-    center: LatLng(19.0700, 73.5300),
-    color: AppColors.sageGreen,
-    trees: 8200,
-  ),
-  _SiteData(
-    name: 'Powai Lake Buffer',
-    center: LatLng(19.1230, 72.9060),
-    color: AppColors.forestGreen,
-    trees: 2100,
-  ),
-];
-
-// Demo tree markers (user-scanned trees near Mumbai)
-const _treeMarkers = [
-  LatLng(19.2165, 72.9120),
-  LatLng(19.2130, 72.9090),
-  LatLng(19.2180, 72.9060),
-  LatLng(19.1240, 72.9080),
-  LatLng(19.1210, 72.9100),
-  LatLng(19.0720, 73.5280),
-  LatLng(19.0690, 73.5320),
-];
+import '../../scanner/widgets/scan_history_detail_sheet.dart';
 
 class EcoGardenPage extends ConsumerStatefulWidget {
   const EcoGardenPage({super.key});
@@ -49,10 +20,37 @@ class EcoGardenPage extends ConsumerStatefulWidget {
 
 class _EcoGardenPageState extends ConsumerState<EcoGardenPage> {
   final MapController _mapController = MapController();
-  _SiteData? _selectedSite;
   int? _selectedMarkerIndex;
-  bool _showSites = true;
-  bool _showMyTrees = true;
+  bool _showTrees = true;
+  LatLng? _myLocation;
+  bool _locationResolved = false;
+
+  static const _bangaloreCenter = LatLng(bangaloreCenterLat, bangaloreCenterLng);
+
+  @override
+  void initState() {
+    super.initState();
+    _loadMyLocation();
+  }
+
+  // Resolved once (success or failure) before the map is first built, so its
+  // initialCenter can correctly default to the user's location when allowed,
+  // falling back to Bangalore otherwise -- the map can't be recentered after
+  // construction without a visible jump.
+  Future<void> _loadMyLocation() async {
+    try {
+      final permission = await Permission.locationWhenInUse.request();
+      if (!permission.isGranted) return;
+      final position = await Geolocator.getCurrentPosition(
+        locationSettings: const LocationSettings(accuracy: LocationAccuracy.high, timeLimit: Duration(seconds: 5)),
+      );
+      if (mounted) setState(() => _myLocation = LatLng(position.latitude, position.longitude));
+    } catch (_) {
+      // Location unavailable -- map just won't show the "you are here" pin.
+    } finally {
+      if (mounted) setState(() => _locationResolved = true);
+    }
+  }
 
   @override
   void dispose() {
@@ -60,9 +58,35 @@ class _EcoGardenPageState extends ConsumerState<EcoGardenPage> {
     super.dispose();
   }
 
+  void _zoomBy(double delta) {
+    final camera = _mapController.camera;
+    final nextZoom = (camera.zoom + delta).clamp(4.0, 20.0);
+    _mapController.move(camera.center, nextZoom);
+  }
+
+  void _showTreeDetail(ScanHistoryItem item) {
+    showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: Colors.transparent,
+      builder: (_) => ScanHistoryDetailSheet(item: item),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
-    final history = ref.watch(scanHistoryProvider);
+    if (!_locationResolved) {
+      return const Scaffold(
+        backgroundColor: AppColors.backgroundCream,
+        body: Center(child: CircularProgressIndicator(color: AppColors.primaryBlue)),
+      );
+    }
+
+    final mapTrees = ref.watch(mapTreesProvider);
+    final trees = mapTrees.maybeWhen(
+      data: (list) => list,
+      orElse: () => const <ScanHistoryItem>[],
+    );
 
     return Scaffold(
       body: Stack(
@@ -71,14 +95,11 @@ class _EcoGardenPageState extends ConsumerState<EcoGardenPage> {
           FlutterMap(
             mapController: _mapController,
             options: MapOptions(
-              initialCenter: const LatLng(19.1850, 72.9280),
+              initialCenter: _myLocation ?? _bangaloreCenter,
               initialZoom: 11.5,
-              minZoom: 8,
-              maxZoom: 18,
-              onTap: (_, _) => setState(() {
-                _selectedSite = null;
-                _selectedMarkerIndex = null;
-              }),
+              minZoom: 4,
+              maxZoom: 20,
+              onTap: (_, _) => setState(() => _selectedMarkerIndex = null),
             ),
             children: [
               // CartoDB Positron — clean, minimal tile style
@@ -86,81 +107,23 @@ class _EcoGardenPageState extends ConsumerState<EcoGardenPage> {
                 urlTemplate: 'https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png',
                 subdomains: const ['a', 'b', 'c', 'd'],
                 userAgentPackageName: 'com.bluedot.app',
+                retinaMode: RetinaMode.isHighDensity(context),
               ),
 
-              // Plantation site circles (simulated polygons)
-              if (_showSites)
-                CircleLayer(
-                  circles: _sites
-                      .map(
-                        (s) => CircleMarker(
-                          point: s.center,
-                          radius: 800,
-                          color: s.color.withAlpha(35),
-                          borderColor: s.color.withAlpha(160),
-                          borderStrokeWidth: 2,
-                          useRadiusInMeter: true,
-                        ),
-                      )
-                      .toList(),
-                ),
-
-              // Site tap zones (larger invisible hit targets)
-              if (_showSites)
+              // Tagged tree markers (blue pins) -- real tagged trees in and
+              // around Bangalore, fetched from the backend.
+              if (_showTrees)
                 MarkerLayer(
-                  markers: _sites.asMap().entries.map((e) {
-                    final s = e.value;
-                    return Marker(
-                      point: s.center,
-                      width: 120,
-                      height: 44,
-                      child: GestureDetector(
-                        onTap: () => setState(() {
-                          _selectedSite = s;
-                          _selectedMarkerIndex = null;
-                        }),
-                        child: Container(
-                          padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
-                          decoration: BoxDecoration(
-                            color: s.color.withAlpha(220),
-                            borderRadius: BorderRadius.circular(20),
-                          ),
-                          child: Row(
-                            mainAxisSize: MainAxisSize.min,
-                            children: [
-                              const Icon(Icons.forest_rounded, color: Colors.white, size: 14),
-                              const SizedBox(width: 4),
-                              Flexible(
-                                child: Text(
-                                  s.name.split(' ').first,
-                                  style: const TextStyle(color: Colors.white, fontSize: 11, fontWeight: FontWeight.w600),
-                                  overflow: TextOverflow.ellipsis,
-                                ),
-                              ),
-                            ],
-                          ),
-                        ),
-                      ),
-                    );
-                  }).toList(),
-                ),
-
-              // User-scanned tree markers (yellow pins)
-              if (_showMyTrees)
-                MarkerLayer(
-                  markers: _treeMarkers.asMap().entries.map((entry) {
+                  markers: trees.asMap().entries.map((entry) {
                     final i = entry.key;
-                    final pt = entry.value;
+                    final tree = entry.value;
                     final isSelected = _selectedMarkerIndex == i;
                     return Marker(
-                      point: pt,
+                      point: LatLng(tree.lat!, tree.lng!),
                       width: 36,
                       height: 44,
                       child: GestureDetector(
-                        onTap: () => setState(() {
-                          _selectedMarkerIndex = i;
-                          _selectedSite = null;
-                        }),
+                        onTap: () => setState(() => _selectedMarkerIndex = i),
                         child: Column(
                           children: [
                             AnimatedContainer(
@@ -168,12 +131,12 @@ class _EcoGardenPageState extends ConsumerState<EcoGardenPage> {
                               width: isSelected ? 36 : 28,
                               height: isSelected ? 36 : 28,
                               decoration: BoxDecoration(
-                                color: AppColors.primaryYellow,
+                                color: AppColors.primaryBlue,
                                 shape: BoxShape.circle,
                                 border: Border.all(color: Colors.white, width: 2),
                                 boxShadow: [
                                   BoxShadow(
-                                    color: AppColors.primaryYellow.withAlpha(100),
+                                    color: AppColors.primaryBlue.withAlpha(100),
                                     blurRadius: isSelected ? 12 : 6,
                                   ),
                                 ],
@@ -185,13 +148,43 @@ class _EcoGardenPageState extends ConsumerState<EcoGardenPage> {
                             Container(
                               width: 2,
                               height: 8,
-                              color: AppColors.primaryYellow,
+                              color: AppColors.primaryBlue,
                             ),
                           ],
                         ),
                       ),
                     );
                   }).toList(),
+                ),
+
+              // "You are here" -- the user's current location, in blue.
+              if (_myLocation != null)
+                MarkerLayer(
+                  markers: [
+                    Marker(
+                      point: _myLocation!,
+                      width: 26,
+                      height: 26,
+                      child: IgnorePointer(
+                        child: Container(
+                          decoration: BoxDecoration(
+                            color: AppColors.primaryBlue.withAlpha(60),
+                            shape: BoxShape.circle,
+                          ),
+                          alignment: Alignment.center,
+                          child: Container(
+                            width: 14,
+                            height: 14,
+                            decoration: BoxDecoration(
+                              color: AppColors.primaryBlue,
+                              shape: BoxShape.circle,
+                              border: Border.all(color: Colors.white, width: 2),
+                            ),
+                          ),
+                        ),
+                      ),
+                    ),
+                  ],
                 ),
             ],
           ),
@@ -237,24 +230,26 @@ class _EcoGardenPageState extends ConsumerState<EcoGardenPage> {
               child: Column(
                 children: [
                   _LayerToggle(
-                    icon: Icons.forest_rounded,
-                    label: 'Sites',
-                    active: _showSites,
-                    color: AppColors.forestGreen,
-                    onTap: () => setState(() => _showSites = !_showSites),
-                  ),
-                  const SizedBox(height: 8),
-                  _LayerToggle(
                     icon: Icons.eco_rounded,
-                    label: 'My Trees',
-                    active: _showMyTrees,
-                    color: AppColors.primaryYellow,
-                    onTap: () => setState(() => _showMyTrees = !_showMyTrees),
+                    label: 'Tagged Trees',
+                    active: _showTrees,
+                    color: AppColors.primaryBlue,
+                    onTap: () => setState(() => _showTrees = !_showTrees),
                   ),
                   const SizedBox(height: 8),
                   _MapButton(
                     icon: Icons.my_location_rounded,
-                    onTap: () => _mapController.move(const LatLng(19.1850, 72.9280), 11.5),
+                    onTap: () => _mapController.move(_myLocation ?? _bangaloreCenter, 13),
+                  ),
+                  const SizedBox(height: 8),
+                  _MapButton(
+                    icon: Icons.add_rounded,
+                    onTap: () => _zoomBy(1),
+                  ),
+                  const SizedBox(height: 8),
+                  _MapButton(
+                    icon: Icons.remove_rounded,
+                    onTap: () => _zoomBy(-1),
                   ),
                 ],
               ),
@@ -266,34 +261,19 @@ class _EcoGardenPageState extends ConsumerState<EcoGardenPage> {
             left: 0,
             right: 0,
             bottom: 0,
-            child: _StatsBar(
-              treeCount: _treeMarkers.length,
-              siteCount: _sites.length,
-            ),
+            child: _StatsBar(treeCount: trees.length),
           ),
 
-          // ── Site info card ────────────────────────────────────────────
-          if (_selectedSite != null)
-            Positioned(
-              left: 16,
-              right: 16,
-              bottom: 100,
-              child: _SiteInfoCard(
-                site: _selectedSite!,
-                onClose: () => setState(() => _selectedSite = null),
-              ).animate().fadeIn(duration: 200.ms).slideY(begin: 0.2, end: 0),
-            ),
-
           // ── Tree info card ────────────────────────────────────────────
-          if (_selectedMarkerIndex != null)
+          if (_selectedMarkerIndex != null && _selectedMarkerIndex! < trees.length)
             Positioned(
               left: 16,
               right: 16,
-              bottom: 100,
+              bottom: 150,
               child: _TreeInfoCard(
-                index: _selectedMarkerIndex!,
-                history: history,
+                item: trees[_selectedMarkerIndex!],
                 onClose: () => setState(() => _selectedMarkerIndex = null),
+                onTap: () => _showTreeDetail(trees[_selectedMarkerIndex!]),
               ).animate().fadeIn(duration: 200.ms).slideY(begin: 0.2, end: 0),
             ),
         ],
@@ -303,14 +283,6 @@ class _EcoGardenPageState extends ConsumerState<EcoGardenPage> {
 }
 
 // ── Supporting widgets ────────────────────────────────────────────────────────
-
-class _SiteData {
-  final String name;
-  final LatLng center;
-  final Color color;
-  final int trees;
-  const _SiteData({required this.name, required this.center, required this.color, required this.trees});
-}
 
 class _MapButton extends StatelessWidget {
   final IconData icon;
@@ -366,8 +338,7 @@ class _LayerToggle extends StatelessWidget {
 
 class _StatsBar extends StatelessWidget {
   final int treeCount;
-  final int siteCount;
-  const _StatsBar({required this.treeCount, required this.siteCount});
+  const _StatsBar({required this.treeCount});
 
   @override
   Widget build(BuildContext context) => Container(
@@ -379,13 +350,21 @@ class _StatsBar extends StatelessWidget {
           boxShadow: [BoxShadow(color: Colors.black.withAlpha(20), blurRadius: 16, offset: const Offset(0, -4))],
         ),
         child: Row(
-          mainAxisAlignment: MainAxisAlignment.spaceAround,
           children: [
-            _StatItem(icon: Icons.eco_rounded, value: '$treeCount', label: 'Trees Tagged', color: AppColors.primaryYellow),
+            Expanded(
+              child: Center(
+                child: _StatItem(icon: Icons.eco_rounded, value: '$treeCount', label: 'Tagged Trees', color: AppColors.primaryBlue),
+              ),
+            ),
             Container(width: 1, height: 36, color: AppColors.borderLight),
-            _StatItem(icon: Icons.forest_rounded, value: '$siteCount', label: 'My Sites', color: AppColors.forestGreen),
-            Container(width: 1, height: 36, color: AppColors.borderLight),
-            _StatItem(icon: Icons.cloud_done_rounded, value: '${(treeCount * 21.8).toStringAsFixed(0)} kg', label: 'CO₂/year', color: AppColors.primaryBlue),
+            // TODO: wire to the user's own tagged-tree count once that flow
+            // exists (the map currently only fetches community trees, not
+            // per-user ones) -- placeholder at 0 until then.
+            const Expanded(
+              child: Center(
+                child: _StatItem(icon: Icons.park_rounded, value: '0', label: 'Your Trees', color: AppColors.primaryYellow),
+              ),
+            ),
           ],
         ),
       );
@@ -410,63 +389,20 @@ class _StatItem extends StatelessWidget {
       );
 }
 
-class _SiteInfoCard extends StatelessWidget {
-  final _SiteData site;
-  final VoidCallback onClose;
-  const _SiteInfoCard({required this.site, required this.onClose});
-
-  @override
-  Widget build(BuildContext context) => Container(
-        padding: const EdgeInsets.all(20),
-        decoration: BoxDecoration(
-          color: Colors.white,
-          borderRadius: BorderRadius.circular(20),
-          boxShadow: [BoxShadow(color: Colors.black.withAlpha(25), blurRadius: 16)],
-        ),
-        child: Row(
-          children: [
-            Container(
-              width: 52,
-              height: 52,
-              decoration: BoxDecoration(color: site.color.withAlpha(25), shape: BoxShape.circle),
-              child: Icon(Icons.forest_rounded, color: site.color, size: 28),
-            ),
-            const SizedBox(width: 14),
-            Expanded(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(site.name, style: const TextStyle(fontWeight: FontWeight.w700, fontSize: 15)),
-                  const SizedBox(height: 2),
-                  Text('${site.trees.toString().replaceAllMapped(RegExp(r'(\d{1,3})(?=(\d{3})+(?!\d))'), (m) => '${m[1]},')} trees documented',
-                      style: const TextStyle(color: AppColors.textMedium, fontSize: 13)),
-                ],
-              ),
-            ),
-            IconButton(icon: const Icon(Icons.close_rounded, size: 20, color: AppColors.textLight), onPressed: onClose),
-          ],
-        ),
-      );
-}
-
 class _TreeInfoCard extends StatelessWidget {
-  final int index;
-  final AsyncValue<dynamic> history;
+  final ScanHistoryItem item;
   final VoidCallback onClose;
-  const _TreeInfoCard({required this.index, required this.history, required this.onClose});
+  final VoidCallback onTap;
+  const _TreeInfoCard({required this.item, required this.onClose, required this.onTap});
 
   @override
   Widget build(BuildContext context) {
-    final name = history.maybeWhen(
-      data: (list) {
-        final items = list as List;
-        if (index < items.length) {
-          return items[index].plantnetSummary?['scientific_name'] as String? ?? 'Unknown species';
-        }
-        return 'Unknown species';
-      },
-      orElse: () => 'Unknown species',
-    );
+    final name = item.species?.localName.isNotEmpty == true
+        ? item.species!.localName
+        : item.species?.scientificName ??
+            item.plantnetData?.commonName ??
+            item.plantnetData?.scientificName ??
+            'Unidentified plant';
 
     return Container(
       padding: const EdgeInsets.all(20),
@@ -477,21 +413,41 @@ class _TreeInfoCard extends StatelessWidget {
       ),
       child: Row(
         children: [
-          Container(
-            width: 52,
-            height: 52,
-            decoration: BoxDecoration(color: AppColors.primaryYellow.withAlpha(25), shape: BoxShape.circle),
-            child: const Icon(Icons.eco_rounded, color: AppColors.primaryYellow, size: 28),
-          ),
-          const SizedBox(width: 14),
           Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(name, style: const TextStyle(fontStyle: FontStyle.italic, fontWeight: FontWeight.w700, fontSize: 14)),
-                const SizedBox(height: 2),
-                const Text('Scanned & Geotagged by you', style: TextStyle(color: AppColors.textMedium, fontSize: 12)),
-              ],
+            child: GestureDetector(
+              onTap: onTap,
+              behavior: HitTestBehavior.opaque,
+              child: Row(
+                children: [
+                  if (item.imageUrl != null)
+                    ClipRRect(
+                      borderRadius: BorderRadius.circular(14),
+                      child: Image.network(
+                        item.imageUrl!,
+                        width: 52,
+                        height: 52,
+                        fit: BoxFit.cover,
+                        errorBuilder: (_, _, _) => _treeIcon(),
+                      ),
+                    )
+                  else
+                    _treeIcon(),
+                  const SizedBox(width: 14),
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(name, style: const TextStyle(fontStyle: FontStyle.italic, fontWeight: FontWeight.w700, fontSize: 14)),
+                        const SizedBox(height: 2),
+                        Text(
+                          item.taggedAt != null ? 'Tagged on ${item.taggedAt}' : 'Tagged & geotagged',
+                          style: const TextStyle(color: AppColors.textMedium, fontSize: 12),
+                        ),
+                      ],
+                    ),
+                  ),
+                ],
+              ),
             ),
           ),
           IconButton(icon: const Icon(Icons.close_rounded, size: 20, color: AppColors.textLight), onPressed: onClose),
@@ -499,4 +455,11 @@ class _TreeInfoCard extends StatelessWidget {
       ),
     );
   }
+
+  Widget _treeIcon() => Container(
+        width: 52,
+        height: 52,
+        decoration: BoxDecoration(color: AppColors.primaryBlue.withAlpha(25), shape: BoxShape.circle),
+        child: const Icon(Icons.eco_rounded, color: AppColors.primaryBlue, size: 28),
+      );
 }
