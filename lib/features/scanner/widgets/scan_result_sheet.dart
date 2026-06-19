@@ -223,6 +223,16 @@ class _ScanResultSheetState extends State<ScanResultSheet> {
 
                   const SizedBox(height: 24),
 
+                  // ── Fun facts card ─────────────────────────────────────
+                  if (species?.funFacts.isNotEmpty == true)
+                    FunFactsCard(facts: species!.funFacts)
+                        .animate()
+                        .fadeIn(delay: 350.ms)
+                        .slideY(begin: 0.06, end: 0),
+
+                  if (species?.funFacts.isNotEmpty == true)
+                    const SizedBox(height: 24),
+
                   // ── Status message ─────────────────────────────────────
                   Center(
                     child: Text(

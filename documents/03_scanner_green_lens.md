@@ -2,6 +2,8 @@
 
 Scope: `lib/features/scanner/` and `lib/core/widgets/in_app_camera_page.dart` in `bluedot_app`, cross-referenced with backend `bluedot_apis/app/api/v1/app/tags.py`.
 
+**📚 See also:** [10_database_schema_trees.md](10_database_schema_trees.md) for complete database relationships, TreeSpecies encyclopedia architecture, tree tagging/allocation data flows, proximity deduplication logic, and fun facts extraction & storage.
+
 ## Files
 
 - `pages/green_lens_page.dart` — `GreenLensPage`. On `initState`, schedules `_startCapture()` → `openInAppCamera(context, maxImages: 5, title: 'Scan a Tree')`. On success, calls `_runScan(photos)`, which fetches GPS via `Geolocator.getCurrentPosition`, then calls `ref.read(scanResultProvider.notifier).scan(images:, lat:, lng:)`. Pops the route, then calls `_showResultSheet(result)`. Shows `AiAnalyzingOverlay` while `_analyzing` is true.

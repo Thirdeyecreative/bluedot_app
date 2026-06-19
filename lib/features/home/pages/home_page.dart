@@ -13,7 +13,6 @@ import '../../../core/constants/app_colors.dart';
 import '../../../core/widgets/skeletons.dart';
 import '../../auth/providers/auth_provider.dart';
 import '../models/blog_model.dart';
-import '../models/campaign_model.dart';
 import '../providers/home_provider.dart';
 
 class HomePage extends ConsumerStatefulWidget {
@@ -40,7 +39,6 @@ class _HomePageState extends ConsumerState<HomePage> {
   Widget build(BuildContext context) {
     final user = ref.watch(currentUserProvider);
     final blogs = ref.watch(blogsProvider);
-    final campaigns = ref.watch(campaignsProvider);
     // Clamped so short screens still fit the scan button and tall/tablet
     // screens don't get an oversized hero.
     final heroHeight =
@@ -69,18 +67,6 @@ class _HomePageState extends ConsumerState<HomePage> {
                 children: [
                   // Quick actions: Eco Garden + Leaderboard
                   vortex(0, const _HomeQuickActions()),
-
-                  // Active Campaigns
-                  campaigns.when(
-                    data: (list) => list.isNotEmpty
-                        ? vortex(2, _CampaignsSection(campaigns: list))
-                        : const SizedBox(),
-                    loading: () => const Padding(
-                      padding: EdgeInsets.only(top: 24),
-                      child: SkeletonRowCards(),
-                    ),
-                    error: (_, _) => const SizedBox(),
-                  ),
 
                   // Blog Section
                   vortex(
@@ -759,103 +745,6 @@ class _QuickActionPill extends StatelessWidget {
           ),
         ),
       );
-}
-
-class _CampaignsSection extends StatelessWidget {
-  final List<Campaign> campaigns;
-  const _CampaignsSection({required this.campaigns});
-
-  @override
-  Widget build(BuildContext context) {
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Padding(
-          padding: const EdgeInsets.fromLTRB(20, 24, 20, 12),
-          child: Text('Active Campaigns', style: Theme.of(context).textTheme.titleMedium?.copyWith(fontWeight: FontWeight.w700)),
-        ),
-        SizedBox(
-          height: 140,
-          child: ListView.separated(
-            padding: const EdgeInsets.symmetric(horizontal: 16),
-            scrollDirection: Axis.horizontal,
-            itemCount: campaigns.length,
-            separatorBuilder: (_, _) => const SizedBox(width: 12),
-            itemBuilder: (_, i) => _CampaignCard(campaign: campaigns[i]),
-          ),
-        ),
-      ],
-    );
-  }
-}
-
-class _CampaignCard extends StatelessWidget {
-  final Campaign campaign;
-  const _CampaignCard({required this.campaign});
-
-  @override
-  Widget build(BuildContext context) {
-    return Container(
-      width: 260,
-      padding: const EdgeInsets.all(16),
-      decoration: BoxDecoration(
-        color: AppColors.surfaceCard,
-        borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: AppColors.borderLight),
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        mainAxisAlignment: MainAxisAlignment.spaceBetween,
-        children: [
-          Row(
-            children: [
-              Container(
-                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
-                decoration: BoxDecoration(
-                  color: AppColors.terracotta.withAlpha(30),
-                  borderRadius: BorderRadius.circular(6),
-                ),
-                child: Text(
-                  campaign.campaignStatus ?? 'Active',
-                  style: const TextStyle(color: AppColors.terracotta, fontSize: 11, fontWeight: FontWeight.w600),
-                ),
-              ),
-            ],
-          ),
-          Text(
-            campaign.title,
-            maxLines: 2,
-            overflow: TextOverflow.ellipsis,
-            style: const TextStyle(fontWeight: FontWeight.w600, fontSize: 14),
-          ),
-          Column(
-            children: [
-              Row(
-                mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                children: [
-                  Text(
-                    '₹${(campaign.currentAmountRaised / 100000).toStringAsFixed(1)}L raised',
-                    style: const TextStyle(fontWeight: FontWeight.w700, fontSize: 13, color: AppColors.primaryBlue),
-                  ),
-                  Text(
-                    '${(campaign.progressPercent * 100).toInt()}%',
-                    style: const TextStyle(fontSize: 12, color: AppColors.textMedium),
-                  ),
-                ],
-              ),
-              const SizedBox(height: 6),
-              LinearProgressIndicator(
-                value: campaign.progressPercent,
-                backgroundColor: AppColors.borderLight,
-                color: AppColors.primaryYellow,
-                borderRadius: BorderRadius.circular(4),
-              ),
-            ],
-          ),
-        ],
-      ),
-    );
-  }
 }
 
 class _BlogGrid extends StatelessWidget {

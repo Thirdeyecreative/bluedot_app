@@ -20,6 +20,7 @@ agent could not fully confirm that detail from code alone.
 | [07_action_hub_events.md](07_action_hub_events.md) | Events, suggest site, check-in/out, volunteering | **Mostly real backend.** Donation sheet is UI-only. |
 | [08_directory.md](08_directory.md) | Tree species directory | **Fully mocked.** Backend admin trees route exists but is unconnected. |
 | [09_navigation.md](09_navigation.md) | Bottom nav / app shell / router | Structural — not data-backed; documents routes and the auth-redirect guard. |
+| [10_database_schema_trees.md](10_database_schema_trees.md) | **Database schema: Tree tagging, allocations, species encyclopedia, fun facts** | **Fully real backend.** Complete relationship diagram, data flows, proximity logic, fun facts extraction & storage. |
 
 ## Architecture summary
 

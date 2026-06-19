@@ -2,6 +2,8 @@
 
 > Documented by reading the live source on 2026-06-18. The map feature was recently and heavily modified; everything below was re-verified against the current code (not carried over from any earlier description).
 
+**📚 See also:** [10_database_schema_trees.md](10_database_schema_trees.md) for the complete database schema showing how tagged trees are stored, indexed, and queried via PostGIS geospatial operations.
+
 ## Files read
 
 - `lib/features/map/pages/eco_garden_page.dart` — the page/UI (only file under `lib/features/map/`; there is no separate `providers/`, `models/`, or `repositories/` subfolder for the map feature — those live in the `scanner` feature and are reused)

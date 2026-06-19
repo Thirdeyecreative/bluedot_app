@@ -103,3 +103,91 @@ class PlantPlaceholder extends StatelessWidget {
         ),
       );
 }
+
+class FunFactsCard extends StatelessWidget {
+  final List<String> facts;
+  const FunFactsCard({super.key, required this.facts});
+
+  @override
+  Widget build(BuildContext context) {
+    if (facts.isEmpty) {
+      return const SizedBox.shrink();
+    }
+
+    return Container(
+      padding: const EdgeInsets.all(18),
+      decoration: BoxDecoration(
+        gradient: LinearGradient(
+          colors: [AppColors.primaryBlue.withAlpha(20), AppColors.slateBlue.withAlpha(10)],
+          begin: Alignment.topLeft,
+          end: Alignment.bottomRight,
+        ),
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(color: AppColors.primaryBlue.withAlpha(50)),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              Container(
+                width: 36,
+                height: 36,
+                decoration: BoxDecoration(
+                  color: AppColors.primaryBlue.withAlpha(30),
+                  shape: BoxShape.circle,
+                ),
+                child: const Icon(Icons.lightbulb_rounded, color: AppColors.primaryBlue, size: 18),
+              ),
+              const SizedBox(width: 12),
+              Expanded(
+                child: Text(
+                  'Fun Facts',
+                  style: Theme.of(context).textTheme.titleSmall?.copyWith(
+                        fontWeight: FontWeight.w700,
+                        color: AppColors.primaryBlue,
+                      ),
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 14),
+          Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: List.generate(
+              facts.length,
+              (index) => Padding(
+                padding: const EdgeInsets.only(bottom: 10),
+                child: Row(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      '•',
+                      style: TextStyle(
+                        fontSize: 16,
+                        fontWeight: FontWeight.w700,
+                        color: AppColors.primaryBlue.withAlpha(180),
+                        height: 1.4,
+                      ),
+                    ),
+                    const SizedBox(width: 10),
+                    Expanded(
+                      child: Text(
+                        facts[index],
+                        style: const TextStyle(
+                          fontSize: 13,
+                          color: AppColors.textDark,
+                          height: 1.4,
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}

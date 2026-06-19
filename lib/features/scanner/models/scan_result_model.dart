@@ -51,6 +51,7 @@ class SpeciesInfo {
   final double? co2OffsetFactor;
   final int? growthTimeYears;
   final List<String> imageUrls;
+  final List<String> funFacts;
   final bool isPendingReview;
 
   const SpeciesInfo({
@@ -60,6 +61,7 @@ class SpeciesInfo {
     this.co2OffsetFactor,
     this.growthTimeYears,
     this.imageUrls = const [],
+    this.funFacts = const [],
     this.isPendingReview = false,
   });
 
@@ -70,6 +72,7 @@ class SpeciesInfo {
         co2OffsetFactor: (json['co2_offset_factor'] as num?)?.toDouble(),
         growthTimeYears: json['growth_time_years'] as int?,
         imageUrls: (json['image_urls'] as List<dynamic>?)?.cast<String>() ?? const [],
+        funFacts: (json['fun_facts'] as List<dynamic>?)?.cast<String>() ?? const [],
         isPendingReview: json['is_pending_review'] as bool? ?? false,
       );
 }
