@@ -26,13 +26,47 @@ class DemoData {
   );
 
   static const banners = [
+    // Image -> opens the Eco Garden map (internal route).
     AppBanner(
       id: 'banner-1',
+      mediaUrl:
+          'https://images.unsplash.com/photo-1542601906990-b4d3fb778b09?auto=format&fit=crop&w=1200&q=80',
+      mediaType: 'image',
+      priority: 1,
+      actionType: 'route',
+      actionTarget: '/map',
       title: 'Restore 10,000 native trees this monsoon',
       subtitle: 'Join drives, tag trees, and watch your impact grow.',
-      imageUrl:
-          'https://images.unsplash.com/photo-1542601906990-b4d3fb778b09?auto=format&fit=crop&w=1200&q=80',
-      placement: 'home_top',
+    ),
+    // Video (muted autoplay) -> opens the scanner.
+    AppBanner(
+      id: 'banner-2',
+      mediaUrl:
+          'https://flutter.github.io/assets-for-api-docs/assets/videos/bee.mp4',
+      mediaType: 'video',
+      priority: 2,
+      actionType: 'scan',
+      title: 'Scan a tree to log your impact',
+    ),
+    // GIF -> external link, with an admin duration override.
+    AppBanner(
+      id: 'banner-3',
+      mediaUrl: 'https://media.giphy.com/media/3o7TKsQ8UQ1zNzm6f6/giphy.gif',
+      mediaType: 'gif',
+      priority: 3,
+      durationSeconds: 6,
+      actionType: 'link',
+      linkUrl: 'https://bluedot.eco',
+      title: 'Learn how your scans grow forests',
+    ),
+    // Image, display-only (no tap), unset priority -> sorts last.
+    AppBanner(
+      id: 'banner-4',
+      mediaUrl:
+          'https://images.unsplash.com/photo-1513836279014-a89f7a76ae86?auto=format&fit=crop&w=1200&q=80',
+      mediaType: 'image',
+      actionType: 'none',
+      title: 'Every scan plants a story',
     ),
   ];
 

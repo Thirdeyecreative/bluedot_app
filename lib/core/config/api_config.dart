@@ -12,7 +12,7 @@ class ApiConfig {
   ApiConfig._();
 
   // Compile-time flag injected via --dart-define=ENV=...
-  static const String _envName = String.fromEnvironment('ENV', defaultValue: 'production');
+  static const String _envName = String.fromEnvironment('ENV', defaultValue: 'staging');
 
   static AppEnv get env => switch (_envName) {
         'production' => AppEnv.production,
@@ -48,6 +48,7 @@ class ApiConfig {
   static String get userProfile => '$_app/profile';
   static String get leaderboard => '$_app/leaderboard';
   static String get homeScreenConfig => '$_app/config';
+  static String get appBanners => '$_app/banners';
 
   // Scanner / Tree Tagging
   static String get scan => '$_app/tags/scan';

@@ -28,8 +28,20 @@ class HomeRepository {
   }
 
   Future<List<AppBanner>> fetchBanners() async {
-    await _demoDelay();
-    return DemoData.banners;
+    try {
+      // Public endpoint (no auth) — banners are home-screen content. The
+      // response is a JSON array shaped to AppBanner's fromJson contract.
+      final data = await _api.get(ApiConfig.appBanners, requireAuth: false);
+      final banners = AppBanner.parseList(data as List<dynamic>);
+      // Fall back to demo content if the server has no published banners yet,
+      // so the carousel still has something to show in dev/staging.
+      if (banners.isNotEmpty) return banners;
+    } catch (_) {
+      // Network/parse failure -> fall back to demo data; never break home.
+    }
+    final demo = List<AppBanner>.of(DemoData.banners);
+    AppBanner.sortInPlace(demo);
+    return demo;
   }
 
   Future<List<BlogPost>> fetchBlogs({int page = 1, int limit = 10}) async {
