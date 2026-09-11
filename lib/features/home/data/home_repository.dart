@@ -58,7 +58,15 @@ class HomeRepository {
   }
 
   Future<List<Campaign>> fetchCampaigns() async {
-    await _demoDelay();
+    try {
+      final data = await _api.get(ApiConfig.campaigns, requireAuth: false);
+      if (data is List) {
+        return data.map((json) => Campaign.fromJson(json)).toList();
+      }
+    } catch (e, stackTrace) {
+      print('Error fetching campaigns: $e\n$stackTrace');
+      // Fallback to demo data on error
+    }
     return DemoData.campaigns;
   }
 }

@@ -17,15 +17,24 @@ class Campaign {
     this.campaignStatus,
   });
 
-  factory Campaign.fromJson(Map<String, dynamic> json) => Campaign(
-        id: json['id'] as String,
-        title: json['title'] as String? ?? json['name'] as String? ?? '',
-        targetAmount: (json['target_amount'] as num?)?.toDouble() ?? 0,
-        currentAmountRaised: (json['current_amount_raised'] as num?)?.toDouble() ?? 0,
-        description: json['description'] as String?,
-        mediaUrls: (json['media_urls'] as List<dynamic>?)?.cast<String>() ?? [],
-        campaignStatus: json['campaign_status'] as String?,
-      );
+  factory Campaign.fromJson(Map<String, dynamic> json) {
+    double parseDouble(dynamic value) {
+      if (value == null) return 0;
+      if (value is num) return value.toDouble();
+      if (value is String) return double.tryParse(value) ?? 0;
+      return 0;
+    }
+
+    return Campaign(
+      id: json['id'] as String,
+      title: json['title'] as String? ?? json['name'] as String? ?? '',
+      targetAmount: parseDouble(json['target_amount']),
+      currentAmountRaised: parseDouble(json['current_amount_raised']),
+      description: json['description'] as String?,
+      mediaUrls: (json['media_urls'] as List<dynamic>?)?.cast<String>() ?? [],
+      campaignStatus: json['campaign_status'] as String?,
+    );
+  }
 
   double get progressPercent =>
       targetAmount > 0 ? (currentAmountRaised / targetAmount).clamp(0, 1) : 0;

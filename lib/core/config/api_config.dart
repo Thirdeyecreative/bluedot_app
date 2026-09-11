@@ -1,3 +1,5 @@
+import 'dart:io';
+
 /// Backend environment selection.
 ///
 /// The active environment is chosen at BUILD time, not in source, so a release
@@ -12,7 +14,7 @@ class ApiConfig {
   ApiConfig._();
 
   // Compile-time flag injected via --dart-define=ENV=...
-  static const String _envName = String.fromEnvironment('ENV', defaultValue: 'staging');
+  static const String _envName = String.fromEnvironment('ENV', defaultValue: 'local');
 
   static AppEnv get env => switch (_envName) {
         'production' => AppEnv.production,
@@ -24,7 +26,16 @@ class ApiConfig {
   static bool get isProduction => env == AppEnv.production;
 
   // --- Per-environment base URLs ---
-  static const String _localUrl = 'http://10.0.2.2:8000'; // Android emulator -> localhost
+  static String get _localUrl {
+    // 10.0.2.2 is the special alias for your host machine's localhost in the Android Emulator.
+    // 127.0.0.1 is used for Windows/Web/iOS simulator.
+    // NOTE: If you are using a PHYSICAL Android phone, you must change this to your computer's Wi-Fi IPv4 address (e.g. 'http://192.168.x.x:8000')
+    try {
+      if (Platform.isAndroid) return 'http://192.168.1.9:8000'; // Computer's Wi-Fi IP for Physical Phone
+    } catch (_) {}
+    return 'http://192.168.1.9:8000'; // Default to host Wi-Fi IP
+  }
+
   static const String _stagingUrl = 'https://bluedot-backend-staging-426166329141.asia-south1.run.app';
   static const String _productionUrl = 'https://bluedot-backend-426166329141.asia-south1.run.app';
 
