@@ -1,38 +1,70 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import '../../../core/demo/demo_data.dart';
-import '../../../core/services/storage_service.dart';
+
+import '../../../core/services/api_client.dart';
+import '../services/supabase_auth_service.dart';
 import '../models/user_model.dart';
+import '../../../core/config/api_config.dart';
 
 final authRepositoryProvider = Provider<AuthRepository>((ref) {
-  return AuthRepository(ref.watch(storageServiceProvider));
+  return AuthRepository(
+    ref.watch(apiClientProvider),
+    SupabaseAuthService(),
+  );
 });
 
 class AuthRepository {
-  final StorageService _storage;
+  final ApiClient _apiClient;
+  final SupabaseAuthService _supabaseAuth;
 
-  AuthRepository(this._storage);
+  AuthRepository(this._apiClient, this._supabaseAuth);
 
   Future<void> sendOtp(String phone) async {
-    await Future<void>.delayed(const Duration(milliseconds: 300));
+    await _supabaseAuth.sendOtp(phone);
   }
 
   Future<AppUser> verifyOtp({required String phone, required String otp}) async {
-    await Future<void>.delayed(const Duration(milliseconds: 300));
-    if (otp != DemoData.demoOtp) {
-      throw Exception('Invalid demo OTP. Use 123456.');
+    final response = await _supabaseAuth.verifyOtp(phone, otp);
+    if (response.session == null) {
+      throw Exception("Verification failed. No session returned.");
     }
+    return await fetchCurrentUser();
+  }
 
-    final user = DemoData.user;
-    await _storage.saveToken(DemoData.demoToken);
-    await _storage.saveUserInfo(phone: phone, name: user.fullName);
-    return user;
+  Future<AppUser> fetchCurrentUser() async {
+    // Assuming GET /api/v1/app/profile returns the current user profile.
+    // The ApiClient automatically injects the Supabase session token.
+    final res = await _apiClient.get(ApiConfig.userProfile, requireAuth: true);
+    return AppUser.fromJson(res['data'] ?? res);
+  }
+
+  Future<AppUser> updateProfile({
+    required String fullName,
+    required String email,
+    required String panNumber,
+  }) async {
+    await _apiClient.put(
+      ApiConfig.userProfile,
+      data: {
+        'full_name': fullName,
+        'email': email,
+        'pan_number': panNumber,
+      },
+      requireAuth: true,
+    );
+    return await fetchCurrentUser();
   }
 
   Future<AppUser?> getSavedUser() async {
-    final isLoggedIn = await _storage.isLoggedIn();
-    if (!isLoggedIn) return null;
-    return DemoData.user;
+    if (_supabaseAuth.currentSession == null) return null;
+    try {
+      return await fetchCurrentUser();
+    } catch (_) {
+      return null;
+    }
   }
 
-  Future<void> signOut() => _storage.clearAll();
+  Future<void> signOut() async {
+    await _supabaseAuth.signOut();
+  }
 }
+

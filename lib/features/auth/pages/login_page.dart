@@ -1,4 +1,4 @@
-﻿import 'package:flutter/material.dart';
+import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_animate/flutter_animate.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -23,24 +23,33 @@ class _LoginPageState extends ConsumerState<LoginPage> {
     super.dispose();
   }
 
+  bool _isSending = false;
+
   Future<void> _sendOtp() async {
+    if (_isSending) return; // ← Debounce guard
     if (!(_formKey.currentState?.validate() ?? false)) return;
+
+    setState(() => _isSending = true);
     final phone = '+91${_phoneController.text.trim()}';
-    await ref.read(authNotifierProvider.notifier).sendOtp(phone);
-    final authState = ref.read(authNotifierProvider);
-    if (!mounted) return;
-    if (authState.hasError) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text(authState.error.toString()), backgroundColor: AppColors.errorRed),
-      );
-    } else {
-      context.push('/otp', extra: phone);
+    try {
+      await ref.read(authNotifierProvider.notifier).sendOtp(phone);
+      final authState = ref.read(authNotifierProvider);
+      if (!mounted) return;
+      if (authState.hasError) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text(authState.error.toString()), backgroundColor: AppColors.errorRed),
+        );
+      } else {
+        context.push(Uri(path: '/otp', queryParameters: {'phone': phone}).toString());
+      }
+    } finally {
+      if (mounted) setState(() => _isSending = false);
     }
   }
 
   @override
   Widget build(BuildContext context) {
-    final isLoading = ref.watch(authNotifierProvider).isLoading;
+    final isLoading = ref.watch(authNotifierProvider).isLoading || _isSending;
 
     return Scaffold(
       body: SafeArea(

@@ -1,10 +1,17 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:supabase_flutter/supabase_flutter.dart' as supabase;
 import '../data/auth_repository.dart';
 import '../models/user_model.dart';
 
-// True if a valid token exists
+
+// True if a valid token exists AND the backend profile was fetched successfully
 final authStateProvider = FutureProvider<bool>((ref) async {
   final user = await ref.watch(authRepositoryProvider).getSavedUser();
+  if (user == null && supabase.Supabase.instance.client.auth.currentSession != null) {
+    // We have a Supabase session, but the backend fetch failed (e.g. backend down or user deleted).
+    // Sign out locally to wipe the corrupted state and force them back to login.
+    await supabase.Supabase.instance.client.auth.signOut();
+  }
   ref.read(currentUserProvider.notifier).set(user);
   return user != null;
 });
@@ -29,7 +36,18 @@ final authNotifierProvider = NotifierProvider<AuthNotifier, AsyncValue<void>>(Au
 
 class AuthNotifier extends Notifier<AsyncValue<void>> {
   @override
-  AsyncValue<void> build() => const AsyncValue.data(null);
+  AsyncValue<void> build() {
+    // Listen to Supabase auth state changes to auto-refresh session state
+    supabase.Supabase.instance.client.auth.onAuthStateChange.listen((data) {
+      if (data.event == supabase.AuthChangeEvent.signedOut) {
+        ref.read(currentUserProvider.notifier).set(null);
+        ref.invalidate(authStateProvider);
+      } else if (data.event == supabase.AuthChangeEvent.signedIn) {
+        ref.invalidate(authStateProvider);
+      }
+    });
+    return const AsyncValue.data(null);
+  }
 
   AuthRepository get _repo => ref.read(authRepositoryProvider);
 
@@ -48,9 +66,24 @@ class AuthNotifier extends Notifier<AsyncValue<void>> {
     return user;
   }
 
+  Future<void> updateProfile({
+    required String fullName,
+    required String email,
+    required String panNumber,
+  }) async {
+    state = const AsyncValue.loading();
+    state = await AsyncValue.guard(() async {
+      final user = await _repo.updateProfile(
+        fullName: fullName,
+        email: email,
+        panNumber: panNumber,
+      );
+      ref.read(currentUserProvider.notifier).set(user);
+    });
+  }
+
   Future<void> signOut() async {
     await _repo.signOut();
-    ref.read(currentUserProvider.notifier).set(null);
-    ref.invalidate(authStateProvider);
   }
 }
+

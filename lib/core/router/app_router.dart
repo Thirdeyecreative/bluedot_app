@@ -1,6 +1,7 @@
 // ignore_for_file: unnecessary_underscores
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
+import 'package:supabase_flutter/supabase_flutter.dart' as supabase;
 
 import '../../features/auth/providers/auth_provider.dart';
 import '../../features/auth/pages/login_page.dart';
@@ -24,32 +25,63 @@ import '../../features/profile/pages/settings_page.dart';
 import '../../features/profile/pages/edit_profile_page.dart';
 import '../../features/profile/pages/legal_page.dart';
 import '../../features/profile/pages/certificates_page.dart';
+import '../../features/auth/pages/complete_profile_page.dart';
 import '../../features/scanner/pages/green_lens_page.dart';
 
 final routerProvider = Provider<GoRouter>((ref) {
-  final authState = ref.watch(authStateProvider);
-
-  return GoRouter(
+  final router = GoRouter(
     initialLocation: '/splash',
     redirect: (context, state) {
-      final isLoggedIn = authState.value ?? false;
+      // Only consider the user truly "logged in" if we have successfully fetched
+      // their profile from the backend. A Supabase session alone is not enough.
+      final currentUser = ref.read(currentUserProvider);
+      final isLoggedIn = currentUser != null;
+      
       final isSplash = state.matchedLocation == '/splash';
       final isAuth = state.matchedLocation.startsWith('/login') ||
           state.matchedLocation.startsWith('/otp');
+      final isCompleteProfile = state.matchedLocation == '/complete-profile';
 
       if (isSplash) return null;
-      if (!isLoggedIn && !isAuth) return '/login';
-      if (isLoggedIn && isAuth) return '/home';
+      
+      if (!isLoggedIn) {
+        return isAuth ? null : '/login';
+      }
+      
+      // If logged in, check if profile is complete.
+      // currentUser is null when the splash page hasn't fetched it yet — let it through.
+      // fullName is null when the backend created a ghost user with empty name.
+      final needsProfileCompletion = currentUser != null && currentUser.fullName == null;
+      
+      if (needsProfileCompletion) {
+        return isCompleteProfile ? null : '/complete-profile';
+      }
+      
+      // If logged in and profile is complete, don't let them stay on auth pages or complete-profile
+      if (isAuth || isCompleteProfile) return '/home';
+      
       return null;
     },
     routes: [
-      GoRoute(path: '/splash', builder: (__, _) => const SplashPage()),
-      GoRoute(path: '/login', builder: (__, _) => const LoginPage()),
+      GoRoute(
+        path: '/splash',
+        builder: (context, state) => const SplashPage(),
+      ),
+      GoRoute(
+        path: '/login',
+        builder: (context, state) => const LoginPage(),
+      ),
       GoRoute(
         path: '/otp',
-        builder: (_, state) => OtpPage(phone: state.extra as String),
+        builder: (context, state) {
+          final phone = state.uri.queryParameters['phone'];
+          return OtpPage(phone: phone ?? '');
+        },
       ),
-      // Full-screen routes (no nav shell)
+      GoRoute(
+        path: '/complete-profile',
+        builder: (context, state) => const CompleteProfilePage(),
+      ),
       GoRoute(path: '/scanner', builder: (__, _) => const GreenLensPage()),
       GoRoute(path: '/map', builder: (__, _) => const EcoGardenPage()),
       GoRoute(path: '/notifications', builder: (__, _) => const NotificationsPage()),
@@ -122,4 +154,16 @@ final routerProvider = Provider<GoRouter>((ref) {
       ),
     ],
   );
+
+  // Trigger a router refresh whenever auth state changes
+  ref.listen(authStateProvider, (_, __) {
+    router.refresh();
+  });
+
+  // Also refresh when currentUser changes (e.g. they complete their profile)
+  ref.listen(currentUserProvider, (_, __) {
+    router.refresh();
+  });
+
+  return router;
 });

@@ -23,18 +23,24 @@ class AppUser {
     this.avatarUrl,
   });
 
-  factory AppUser.fromJson(Map<String, dynamic> json) => AppUser(
-        id: json['id'] as String,
-        phone: json['phone'] as String? ?? '',
-        fullName: json['full_name'] as String?,
-        email: json['email'] as String?,
-        city: json['city'] as String?,
-        totalPoints: json['total_points'] as int? ?? 0,
-        level: json['level'] as int? ?? 1,
-        totalDonated: (json['total_donated'] as num?)?.toDouble() ?? 0,
-        treesTagged: json['trees_tagged'] as int? ?? 0,
-        avatarUrl: json['avatar_url'] as String?,
-      );
+  factory AppUser.fromJson(Map<String, dynamic> json) {
+    // The backend stores '' for ghost users to satisfy NOT NULL.
+    // Normalise to null so the router treats it as "profile incomplete".
+    String? _nonEmpty(String? v) => (v == null || v.trim().isEmpty) ? null : v;
+
+    return AppUser(
+      id: json['id'] as String,
+      phone: json['phone'] as String? ?? '',
+      fullName: _nonEmpty(json['full_name'] as String?),
+      email: _nonEmpty(json['email'] as String?),
+      city: _nonEmpty(json['city'] as String?),
+      totalPoints: json['total_impact_points'] as int? ?? json['total_points'] as int? ?? 0,
+      level: json['level'] as int? ?? 1,
+      totalDonated: (json['total_donated'] as num?)?.toDouble() ?? 0,
+      treesTagged: json['trees_tagged'] as int? ?? 0,
+      avatarUrl: json['avatar_url'] as String?,
+    );
+  }
 
   String get levelTitle {
     switch (level) {

@@ -4,6 +4,7 @@ import 'dart:io';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:http/http.dart' as http;
 import 'package:http_parser/http_parser.dart';
+import 'package:supabase_flutter/supabase_flutter.dart';
 import 'storage_service.dart';
 
 final apiClientProvider = Provider<ApiClient>((ref) {
@@ -23,8 +24,10 @@ class ApiClient {
       'Accept': 'application/json',
     };
     if (requireAuth) {
-      final token = await _storage.getToken();
-      if (token != null) headers['Authorization'] = 'Bearer $token';
+      final session = Supabase.instance.client.auth.currentSession;
+      if (session != null) {
+        headers['Authorization'] = 'Bearer ${session.accessToken}';
+      }
     }
     return headers;
   }
@@ -53,6 +56,19 @@ class ApiClient {
     return _handle(res);
   }
 
+  Future<dynamic> put(
+    String url, {
+    dynamic data,
+    bool requireAuth = true,
+  }) async {
+    final res = await _guard(() async => http.put(
+          Uri.parse(url),
+          headers: await _headers(requireAuth: requireAuth),
+          body: data != null ? jsonEncode(data) : null,
+        ));
+    return _handle(res);
+  }
+
   Future<dynamic> delete(
     String url, {
     bool requireAuth = true,
@@ -73,9 +89,9 @@ class ApiClient {
     Duration? timeout,
   }) async {
     final res = await _guard(() async {
-      final token = requireAuth ? await _storage.getToken() : null;
+      final session = requireAuth ? Supabase.instance.client.auth.currentSession : null;
       final request = http.MultipartRequest('POST', Uri.parse(url));
-      if (token != null) request.headers['Authorization'] = 'Bearer $token';
+      if (session != null) request.headers['Authorization'] = 'Bearer ${session.accessToken}';
       request.fields.addAll(fields);
       // All files are sent under the same repeated field name, which FastAPI
       // collects into a `List[UploadFile]`.

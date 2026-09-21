@@ -14,13 +14,16 @@ class ApiConfig {
   ApiConfig._();
 
   // Compile-time flag injected via --dart-define=ENV=...
-  static const String _envName = String.fromEnvironment('ENV', defaultValue: 'local');
+  static const String _envName = String.fromEnvironment(
+    'ENV',
+    defaultValue: 'local',
+  );
 
   static AppEnv get env => switch (_envName) {
-        'production' => AppEnv.production,
-        'staging' => AppEnv.staging,
-        _ => AppEnv.local,
-      };
+    'production' => AppEnv.production,
+    'staging' => AppEnv.staging,
+    _ => AppEnv.local,
+  };
 
   /// Reads exactly like the mental model: true only on a production build.
   static bool get isProduction => env == AppEnv.production;
@@ -31,19 +34,21 @@ class ApiConfig {
     // 127.0.0.1 is used for Windows/Web/iOS simulator.
     // NOTE: If you are using a PHYSICAL Android phone, you must change this to your computer's Wi-Fi IPv4 address (e.g. 'http://192.168.x.x:8000')
     try {
-      if (Platform.isAndroid) return 'http://192.168.1.9:8000'; // Computer's Wi-Fi IP for Physical Phone
+      if (Platform.isAndroid) return 'http://192.168.1.9:8000';
     } catch (_) {}
-    return 'http://192.168.1.9:8000'; // Default to host Wi-Fi IP
+    return 'http://192.168.1.9:8000';
   }
 
-  static const String _stagingUrl = 'https://bluedot-backend-staging-426166329141.asia-south1.run.app';
-  static const String _productionUrl = 'https://bluedot-backend-426166329141.asia-south1.run.app';
+  static const String _stagingUrl =
+      'https://bluedot-backend-staging-426166329141.asia-south1.run.app';
+  static const String _productionUrl =
+      'https://bluedot-backend-426166329141.asia-south1.run.app';
 
   static String get baseUrl => switch (env) {
-        AppEnv.production => _productionUrl,
-        AppEnv.staging => _stagingUrl,
-        AppEnv.local => _localUrl,
-      };
+    AppEnv.production => _productionUrl,
+    AppEnv.staging => _stagingUrl,
+    AppEnv.local => _localUrl,
+  };
 
   static const String _v1 = '/api/v1';
   static String get _app => '$baseUrl$_v1/app';

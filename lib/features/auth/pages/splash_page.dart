@@ -21,9 +21,13 @@ class _SplashPageState extends ConsumerState<SplashPage> {
   }
 
   Future<void> _navigate() async {
-    await Future.delayed(const Duration(milliseconds: 2200));
-    if (!mounted) return;
-    final isLoggedIn = await ref.read(authStateProvider.future);
+    // Run both the animation delay and the network fetch concurrently
+    final authFuture = ref.read(authStateProvider.future);
+    final delayFuture = Future.delayed(const Duration(milliseconds: 2200));
+
+    final results = await Future.wait([authFuture, delayFuture]);
+    final isLoggedIn = results[0] as bool;
+
     if (!mounted) return;
     context.go(isLoggedIn ? '/home' : '/login');
   }
