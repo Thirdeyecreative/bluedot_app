@@ -14,6 +14,8 @@ class SplashPage extends ConsumerStatefulWidget {
 }
 
 class _SplashPageState extends ConsumerState<SplashPage> {
+  bool _hasError = false;
+
   @override
   void initState() {
     super.initState();
@@ -21,15 +23,21 @@ class _SplashPageState extends ConsumerState<SplashPage> {
   }
 
   Future<void> _navigate() async {
-    // Run both the animation delay and the network fetch concurrently
-    final authFuture = ref.read(authStateProvider.future);
-    final delayFuture = Future.delayed(const Duration(milliseconds: 2200));
+    setState(() => _hasError = false);
+    try {
+      // Run both the animation delay and the network fetch concurrently
+      final authFuture = ref.read(authStateProvider.future);
+      final delayFuture = Future.delayed(const Duration(milliseconds: 2200));
 
-    final results = await Future.wait([authFuture, delayFuture]);
-    final isLoggedIn = results[0] as bool;
+      final results = await Future.wait([authFuture, delayFuture]);
+      final isLoggedIn = results[0] as bool;
 
-    if (!mounted) return;
-    context.go(isLoggedIn ? '/home' : '/login');
+      if (!mounted) return;
+      context.go(isLoggedIn ? '/home' : '/login');
+    } catch (e) {
+      if (!mounted) return;
+      setState(() => _hasError = true);
+    }
   }
 
   @override
@@ -58,6 +66,27 @@ class _SplashPageState extends ConsumerState<SplashPage> {
             )
                 .animate()
                 .fadeIn(delay: 700.ms, duration: 600.ms),
+            if (_hasError) ...[
+              const SizedBox(height: 48),
+              const Text(
+                'Cannot connect to servers.\nPlease check your internet.',
+                textAlign: TextAlign.center,
+                style: TextStyle(color: Colors.white, fontSize: 14),
+              ).animate().fadeIn(duration: 400.ms),
+              const SizedBox(height: 16),
+              ElevatedButton.icon(
+                onPressed: () {
+                  ref.invalidate(authStateProvider);
+                  _navigate();
+                },
+                icon: const Icon(Icons.refresh_rounded, color: AppColors.primaryBlue),
+                label: const Text('Retry Connection', style: TextStyle(color: AppColors.primaryBlue, fontWeight: FontWeight.bold)),
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: Colors.white,
+                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+                ),
+              ).animate().fadeIn(duration: 400.ms).slideY(begin: 0.2, end: 0),
+            ],
           ],
         ),
       ),

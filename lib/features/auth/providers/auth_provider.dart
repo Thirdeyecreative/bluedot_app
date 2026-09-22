@@ -8,8 +8,8 @@ import '../models/user_model.dart';
 final authStateProvider = FutureProvider<bool>((ref) async {
   final user = await ref.watch(authRepositoryProvider).getSavedUser();
   if (user == null && supabase.Supabase.instance.client.auth.currentSession != null) {
-    // We have a Supabase session, but the backend fetch failed (e.g. backend down or user deleted).
-    // Sign out locally to wipe the corrupted state and force them back to login.
+    // If the repository specifically returned null (not a network error, but a 401/404),
+    // we sign out to clear the bad session.
     await supabase.Supabase.instance.client.auth.signOut();
   }
   ref.read(currentUserProvider.notifier).set(user);

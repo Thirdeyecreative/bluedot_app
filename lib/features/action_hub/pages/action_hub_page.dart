@@ -346,7 +346,7 @@ class _CampaignFundingCard extends StatelessWidget {
           ),
           if (campaign.description != null) ...[
             const SizedBox(height: 6),
-            Text(campaign.description!, maxLines: 2, overflow: TextOverflow.ellipsis, style: const TextStyle(color: AppColors.textMedium, fontSize: 13, height: 1.4)),
+            Text(_stripHtmlIfNeeded(campaign.description!), maxLines: 2, overflow: TextOverflow.ellipsis, style: const TextStyle(color: AppColors.textMedium, fontSize: 13, height: 1.4)),
           ],
           const SizedBox(height: 18),
           ClipRRect(
@@ -555,4 +555,11 @@ class _Tag extends StatelessWidget {
         decoration: BoxDecoration(color: color.withAlpha(20), borderRadius: BorderRadius.circular(8)),
         child: Text(label, style: TextStyle(color: color, fontSize: 11, fontWeight: FontWeight.w600)),
       );
+}
+
+String _stripHtmlIfNeeded(String text) {
+  // A simple regex to remove HTML tags.
+  final exp = RegExp(r'<[^>]*>', multiLine: true, caseSensitive: true);
+  // Also strip common markdown asterisks if any.
+  return text.replaceAll(exp, '').replaceAll('**', '').trim();
 }

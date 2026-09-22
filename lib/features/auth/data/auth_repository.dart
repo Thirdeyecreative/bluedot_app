@@ -58,8 +58,13 @@ class AuthRepository {
     if (_supabaseAuth.currentSession == null) return null;
     try {
       return await fetchCurrentUser();
-    } catch (_) {
-      return null;
+    } on ApiException catch (e) {
+      if (e.statusCode == 401 || e.statusCode == 404) {
+        return null; // Session invalid or user deleted
+      }
+      rethrow; // Network error or 500 server error
+    } catch (e) {
+      rethrow; // Any other unexpected error
     }
   }
 

@@ -339,7 +339,7 @@ class _BlogCard extends StatelessWidget {
                     if (blog.excerpt != null) ...[
                       const SizedBox(height: 6),
                       Text(
-                        blog.excerpt!,
+                        _stripHtmlIfNeeded(blog.excerpt!),
                         maxLines: 2,
                         overflow: TextOverflow.ellipsis,
                         style: const TextStyle(fontSize: 12, color: AppColors.textMedium),
@@ -366,5 +366,10 @@ class _BlogCard extends StatelessWidget {
       ),
     );
   }
+}
+
+String _stripHtmlIfNeeded(String text) {
+  final exp = RegExp(r'<[^>]*>', multiLine: true, caseSensitive: true);
+  return text.replaceAll(exp, '').replaceAll('**', '').trim();
 }
 
