@@ -24,6 +24,11 @@ class MainNavigationShell extends StatelessWidget {
     return Scaffold(
       extendBody: true,
       body: child,
+      floatingActionButton: GestureDetector(
+        onTap: () => context.push('/scanner'),
+        child: const _PulsingScanFab(),
+      ),
+      floatingActionButtonLocation: FloatingActionButtonLocation.centerDocked,
       bottomNavigationBar: _BlueDotNavBar(currentIndex: index),
     );
   }
@@ -42,70 +47,50 @@ class _BlueDotNavBar extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return SafeArea(
-      top: false,
-      minimum: const EdgeInsets.fromLTRB(20, 0, 20, 16),
-      child: Container(
-        height: 68,
-        clipBehavior: Clip.none,
-        decoration: BoxDecoration(
-          color: AppColors.forestGreen,
-          borderRadius: BorderRadius.circular(32),
-          boxShadow: [
-            BoxShadow(
-              color: AppColors.forestGreen.withAlpha(90),
-              blurRadius: 20,
-              offset: const Offset(0, 8),
+    return BottomAppBar(
+      color: AppColors.forestGreen,
+      shape: const CircularNotchedRectangle(),
+      notchMargin: 8,
+      height: 74,
+      padding: EdgeInsets.zero,
+      clipBehavior: Clip.antiAlias,
+      child: Row(
+        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+        children: [
+          Expanded(
+            child: _NavItem(
+              icon: _items[0].icon,
+              label: _items[0].label,
+              selected: currentIndex == 0,
+              onTap: () => context.go(_items[0].route),
             ),
-          ],
-        ),
-        child: Row(
-          children: [
-            Expanded(
-              child: _NavItem(
-                icon: _items[0].icon,
-                label: _items[0].label,
-                selected: currentIndex == 0,
-                onTap: () => context.go(_items[0].route),
-              ),
+          ),
+          Expanded(
+            child: _NavItem(
+              icon: _items[1].icon,
+              label: _items[1].label,
+              selected: currentIndex == 1,
+              onTap: () => context.go(_items[1].route),
             ),
-            Expanded(
-              child: _NavItem(
-                icon: _items[1].icon,
-                label: _items[1].label,
-                selected: currentIndex == 1,
-                onTap: () => context.go(_items[1].route),
-              ),
+          ),
+          const SizedBox(width: 72), // Empty space for the docked FAB notch
+          Expanded(
+            child: _NavItem(
+              icon: _items[2].icon,
+              label: _items[2].label,
+              selected: currentIndex == 2,
+              onTap: () => context.go(_items[2].route),
             ),
-            
-            // Center Docked Scanner FAB
-            GestureDetector(
-              onTap: () => context.push('/scanner'),
-              behavior: HitTestBehavior.opaque,
-              child: Transform.translate(
-                offset: const Offset(0, -18),
-                child: const _PulsingScanFab(),
-              ),
+          ),
+          Expanded(
+            child: _NavItem(
+              icon: _items[3].icon,
+              label: _items[3].label,
+              selected: currentIndex == 3,
+              onTap: () => context.go(_items[3].route),
             ),
-            
-            Expanded(
-              child: _NavItem(
-                icon: _items[2].icon,
-                label: _items[2].label,
-                selected: currentIndex == 2,
-                onTap: () => context.go(_items[2].route),
-              ),
-            ),
-            Expanded(
-              child: _NavItem(
-                icon: _items[3].icon,
-                label: _items[3].label,
-                selected: currentIndex == 3,
-                onTap: () => context.go(_items[3].route),
-              ),
-            ),
-          ],
-        ),
+          ),
+        ],
       ),
     );
   }
@@ -135,37 +120,32 @@ class _NavItem extends StatelessWidget {
                 mainAxisAlignment: MainAxisAlignment.center,
                 mainAxisSize: MainAxisSize.min,
                 children: [
-                  Transform.translate(
-                    offset: const Offset(0, -14),
-                    child: Container(
-                      width: 52,
-                      height: 52,
-                      decoration: BoxDecoration(
-                        color: AppColors.textDark,
-                        shape: BoxShape.circle,
-                        border: Border.all(color: AppColors.backgroundCream, width: 4),
-                        boxShadow: [
-                          BoxShadow(
-                            color: AppColors.textDark.withAlpha(110),
-                            blurRadius: 14,
-                            spreadRadius: 1,
-                          ),
-                        ],
-                      ),
-                      child: Icon(icon, color: AppColors.backgroundCream, size: 26),
-                    ).animate().scaleXY(begin: 0.6, end: 1, curve: Curves.elasticOut, duration: 500.ms),
-                  ),
-                  Transform.translate(
-                    offset: const Offset(0, -10),
-                    child: Text(
-                      label,
-                      style: const TextStyle(
-                        color: Colors.white,
-                        fontSize: 11,
-                        fontWeight: FontWeight.w600,
-                      ),
-                    ).animate().fadeIn(delay: 150.ms, duration: 300.ms),
-                  ),
+                  Container(
+                    width: 44,
+                    height: 44,
+                    decoration: BoxDecoration(
+                      color: AppColors.textDark,
+                      shape: BoxShape.circle,
+                      border: Border.all(color: AppColors.backgroundCream, width: 2),
+                      boxShadow: [
+                        BoxShadow(
+                          color: AppColors.textDark.withAlpha(110),
+                          blurRadius: 10,
+                          spreadRadius: 1,
+                        ),
+                      ],
+                    ),
+                    child: Icon(icon, color: AppColors.backgroundCream, size: 22),
+                  ).animate().scaleXY(begin: 0.6, end: 1, curve: Curves.elasticOut, duration: 500.ms),
+                  const SizedBox(height: 4),
+                  Text(
+                    label,
+                    style: const TextStyle(
+                      color: Colors.white,
+                      fontSize: 10,
+                      fontWeight: FontWeight.w700,
+                    ),
+                  ).animate().fadeIn(delay: 150.ms, duration: 300.ms),
                 ],
               )
             : Icon(icon, color: Colors.white.withAlpha(190), size: 24),
@@ -235,7 +215,7 @@ class _PulsingScanFab extends StatelessWidget {
             child: Container(
               width: 60,
               height: 60,
-              color: Colors.white,
+              color: AppColors.primaryBlue,
               padding: const EdgeInsets.all(8),
               child: Image.asset(
                 AppAssets.greenLensButton,
