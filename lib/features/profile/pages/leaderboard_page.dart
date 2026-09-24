@@ -2,96 +2,102 @@ import 'package:flutter/material.dart' hide Badge;
 import 'package:flutter_animate/flutter_animate.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../core/constants/app_colors.dart';
-import '../../../core/demo/demo_data.dart';
 import '../../auth/providers/auth_provider.dart';
 
-// Extended leaderboard for demo purposes
-const _fullLeaderboard = [
-  {'rank': 1, 'name': 'Aarav Mehta', 'city': 'Mumbai', 'points': 4280, 'trees': 63, 'level': 'Guardian'},
-  {'rank': 2, 'name': 'Nisha Rao', 'city': 'Pune', 'points': 3860, 'trees': 55, 'level': 'Ranger'},
-  {'rank': 3, 'name': 'Avishkar', 'city': 'Mumbai', 'points': 1320, 'trees': 18, 'level': 'Sapling'},
-  {'rank': 4, 'name': 'Priya Malhotra', 'city': 'Delhi', 'points': 980, 'trees': 14, 'level': 'Sapling'},
-  {'rank': 5, 'name': 'Rahul Singh', 'city': 'Bangalore', 'points': 760, 'trees': 11, 'level': 'Sapling'},
-  {'rank': 6, 'name': 'Ananya Iyer', 'city': 'Chennai', 'points': 540, 'trees': 8, 'level': 'Seedling'},
-  {'rank': 7, 'name': 'Dev Patel', 'city': 'Surat', 'points': 420, 'trees': 6, 'level': 'Seedling'},
-  {'rank': 8, 'name': 'Kavya Reddy', 'city': 'Hyderabad', 'points': 310, 'trees': 5, 'level': 'Seedling'},
-  {'rank': 9, 'name': 'Aditya Sharma', 'city': 'Jaipur', 'points': 210, 'trees': 3, 'level': 'Seedling'},
-  {'rank': 10, 'name': 'Meera Das', 'city': 'Kolkata', 'points': 150, 'trees': 2, 'level': 'Seedling'},
-];
+import '../providers/leaderboard_provider.dart';
 
 class LeaderboardPage extends ConsumerWidget {
   const LeaderboardPage({super.key});
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
+    final leaderboardState = ref.watch(leaderboardProvider);
     final currentUser = ref.watch(currentUserProvider);
-    final currentName = currentUser?.fullName ?? DemoData.user.fullName ?? 'You';
-
-    final userEntry = _fullLeaderboard.firstWhere(
-      (e) => (e['name'] as String) == currentName,
-      orElse: () => {'rank': 99, 'name': currentName, 'city': 'Unknown', 'points': currentUser?.totalPoints ?? 0, 'trees': currentUser?.treesTagged ?? 0, 'level': currentUser?.levelTitle ?? 'Seedling'},
-    );
-    final userRank = userEntry['rank'] as int;
-    final aboveUser = userRank > 1
-        ? _fullLeaderboard.firstWhere((e) => (e['rank'] as int) == userRank - 1, orElse: () => _fullLeaderboard.first)
-        : null;
-    final pointsNeeded = aboveUser != null ? ((aboveUser['points'] as int) - (userEntry['points'] as int)) : 0;
 
     return Scaffold(
       backgroundColor: AppColors.primaryBlue,
-      body: Column(
-        children: [
-          // ── Blue header ─────────────────────────────────────────────
-          SafeArea(
-            bottom: false,
-            child: Padding(
-              padding: const EdgeInsets.fromLTRB(16, 8, 16, 0),
-              child: Column(
-                children: [
-                  Row(
+      body: leaderboardState.when(
+        loading: () => const Center(child: CircularProgressIndicator(color: Colors.white)),
+        error: (err, stack) => Center(child: Text('Error: $err', style: const TextStyle(color: Colors.white))),
+        data: (leaderboardData) {
+          // Use the `is_current_user` flag from the API — not fragile name matching
+          final userEntry = leaderboardData.firstWhere(
+            (e) => e['is_current_user'] == true,
+            orElse: () => {
+              'rank': 0, 'name': currentUser?.fullName ?? 'You',
+              'city': currentUser?.city ?? 'Unknown',
+              'points': currentUser?.totalPoints ?? 0,
+              'trees': currentUser?.treesTagged ?? 0,
+              'level': currentUser?.levelTitle ?? 'Seedling',
+              'is_current_user': true,
+            },
+          );
+          final userRank = (userEntry['rank'] as num?)?.toInt() ?? 0;
+          final aboveUser = userRank > 1
+              ? leaderboardData.cast<Map<String, dynamic>?>().firstWhere(
+                  (e) => (e?['rank'] as num?)?.toInt() == userRank - 1,
+                  orElse: () => leaderboardData.isNotEmpty ? leaderboardData.first : null,
+                )
+              : null;
+          final userPoints = (userEntry['points'] as num?)?.toInt() ?? 0;
+          final abovePoints = (aboveUser?['points'] as num?)?.toInt() ?? 0;
+          final pointsNeeded = aboveUser != null ? (abovePoints - userPoints) : 0;
+
+          return Column(
+            children: [
+              // ── Blue header ─────────────────────────────────────────────
+              SafeArea(
+                bottom: false,
+                child: Padding(
+                  padding: const EdgeInsets.fromLTRB(16, 8, 16, 0),
+                  child: Column(
                     children: [
-                      IconButton(
-                        icon: const Icon(Icons.arrow_back_rounded, color: Colors.white),
-                        onPressed: () => Navigator.pop(context),
+                      Row(
+                        children: [
+                          IconButton(
+                            icon: const Icon(Icons.arrow_back_rounded, color: Colors.white),
+                            onPressed: () => Navigator.pop(context),
+                          ),
+                          const Expanded(
+                            child: Text(
+                              'Leaderboard',
+                              textAlign: TextAlign.center,
+                              style: TextStyle(color: Colors.white, fontSize: 18, fontWeight: FontWeight.w700),
+                            ),
+                          ),
+                          const SizedBox(width: 48),
+                        ],
                       ),
-                      const Expanded(
-                        child: Text(
-                          'Leaderboard',
-                          textAlign: TextAlign.center,
-                          style: TextStyle(color: Colors.white, fontSize: 18, fontWeight: FontWeight.w700),
-                        ),
-                      ),
-                      const SizedBox(width: 48),
+                      const SizedBox(height: 24),
+
+                      // ── Podium (top 3) ──────────────────────────────────
+                      _Podium(entries: leaderboardData.take(3).toList()),
+                      const SizedBox(height: 8),
                     ],
                   ),
-                  const SizedBox(height: 24),
-
-                  // ── Podium (top 3) ──────────────────────────────────
-                  _Podium(entries: _fullLeaderboard.take(3).toList(), currentName: currentName),
-                  const SizedBox(height: 8),
-                ],
+                ),
               ),
-            ),
-          ),
 
-          // ── Scrollable list (rank 4+) ────────────────────────────────
-          Expanded(
-            child: Container(
-              decoration: const BoxDecoration(
-                color: AppColors.backgroundCream,
-                borderRadius: BorderRadius.vertical(top: Radius.circular(28)),
+              // ── Scrollable list (rank 4+) ────────────────────────────────
+              Expanded(
+                child: Container(
+                  decoration: const BoxDecoration(
+                    color: AppColors.backgroundCream,
+                    borderRadius: BorderRadius.vertical(top: Radius.circular(28)),
+                  ),
+                  child: _LeaderList(entries: leaderboardData.skip(3).toList()),
+                ),
               ),
-              child: _LeaderList(entries: _fullLeaderboard.skip(3).toList(), currentName: currentName),
-            ),
-          ),
 
-          // ── Sticky current user banner ──────────────────────────────
-          _CurrentUserBanner(
-            entry: userEntry,
-            pointsNeeded: pointsNeeded,
-            aboveName: aboveUser?['name'] as String?,
-          ),
-        ],
+              // ── Sticky current user banner ──────────────────────────────
+              _CurrentUserBanner(
+                entry: userEntry,
+                pointsNeeded: pointsNeeded,
+                aboveName: aboveUser?['name'] as String?,
+              ),
+            ],
+          );
+        },
       ),
     );
   }
@@ -101,8 +107,7 @@ class LeaderboardPage extends ConsumerWidget {
 
 class _Podium extends StatelessWidget {
   final List<Map<String, dynamic>> entries;
-  final String currentName;
-  const _Podium({required this.entries, required this.currentName});
+  const _Podium({required this.entries});
 
   @override
   Widget build(BuildContext context) {
@@ -116,15 +121,15 @@ class _Podium extends StatelessWidget {
       mainAxisAlignment: MainAxisAlignment.center,
       children: [
         // 2nd place (left, shorter)
-        _PodiumSlot(entry: second, height: 90, medalColor: const Color(0xFFB0B7C3), rank: 2, isCurrentUser: (second['name'] as String) == currentName)
+        _PodiumSlot(entry: second, height: 90, medalColor: const Color(0xFFB0B7C3), rank: 2, isCurrentUser: second['is_current_user'] == true)
             .animate().fadeIn(delay: 200.ms).slideY(begin: 0.3, end: 0, delay: 200.ms),
         const SizedBox(width: 12),
         // 1st place (center, tallest)
-        _PodiumSlot(entry: first, height: 120, medalColor: AppColors.primaryYellow, rank: 1, isCurrentUser: (first['name'] as String) == currentName)
+        _PodiumSlot(entry: first, height: 120, medalColor: AppColors.primaryYellow, rank: 1, isCurrentUser: first['is_current_user'] == true)
             .animate().fadeIn(delay: 100.ms).slideY(begin: 0.3, end: 0, delay: 100.ms),
         const SizedBox(width: 12),
         // 3rd place (right, shortest)
-        _PodiumSlot(entry: third, height: 72, medalColor: const Color(0xFFCD7F32), rank: 3, isCurrentUser: (third['name'] as String) == currentName)
+        _PodiumSlot(entry: third, height: 72, medalColor: const Color(0xFFCD7F32), rank: 3, isCurrentUser: third['is_current_user'] == true)
             .animate().fadeIn(delay: 300.ms).slideY(begin: 0.3, end: 0, delay: 300.ms),
       ],
     );
@@ -210,8 +215,7 @@ class _PodiumSlot extends StatelessWidget {
 
 class _LeaderList extends StatelessWidget {
   final List<Map<String, dynamic>> entries;
-  final String currentName;
-  const _LeaderList({required this.entries, required this.currentName});
+  const _LeaderList({required this.entries});
 
   @override
   Widget build(BuildContext context) {
@@ -228,7 +232,7 @@ class _LeaderList extends StatelessWidget {
       itemCount: entries.length,
       itemBuilder: (_, i) {
         final e = entries[i];
-        final isMe = (e['name'] as String) == currentName;
+        final isMe = e['is_current_user'] == true;
         return _LeaderRow(entry: e, isCurrentUser: isMe)
             .animate()
             .fadeIn(delay: (60 * i).ms)
@@ -245,11 +249,11 @@ class _LeaderRow extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final rank = entry['rank'] as int;
-    final name = entry['name'] as String;
+    final rank = (entry['rank'] as num?)?.toInt() ?? 0;
+    final name = entry['name'] as String? ?? 'Anonymous';
     final level = entry['level'] as String? ?? '';
-    final points = entry['points'] as int;
-    final trees = entry['trees'] as int;
+    final points = (entry['points'] as num?)?.toInt() ?? 0;
+    final trees = (entry['trees'] as num?)?.toInt() ?? 0;
 
     return Container(
       margin: const EdgeInsets.only(bottom: 10),
