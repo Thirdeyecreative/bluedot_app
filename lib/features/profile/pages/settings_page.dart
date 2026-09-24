@@ -321,6 +321,15 @@ class _PanManagementSheetState extends ConsumerState<_PanManagementSheet> {
                           return;
                         }
 
+                        // Strict Indian PAN format regex check
+                        final panRegex = RegExp(r'^[A-Z]{5}[0-9]{4}[A-Z]$');
+                        if (!panRegex.hasMatch(pan.toUpperCase())) {
+                          ScaffoldMessenger.of(context).showSnackBar(
+                            const SnackBar(content: Text('Enter a valid PAN (e.g. ABCDE1234F)'), backgroundColor: AppColors.errorRed),
+                          );
+                          return;
+                        }
+
                         setState(() => _isLoading = true);
                         try {
                           final user = ref.read(currentUserProvider);
