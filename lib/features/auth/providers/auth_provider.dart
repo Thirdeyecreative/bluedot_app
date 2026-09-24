@@ -85,5 +85,15 @@ class AuthNotifier extends Notifier<AsyncValue<void>> {
   Future<void> signOut() async {
     await _repo.signOut();
   }
+
+  Future<void> deleteAccount() async {
+    state = const AsyncValue.loading();
+    state = await AsyncValue.guard(() async {
+      await _repo.deleteProfile();
+      // On success, the repository clears local auth session and Supabase auth,
+      // which triggers the Supabase onAuthStateChange listener above,
+      // invalidating state and routing the user to login automatically.
+    });
+  }
 }
 

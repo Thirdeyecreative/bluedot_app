@@ -145,7 +145,7 @@ class SettingsPage extends ConsumerWidget {
           Padding(
             padding: const EdgeInsets.fromLTRB(16, 0, 16, 32),
             child: OutlinedButton.icon(
-              onPressed: () => _confirmDeleteAccount(context),
+              onPressed: () => _confirmDeleteAccount(context, ref),
               icon: const Icon(Icons.delete_forever_rounded, color: AppColors.errorRed),
               label: const Text('Delete Account', style: TextStyle(color: AppColors.errorRed, fontWeight: FontWeight.w600)),
               style: OutlinedButton.styleFrom(
@@ -199,16 +199,34 @@ class SettingsPage extends ConsumerWidget {
     );
   }
 
-  void _confirmDeleteAccount(BuildContext context) {
+  void _confirmDeleteAccount(BuildContext context, WidgetRef ref) {
     showDialog(
       context: context,
       builder: (_) => AlertDialog(
         title: const Text('Delete Account?', style: TextStyle(fontWeight: FontWeight.w700, color: AppColors.errorRed)),
-        content: const Text('This will permanently delete all your data, scans, and badges. This action cannot be undone.'),
+        content: const Text('This will permanently delete all your data, scans, and badges. Your tax receipts and impact points will be anonymized. This action cannot be undone.'),
         actions: [
           TextButton(onPressed: () => Navigator.pop(context), child: const Text('Cancel')),
           ElevatedButton(
-            onPressed: () => Navigator.pop(context),
+            onPressed: () async {
+              Navigator.pop(context);
+              
+              if (!context.mounted) return;
+              ScaffoldMessenger.of(context).showSnackBar(
+                const SnackBar(content: Text('Deleting account...'), duration: Duration(seconds: 1)),
+              );
+
+              try {
+                await ref.read(authNotifierProvider.notifier).deleteAccount();
+                if (context.mounted) context.go('/login');
+              } catch (e) {
+                if (context.mounted) {
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    SnackBar(content: Text('Failed to delete account: $e'), backgroundColor: AppColors.errorRed),
+                  );
+                }
+              }
+            },
             style: ElevatedButton.styleFrom(backgroundColor: AppColors.errorRed),
             child: const Text('Delete'),
           ),

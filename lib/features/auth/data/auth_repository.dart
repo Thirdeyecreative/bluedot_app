@@ -71,5 +71,10 @@ class AuthRepository {
   Future<void> signOut() async {
     await _supabaseAuth.signOut();
   }
+
+  Future<void> deleteProfile() async {
+    await _apiClient.delete(ApiConfig.userProfile, requireAuth: true);
+    await signOut(); // Clear local session after backend confirms deletion
+  }
 }
 
