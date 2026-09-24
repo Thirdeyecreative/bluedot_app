@@ -9,6 +9,7 @@ class AppUser {
   final double totalDonated;
   final int treesTagged;
   final String? avatarUrl;
+  final String? panNumber;
 
   const AppUser({
     required this.id,
@@ -21,6 +22,7 @@ class AppUser {
     this.totalDonated = 0,
     this.treesTagged = 0,
     this.avatarUrl,
+    this.panNumber,
   });
 
   factory AppUser.fromJson(Map<String, dynamic> json) {
@@ -39,6 +41,7 @@ class AppUser {
       totalDonated: (json['total_donated'] as num?)?.toDouble() ?? 0,
       treesTagged: json['trees_tagged'] as int? ?? 0,
       avatarUrl: json['avatar_url'] as String?,
+      panNumber: _nonEmpty(json['pan_number'] as String?),
     );
   }
 
@@ -68,6 +71,7 @@ class AppUser {
     String? email,
     String? city,
     String? avatarUrl,
+    String? panNumber,
   }) =>
       AppUser(
         id: id,
@@ -80,5 +84,6 @@ class AppUser {
         totalDonated: totalDonated,
         treesTagged: treesTagged,
         avatarUrl: avatarUrl ?? this.avatarUrl,
+        panNumber: panNumber ?? this.panNumber,
       );
 }

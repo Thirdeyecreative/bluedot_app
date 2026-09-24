@@ -220,17 +220,27 @@ class SettingsPage extends ConsumerWidget {
 
 // ── PAN Management Sheet ──────────────────────────────────────────────────────
 
-class _PanManagementSheet extends StatefulWidget {
+class _PanManagementSheet extends ConsumerStatefulWidget {
   const _PanManagementSheet();
 
   @override
-  State<_PanManagementSheet> createState() => _PanManagementSheetState();
+  ConsumerState<_PanManagementSheet> createState() => _PanManagementSheetState();
 }
 
-class _PanManagementSheetState extends State<_PanManagementSheet> {
+class _PanManagementSheetState extends ConsumerState<_PanManagementSheet> {
   final _panCtrl = TextEditingController();
   bool _obscure = true;
   bool _saved = false;
+  bool _isLoading = false;
+
+  @override
+  void initState() {
+    super.initState();
+    final user = ref.read(currentUserProvider);
+    if (user?.panNumber != null) {
+      _panCtrl.text = user!.panNumber!;
+    }
+  }
 
   @override
   void dispose() {
@@ -300,16 +310,54 @@ class _PanManagementSheetState extends State<_PanManagementSheet> {
               width: double.infinity,
               height: 52,
               child: ElevatedButton.icon(
-                onPressed: () {
-                  setState(() => _saved = true);
-                  Future.delayed(1500.ms, () {
-                    if (!mounted) return;
-                    // ignore: use_build_context_synchronously
-                    Navigator.pop(context);
-                  });
-                },
-                icon: const Icon(Icons.save_rounded),
-                label: const Text('Save PAN Securely'),
+                onPressed: _isLoading
+                    ? null
+                    : () async {
+                        final pan = _panCtrl.text.trim();
+                        if (pan.isEmpty) {
+                          ScaffoldMessenger.of(context).showSnackBar(
+                            const SnackBar(content: Text('Please enter a PAN number'), backgroundColor: AppColors.errorRed),
+                          );
+                          return;
+                        }
+
+                        setState(() => _isLoading = true);
+                        try {
+                          final user = ref.read(currentUserProvider);
+                          if (user == null) throw Exception("User not found");
+
+                          await ref.read(authNotifierProvider.notifier).updateProfile(
+                                fullName: user.fullName ?? '',
+                                email: user.email ?? '',
+                                panNumber: pan,
+                              );
+
+                          if (!mounted) return;
+                          setState(() {
+                            _isLoading = false;
+                            _saved = true;
+                          });
+
+                          Future.delayed(1500.ms, () {
+                            if (!mounted) return;
+                            Navigator.pop(context);
+                          });
+                        } catch (e) {
+                          if (!mounted) return;
+                          setState(() => _isLoading = false);
+                          ScaffoldMessenger.of(context).showSnackBar(
+                            SnackBar(content: Text('Failed to save PAN: $e'), backgroundColor: AppColors.errorRed),
+                          );
+                        }
+                      },
+                icon: _isLoading
+                    ? const SizedBox(
+                        width: 20,
+                        height: 20,
+                        child: CircularProgressIndicator(color: Colors.white, strokeWidth: 2),
+                      )
+                    : const Icon(Icons.save_rounded),
+                label: Text(_isLoading ? 'Saving...' : 'Save PAN Securely'),
                 style: ElevatedButton.styleFrom(shape: const StadiumBorder()),
               ),
             ),

@@ -24,10 +24,10 @@ class CurrentUserNotifier extends Notifier<AppUser?> {
   AppUser? build() => null;
   void set(AppUser? user) => state = user;
 
-  void update({String? fullName, String? email, String? city}) {
+  void update({String? fullName, String? email, String? city, String? panNumber}) {
     final current = state;
     if (current == null) return;
-    state = current.copyWith(fullName: fullName, email: email, city: city);
+    state = current.copyWith(fullName: fullName, email: email, city: city, panNumber: panNumber);
   }
 }
 
