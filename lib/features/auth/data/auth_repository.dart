@@ -54,6 +54,17 @@ class AuthRepository {
     return await fetchCurrentUser();
   }
 
+  Future<AppUser> updatePreferences(Map<String, dynamic> preferences) async {
+    await _apiClient.put(
+      ApiConfig.userProfile,
+      data: {
+        'preferences': preferences,
+      },
+      requireAuth: true,
+    );
+    return await fetchCurrentUser();
+  }
+
   Future<AppUser?> getSavedUser() async {
     if (_supabaseAuth.currentSession == null) return null;
     try {

@@ -82,6 +82,14 @@ class AuthNotifier extends Notifier<AsyncValue<void>> {
     });
   }
 
+  Future<void> updatePreferences(Map<String, dynamic> preferences) async {
+    state = const AsyncValue.loading();
+    state = await AsyncValue.guard(() async {
+      final user = await _repo.updatePreferences(preferences);
+      ref.read(currentUserProvider.notifier).set(user);
+    });
+  }
+
   Future<void> signOut() async {
     await _repo.signOut();
   }

@@ -10,6 +10,7 @@ class AppUser {
   final int treesTagged;
   final String? avatarUrl;
   final String? panNumber;
+  final Map<String, dynamic>? preferences;
 
   const AppUser({
     required this.id,
@@ -23,6 +24,7 @@ class AppUser {
     this.treesTagged = 0,
     this.avatarUrl,
     this.panNumber,
+    this.preferences,
   });
 
   factory AppUser.fromJson(Map<String, dynamic> json) {
@@ -42,6 +44,7 @@ class AppUser {
       treesTagged: json['trees_tagged'] as int? ?? 0,
       avatarUrl: json['avatar_url'] as String?,
       panNumber: _nonEmpty(json['pan_number'] as String?),
+      preferences: json['preferences'] as Map<String, dynamic>?,
     );
   }
 
@@ -72,6 +75,7 @@ class AppUser {
     String? city,
     String? avatarUrl,
     String? panNumber,
+    Map<String, dynamic>? preferences,
   }) =>
       AppUser(
         id: id,
@@ -85,5 +89,6 @@ class AppUser {
         treesTagged: treesTagged,
         avatarUrl: avatarUrl ?? this.avatarUrl,
         panNumber: panNumber ?? this.panNumber,
+        preferences: preferences ?? this.preferences,
       );
 }

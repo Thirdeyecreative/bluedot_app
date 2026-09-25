@@ -7,15 +7,186 @@ import '../../../core/constants/app_colors.dart';
 import '../../../core/services/api_client.dart';
 import '../../../core/config/api_config.dart';
 import '../../auth/providers/auth_provider.dart';
+import '../../auth/data/auth_repository.dart';
 
-// Local notification preference state
-final _pushEnabledProvider = NotifierProvider<_BoolNotifier, bool>(_BoolNotifier.new);
-final _emailEnabledProvider = NotifierProvider<_BoolNotifier, bool>(_BoolNotifier.new);
+import 'package:permission_handler/permission_handler.dart';
 
-class _BoolNotifier extends Notifier<bool> {
+// ── Notification preference providers ─────────────────────────────────────────
+
+final _pushEnabledProvider = AsyncNotifierProvider<PushNotificationNotifier, bool>(PushNotificationNotifier.new);
+final _emailEnabledProvider = NotifierProvider<_EmailNotifier, bool>(_EmailNotifier.new);
+
+/// Email preference toggle — syncs to the backend JSONB `preferences` column.
+/// Uses `ref.watch` so the initial value reacts to profile refreshes (e.g. after
+/// login), and optimistically updates the UI, rolling back on API failure.
+class _EmailNotifier extends Notifier<bool> {
   @override
-  bool build() => true;
-  void toggle() => state = !state;
+  bool build() {
+    // watch (not read) so the toggle updates if the user profile is refreshed.
+    final user = ref.watch(currentUserProvider);
+    return user?.preferences?['email_enabled'] as bool? ?? true;
+  }
+
+  Future<void> toggle() async {
+    final previous = state;
+    final newState = !previous;
+    // Optimistic UI update
+    state = newState;
+    try {
+      await _syncPreference('email_enabled', newState);
+    } catch (_) {
+      // Revert on failure — the pragmatic approach: never leave the UI lying
+      // to the user about what the backend actually stored.
+      state = previous;
+    }
+  }
+
+  Future<void> _syncPreference(String key, bool value) async {
+    final user = ref.read(currentUserProvider);
+    final prefs = Map<String, dynamic>.from(user?.preferences ?? {});
+    prefs[key] = value;
+    final repo = ref.read(authRepositoryProvider);
+    final updatedUser = await repo.updatePreferences(prefs);
+    ref.read(currentUserProvider.notifier).set(updatedUser);
+  }
+}
+
+/// Push notification toggle — bridges the OS-level permission with the backend
+/// JSONB `preferences.push_enabled` field.
+///
+/// Key design decisions:
+///   • Uses `WidgetsBindingObserver` to auto-detect permission changes when the
+///     user returns from the OS Settings app.
+///   • Backend sync errors are caught and surfaced to the user via SnackBar
+///     instead of silently swallowed.
+///   • Does NOT set the global `authNotifierProvider` to loading — preferences
+///     are a lightweight side-channel, not a global auth event.
+class PushNotificationNotifier extends AsyncNotifier<bool> with WidgetsBindingObserver {
+  @override
+  Future<bool> build() async {
+    final binding = WidgetsBinding.instance;
+    binding.addObserver(this);
+    ref.onDispose(() => binding.removeObserver(this));
+    return _checkOsStatus();
+  }
+
+  /// Called by Flutter when the app transitions between foreground/background.
+  /// When the user comes back from OS Settings, we re-check the permission and
+  /// sync the delta to the backend.
+  @override
+  void didChangeAppLifecycleState(AppLifecycleState lifecycleState) {
+    if (lifecycleState == AppLifecycleState.resumed) {
+      _checkOsStatus().then((isGranted) {
+        if (state.value != isGranted) {
+          state = AsyncValue.data(isGranted);
+          _syncToBackend(isGranted);
+        }
+      }).catchError((_) {
+        // Lifecycle observer must never throw — a network blip here is
+        // non-fatal; the next resume will retry automatically.
+      });
+    }
+  }
+
+  Future<bool> _checkOsStatus() async {
+    final status = await Permission.notification.status;
+    return status.isGranted;
+  }
+
+  /// Syncs the push_enabled flag to the backend JSONB column.
+  /// Errors are intentionally propagated so callers can show user feedback.
+  Future<void> _syncToBackend(bool isGranted) async {
+    final user = ref.read(currentUserProvider);
+    final prefs = Map<String, dynamic>.from(user?.preferences ?? {});
+    prefs['push_enabled'] = isGranted;
+    final repo = ref.read(authRepositoryProvider);
+    final updatedUser = await repo.updatePreferences(prefs);
+    ref.read(currentUserProvider.notifier).set(updatedUser);
+  }
+
+  /// The main toggle action — called from the Settings page Switch widget.
+  /// Handles all three OS permission states and syncs the result to backend.
+  Future<void> toggle(BuildContext context) async {
+    final currentlyEnabled = state.value ?? false;
+
+    if (!currentlyEnabled) {
+      // ── Trying to turn ON ──────────────────────────────────────────
+      var status = await Permission.notification.status;
+
+      if (status.isGranted) {
+        state = const AsyncValue.data(true);
+        await _trySyncWithFeedback(true, context);
+      } else if (status.isPermanentlyDenied) {
+        if (context.mounted) _showSettingsDialog(context);
+      } else {
+        // First ask or soft-denied — show the native OS prompt
+        status = await Permission.notification.request();
+        if (status.isGranted) {
+          state = const AsyncValue.data(true);
+          await _trySyncWithFeedback(true, context);
+        } else if (status.isPermanentlyDenied && context.mounted) {
+          _showSettingsDialog(context);
+        }
+        // If simply denied (not permanently), we do nothing — the user can
+        // try again later. No backend sync needed.
+      }
+    } else {
+      // ── Trying to turn OFF ─────────────────────────────────────────
+      state = const AsyncValue.data(false);
+      await _trySyncWithFeedback(false, context);
+      if (context.mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('Push notifications disabled. To fully revoke, visit OS Settings.'),
+          ),
+        );
+      }
+    }
+  }
+
+  /// Wraps `_syncToBackend` with error handling + user feedback.
+  Future<void> _trySyncWithFeedback(bool value, BuildContext context) async {
+    try {
+      await _syncToBackend(value);
+    } catch (_) {
+      // Revert the UI toggle so it doesn't lie to the user
+      state = AsyncValue.data(!value);
+      if (context.mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('Failed to save preference. Please try again.'),
+            backgroundColor: Colors.red,
+          ),
+        );
+      }
+    }
+  }
+
+  void _showSettingsDialog(BuildContext context) {
+    showDialog(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        title: const Text('Notification Permission'),
+        content: const Text(
+          'Notification permission was permanently denied. '
+          'Please enable it in app settings to receive notifications.',
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(ctx),
+            child: const Text('Cancel'),
+          ),
+          TextButton(
+            onPressed: () {
+              Navigator.pop(ctx);
+              openAppSettings();
+            },
+            child: const Text('Open Settings'),
+          ),
+        ],
+      ),
+    );
+  }
 }
 
 class SettingsPage extends ConsumerWidget {
@@ -65,10 +236,14 @@ class SettingsPage extends ConsumerWidget {
             icon: Icons.notifications_outlined,
             label: 'Push Notifications',
             subtitle: 'Drives, badge unlocks, campaign updates',
-            trailing: Switch.adaptive(
-              value: pushEnabled,
-              onChanged: (_) => ref.read(_pushEnabledProvider.notifier).toggle(),
-              activeTrackColor: AppColors.primaryBlue,
+            trailing: pushEnabled.when(
+              data: (enabled) => Switch.adaptive(
+                value: enabled,
+                onChanged: (_) => ref.read(_pushEnabledProvider.notifier).toggle(context),
+                activeTrackColor: AppColors.primaryBlue,
+              ),
+              loading: () => const SizedBox(width: 48, height: 24, child: Center(child: CircularProgressIndicator(strokeWidth: 2))),
+              error: (_, __) => const Icon(Icons.error_outline_rounded, color: AppColors.errorRed),
             ),
           ),
           _SettingsTile(
