@@ -102,19 +102,18 @@ class _EcoGardenPageState extends ConsumerState<EcoGardenPage> {
               onTap: (_, _) => setState(() => _selectedMarkerIndex = null),
             ),
             children: [
-              // CartoDB Positron — clean, minimal tile style
+              // OpenStreetMap default tiles (Free, no API key required)
+              // Note: CartoDB recently started requiring API keys for their basemaps.
               TileLayer(
-                urlTemplate: 'https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png',
-                subdomains: const ['a', 'b', 'c', 'd'],
+                urlTemplate: 'https://tile.openstreetmap.org/{z}/{x}/{y}.png',
                 userAgentPackageName: 'com.bluedot.app',
-                retinaMode: RetinaMode.isHighDensity(context),
               ),
 
               // Tagged tree markers (blue pins) -- real tagged trees in and
               // around Bangalore, fetched from the backend.
               if (_showTrees)
                 MarkerLayer(
-                  markers: trees.asMap().entries.map((entry) {
+                  markers: trees.asMap().entries.where((e) => e.value.hasLocation).map((entry) {
                     final i = entry.key;
                     final tree = entry.value;
                     final isSelected = _selectedMarkerIndex == i;
