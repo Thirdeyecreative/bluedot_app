@@ -1,4 +1,5 @@
 // ignore_for_file: unnecessary_underscores
+import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:supabase_flutter/supabase_flutter.dart' as supabase;
@@ -15,6 +16,7 @@ import '../../features/action_hub/pages/action_hub_page.dart';
 import '../../features/action_hub/pages/event_detail_page.dart';
 import '../../features/action_hub/pages/event_checkin_page.dart';
 import '../../features/action_hub/pages/suggest_site_page.dart';
+import '../../features/action_hub/pages/campaign_detail_page.dart';
 import '../../features/directory/pages/directory_page.dart';
 import '../../features/directory/pages/species_detail_page.dart';
 import '../../features/map/pages/eco_garden_page.dart';
@@ -28,8 +30,11 @@ import '../../features/profile/pages/certificates_page.dart';
 import '../../features/auth/pages/complete_profile_page.dart';
 import '../../features/scanner/pages/green_lens_page.dart';
 
+final _rootNavigatorKey = GlobalKey<NavigatorState>();
+
 final routerProvider = Provider<GoRouter>((ref) {
   final router = GoRouter(
+    navigatorKey: _rootNavigatorKey,
     initialLocation: '/splash',
     redirect: (context, state) {
       // Only consider the user truly "logged in" if we have successfully fetched
@@ -103,6 +108,10 @@ final routerProvider = Provider<GoRouter>((ref) {
             path: '/action-hub',
             builder: (__, _) => const ActionHubPage(),
             routes: [
+              GoRoute(
+                path: 'campaign/:id',
+                builder: (_, state) => CampaignDetailPage(campaignId: state.pathParameters['id']!),
+              ),
               GoRoute(
                 path: 'event/:id',
                 builder: (_, state) => EventDetailPage(eventId: state.pathParameters['id']!),

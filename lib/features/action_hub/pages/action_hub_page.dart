@@ -41,29 +41,7 @@ class _ActionHubPageState extends ConsumerState<ActionHubPage> with SingleTicker
             floating: true,
             snap: true,
             title: Text('Action Hub', style: Theme.of(context).textTheme.titleLarge?.copyWith(fontWeight: FontWeight.w700)),
-            actions: [
-              Padding(
-                padding: const EdgeInsets.only(right: 16),
-                child: GestureDetector(
-                  onTap: () => context.push('/action-hub/suggest-site'),
-                  child: Container(
-                    padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 7),
-                    decoration: BoxDecoration(
-                      color: AppColors.forestGreen.withAlpha(20),
-                      borderRadius: BorderRadius.circular(20),
-                      border: Border.all(color: AppColors.forestGreen.withAlpha(60)),
-                    ),
-                    child: const Row(
-                      children: [
-                        Icon(Icons.add_location_alt_rounded, color: AppColors.forestGreen, size: 16),
-                        SizedBox(width: 6),
-                        Text('Suggest Site', style: TextStyle(color: AppColors.forestGreen, fontWeight: FontWeight.w600, fontSize: 13)),
-                      ],
-                    ),
-                  ),
-                ),
-              ),
-            ],
+            actions: const [],
             bottom: TabBar(
               controller: _tab,
               labelColor: AppColors.primaryBlue,
@@ -303,7 +281,9 @@ class _CampaignFundingCard extends StatelessWidget {
     final pct = campaign.progressPercent;
     final isNearlyFunded = pct >= 0.75;
 
-    return Container(
+    return GestureDetector(
+      onTap: () => context.push('/action-hub/campaign/${campaign.id}'),
+      child: Container(
       margin: const EdgeInsets.only(bottom: 14),
       decoration: BoxDecoration(
         color: AppColors.surfaceCard,
@@ -370,32 +350,23 @@ class _CampaignFundingCard extends StatelessWidget {
             ],
           ),
           const SizedBox(height: 18),
-          Row(
-            children: [
-              for (final amount in [500, 1000, 2500])
-                Expanded(
-                  child: Padding(
-                    padding: const EdgeInsets.only(right: 8),
-                    child: OutlinedButton(
-                      onPressed: () => _showDonation(context, amount),
-                      style: OutlinedButton.styleFrom(
-                        minimumSize: const Size(0, 40),
-                        padding: EdgeInsets.zero,
-                        textStyle: const TextStyle(fontSize: 13, fontWeight: FontWeight.w700),
-                        side: const BorderSide(color: AppColors.primaryBlue),
-                      ),
-                      child: Text('₹$amount'),
-                    ),
-                  ),
-                ),
-            ],
+          SizedBox(
+            width: double.infinity,
+            child: ElevatedButton(
+              onPressed: () => _showDonation(context),
+              style: ElevatedButton.styleFrom(
+                minimumSize: const Size(0, 48),
+                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+              ),
+              child: const Text('Donate Now', style: TextStyle(fontSize: 14, fontWeight: FontWeight.w700)),
+            ),
           ),
         ],
             ),
           ),
         ],
       ),
-    );
+    ));
   }
 
   String _fmt(double v) {
@@ -404,14 +375,14 @@ class _CampaignFundingCard extends StatelessWidget {
     return v.toStringAsFixed(0);
   }
 
-  void _showDonation(BuildContext context, int amount) {
+  void _showDonation(BuildContext context) {
     showModalBottomSheet(
       context: context,
       // Root navigator so the sheet renders above the shell's floating nav bar.
       useRootNavigator: true,
       isScrollControlled: true,
       backgroundColor: Colors.transparent,
-      builder: (_) => _DonationSheet(campaign: campaign, presetAmount: amount),
+      builder: (_) => DonationSheet(campaign: campaign),
     );
   }
 }
@@ -430,28 +401,23 @@ class _CampaignImageFallback extends StatelessWidget {
 
 // ── Donation Sheet ────────────────────────────────────────────────────────────
 
-class _DonationSheet extends StatefulWidget {
+class DonationSheet extends StatefulWidget {
   final Campaign campaign;
-  final int presetAmount;
-  const _DonationSheet({required this.campaign, required this.presetAmount});
+  const DonationSheet({super.key, required this.campaign});
   @override
-  State<_DonationSheet> createState() => _DonationSheetState();
+  State<DonationSheet> createState() => _DonationSheetState();
 }
 
-class _DonationSheetState extends State<_DonationSheet> {
-  late int _selected;
+class _DonationSheetState extends State<DonationSheet> {
+  int _selected = 800;
   final _panCtrl = TextEditingController();
+  final _customCtrl = TextEditingController();
   bool _showPan = false;
-
-  @override
-  void initState() {
-    super.initState();
-    _selected = widget.presetAmount;
-  }
 
   @override
   void dispose() {
     _panCtrl.dispose();
+    _customCtrl.dispose();
     super.dispose();
   }
 
@@ -476,7 +442,7 @@ class _DonationSheetState extends State<_DonationSheet> {
             const SizedBox(height: 20),
             Row(
               children: [
-                for (final a in [500, 1000, 2500, 5000])
+                for (final a in [800, 1000, -1])
                   Expanded(
                     child: Padding(
                       padding: const EdgeInsets.only(right: 8),
@@ -491,7 +457,7 @@ class _DonationSheetState extends State<_DonationSheet> {
                             border: Border.all(color: _selected == a ? AppColors.primaryBlue : AppColors.borderLight),
                           ),
                           child: Center(
-                            child: Text('₹$a',
+                            child: Text(a == -1 ? 'Custom' : '₹$a',
                                 style: TextStyle(fontWeight: FontWeight.w700, color: _selected == a ? Colors.white : AppColors.textDark, fontSize: 13)),
                           ),
                         ),
@@ -500,6 +466,18 @@ class _DonationSheetState extends State<_DonationSheet> {
                   ),
               ],
             ),
+            if (_selected == -1) ...[
+              const SizedBox(height: 16),
+              TextField(
+                controller: _customCtrl,
+                keyboardType: TextInputType.number,
+                decoration: const InputDecoration(
+                  hintText: 'Enter amount',
+                  prefixText: '₹ ',
+                  prefixStyle: TextStyle(color: AppColors.textDark, fontWeight: FontWeight.w600, fontSize: 16),
+                ),
+              ),
+            ],
             if (_showPan) ...[
               const SizedBox(height: 20),
               Text('PAN Number', style: Theme.of(context).textTheme.bodyMedium?.copyWith(fontWeight: FontWeight.w600)),
@@ -516,16 +494,33 @@ class _DonationSheetState extends State<_DonationSheet> {
               height: 52,
               child: ElevatedButton(
                 onPressed: () {
+                  int amount = _selected;
+                  if (_selected == -1) {
+                    amount = int.tryParse(_customCtrl.text.trim()) ?? 0;
+                    if (amount <= 0) {
+                      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Please enter a valid amount'), backgroundColor: AppColors.errorRed));
+                      return;
+                    }
+                  }
+
                   if (!_showPan) {
                     setState(() => _showPan = true);
                   } else {
                     Navigator.pop(context);
                     ScaffoldMessenger.of(context).showSnackBar(
-                      SnackBar(content: Text('Donation of ₹$_selected initiated!'), backgroundColor: AppColors.forestGreen),
+                      SnackBar(content: Text('Donation of ₹$amount initiated!'), backgroundColor: AppColors.forestGreen),
                     );
                   }
                 },
-                child: Text(_showPan ? 'Proceed to Pay ₹$_selected' : 'Donate ₹$_selected'),
+                child: Builder(
+                  builder: (_) {
+                    String label = 'Donate';
+                    if (_selected != -1) {
+                      label += ' ₹$_selected';
+                    }
+                    return Text(_showPan ? label.replaceAll('Donate', 'Proceed to Pay') : label);
+                  }
+                ),
               ),
             ),
             if (!_showPan)

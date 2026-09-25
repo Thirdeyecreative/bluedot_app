@@ -366,34 +366,39 @@ class _ActionBar extends StatelessWidget {
     }
 
     if (isRsvped || isVolunteered) {
-      return _RegisteredBadge(isVolunteer: isVolunteered);
+      return _RegisteredBadge(
+        isVolunteer: isVolunteered,
+        onCancel: isVolunteered ? onVolunteer : onRsvp,
+        isLoading: isVolunteered ? volunteerLoading : rsvpLoading,
+      );
     }
 
     return Row(
       children: [
         Expanded(
-          child: OutlinedButton.icon(
+          child: OutlinedButton(
             onPressed: event.isAttendeeFull || rsvpLoading ? null : onRsvp,
-            icon: rsvpLoading
-                ? const SizedBox(width: 16, height: 16, child: CircularProgressIndicator(strokeWidth: 2))
-                : Icon(event.isAttendeeFull ? Icons.block_rounded : Icons.how_to_reg_rounded, size: 18),
-            label: Text(event.isAttendeeFull ? 'Full' : 'RSVP'),
             style: OutlinedButton.styleFrom(
               side: const BorderSide(color: AppColors.primaryBlue),
               foregroundColor: AppColors.primaryBlue,
+              padding: const EdgeInsets.symmetric(horizontal: 4),
             ),
+            child: rsvpLoading
+                ? const SizedBox(width: 16, height: 16, child: CircularProgressIndicator(strokeWidth: 2))
+                : Text(event.isAttendeeFull ? 'Full' : 'RSVP', style: const TextStyle(fontSize: 13, fontWeight: FontWeight.w700)),
           ),
         ),
-        const SizedBox(width: 10),
+        const SizedBox(width: 90), // Leaves space for the Pulsing Camera
         Expanded(
-          flex: 2,
-          child: ElevatedButton.icon(
+          child: ElevatedButton(
             onPressed: event.isVolunteerFull || volunteerLoading ? null : onVolunteer,
-            icon: volunteerLoading
+            style: ElevatedButton.styleFrom(
+              backgroundColor: AppColors.forestGreen,
+              padding: const EdgeInsets.symmetric(horizontal: 4),
+            ),
+            child: volunteerLoading
                 ? const SizedBox(width: 16, height: 16, child: CircularProgressIndicator(color: Colors.white, strokeWidth: 2))
-                : Icon(event.isVolunteerFull ? Icons.block_rounded : Icons.volunteer_activism_rounded, size: 18),
-            label: Text(event.isVolunteerFull ? 'Volunteer Full' : 'Join as Volunteer'),
-            style: ElevatedButton.styleFrom(backgroundColor: AppColors.forestGreen),
+                : Text(event.isVolunteerFull ? 'Full' : 'Volunteer', style: const TextStyle(fontSize: 13, fontWeight: FontWeight.w700)),
           ),
         ),
       ],
@@ -403,36 +408,65 @@ class _ActionBar extends StatelessWidget {
 
 class _RegisteredBadge extends StatelessWidget {
   final bool isVolunteer;
-  const _RegisteredBadge({required this.isVolunteer});
+  final VoidCallback onCancel;
+  final bool isLoading;
+  const _RegisteredBadge({required this.isVolunteer, required this.onCancel, required this.isLoading});
 
   @override
-  Widget build(BuildContext context) => Container(
-        padding: const EdgeInsets.symmetric(vertical: 14),
-        decoration: BoxDecoration(
-          color: (isVolunteer ? AppColors.forestGreen : AppColors.primaryBlue).withAlpha(15),
-          borderRadius: BorderRadius.circular(14),
-          border: Border.all(color: (isVolunteer ? AppColors.forestGreen : AppColors.primaryBlue).withAlpha(60)),
-        ),
-        child: Row(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            Icon(
-              isVolunteer ? Icons.volunteer_activism_rounded : Icons.how_to_reg_rounded,
-              color: isVolunteer ? AppColors.forestGreen : AppColors.primaryBlue,
-              size: 20,
-            ),
-            const SizedBox(width: 10),
-            Text(
+  Widget build(BuildContext context) {
+    final color = isVolunteer ? AppColors.forestGreen : AppColors.primaryBlue;
+    return Container(
+      padding: const EdgeInsets.symmetric(vertical: 12, horizontal: 16),
+      decoration: BoxDecoration(
+        color: color.withAlpha(15),
+        borderRadius: BorderRadius.circular(14),
+        border: Border.all(color: color.withAlpha(60)),
+      ),
+      child: Row(
+        children: [
+          Icon(isVolunteer ? Icons.volunteer_activism_rounded : Icons.how_to_reg_rounded, color: color, size: 20),
+          const SizedBox(width: 10),
+          Expanded(
+            child: Text(
               isVolunteer ? "Registered as Volunteer" : "RSVP'd as Attendee",
-              style: TextStyle(
-                color: isVolunteer ? AppColors.forestGreen : AppColors.primaryBlue,
-                fontWeight: FontWeight.w700,
-                fontSize: 14,
-              ),
+              style: TextStyle(color: color, fontWeight: FontWeight.w700, fontSize: 14),
             ),
-          ],
-        ),
-      );
+          ),
+          if (isLoading)
+            const SizedBox(width: 20, height: 20, child: CircularProgressIndicator(strokeWidth: 2))
+          else
+            IconButton(
+              onPressed: () => _showCancelDialog(context),
+              icon: const Icon(Icons.cancel_rounded),
+              color: AppColors.terracotta,
+              tooltip: 'Cancel Registration',
+              padding: EdgeInsets.zero,
+              constraints: const BoxConstraints(),
+            ),
+        ],
+      ),
+    );
+  }
+
+  void _showCancelDialog(BuildContext context) {
+    showDialog(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        title: const Text('Cancel Registration?'),
+        content: Text('Are you sure you want to cancel your slot as an ${isVolunteer ? 'volunteer' : 'attendee'} for this event?'),
+        actions: [
+          TextButton(onPressed: () => Navigator.pop(ctx), child: const Text('Keep it')),
+          TextButton(
+            onPressed: () {
+              Navigator.pop(ctx);
+              onCancel();
+            }, 
+            child: const Text('Cancel Slot', style: TextStyle(color: AppColors.terracotta))
+          ),
+        ],
+      ),
+    );
+  }
 }
 
 class _CheckOutButton extends StatelessWidget {

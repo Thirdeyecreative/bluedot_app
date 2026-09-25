@@ -192,27 +192,28 @@ class _HomeQuickActions extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Padding(
-      padding: const EdgeInsets.fromLTRB(16, 16, 16, 0),
+      padding: const EdgeInsets.fromLTRB(24, 24, 24, 8),
       child: Row(
+        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+        crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Expanded(
-            child: _QuickActionPill(
-              icon: Icons.map_rounded,
-              label: 'Eco Garden',
-              sublabel: 'View your trees',
-              color: AppColors.forestGreen,
-              onTap: () => context.push('/map'),
-            ),
+          _QuickActionButton(
+            icon: Icons.map_rounded,
+            label: 'Eco Garden',
+            color: AppColors.forestGreen,
+            onTap: () => context.push('/map'),
           ),
-          const SizedBox(width: 12),
-          Expanded(
-            child: _QuickActionPill(
-              icon: Icons.leaderboard_rounded,
-              label: 'Leaderboard',
-              sublabel: 'See your rank',
-              color: AppColors.primaryBlue,
-              onTap: () => context.push('/profile/leaderboard'),
-            ),
+          _QuickActionButton(
+            icon: Icons.leaderboard_rounded,
+            label: 'Leaderboard',
+            color: AppColors.primaryBlue,
+            onTap: () => context.push('/profile/leaderboard'),
+          ),
+          _QuickActionButton(
+            icon: Icons.add_location_alt_rounded,
+            label: 'Suggest Site',
+            color: AppColors.terracotta,
+            onTap: () => context.push('/action-hub/suggest-site'),
           ),
         ],
       ),
@@ -220,16 +221,15 @@ class _HomeQuickActions extends StatelessWidget {
   }
 }
 
-class _QuickActionPill extends StatelessWidget {
+class _QuickActionButton extends StatelessWidget {
   final IconData icon;
   final String label;
-  final String sublabel;
   final Color color;
   final VoidCallback onTap;
-  const _QuickActionPill({
+  
+  const _QuickActionButton({
     required this.icon,
     required this.label,
-    required this.sublabel,
     required this.color,
     required this.onTap,
   });
@@ -237,25 +237,30 @@ class _QuickActionPill extends StatelessWidget {
   @override
   Widget build(BuildContext context) => GestureDetector(
         onTap: onTap,
-        child: Container(
-          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
-          decoration: BoxDecoration(
-            color: color.withAlpha(15),
-            borderRadius: BorderRadius.circular(16),
-            border: Border.all(color: color.withAlpha(50)),
-          ),
-          child: Row(
+        behavior: HitTestBehavior.opaque,
+        child: SizedBox(
+          width: 86, // Fixed width so text wraps cleanly if needed
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
             children: [
-              Icon(icon, color: color, size: 24),
-              const SizedBox(width: 10),
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(label, style: TextStyle(fontWeight: FontWeight.w700, color: color, fontSize: 13)),
-                    Text(sublabel, maxLines: 1, overflow: TextOverflow.ellipsis, style: const TextStyle(color: AppColors.textMedium, fontSize: 11)),
+              Container(
+                width: 64,
+                height: 64,
+                decoration: BoxDecoration(
+                  color: Colors.white,
+                  shape: BoxShape.circle,
+                  boxShadow: [
+                    BoxShadow(color: color.withAlpha(30), blurRadius: 16, offset: const Offset(0, 6)),
                   ],
+                  border: Border.all(color: color.withAlpha(30), width: 1.5),
                 ),
+                child: Icon(icon, color: color, size: 28),
+              ),
+              const SizedBox(height: 10),
+              Text(
+                label,
+                textAlign: TextAlign.center,
+                style: const TextStyle(fontWeight: FontWeight.w600, color: AppColors.textDark, fontSize: 13, height: 1.2),
               ),
             ],
           ),
@@ -293,9 +298,11 @@ class _BlogCard extends StatelessWidget {
       onTap: () => context.push('/home/blog/${blog.slug}'),
       child: Container(
         decoration: BoxDecoration(
-          color: AppColors.surfaceCard,
+          color: Colors.white,
           borderRadius: BorderRadius.circular(16),
-          border: Border.all(color: AppColors.borderLight),
+          boxShadow: [
+            BoxShadow(color: Colors.black.withOpacity(0.03), blurRadius: 12, offset: const Offset(0, 4)),
+          ],
         ),
         child: Row(
           children: [
