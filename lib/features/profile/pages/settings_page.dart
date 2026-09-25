@@ -4,6 +4,8 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:url_launcher/url_launcher.dart';
 import '../../../core/constants/app_colors.dart';
+import '../../../core/services/api_client.dart';
+import '../../../core/config/api_config.dart';
 import '../../auth/providers/auth_provider.dart';
 
 // Local notification preference state
@@ -397,17 +399,20 @@ class _PanManagementSheetState extends ConsumerState<_PanManagementSheet> {
 
 // ── 80G Tax Vault Page ────────────────────────────────────────────────────────
 
-class TaxVaultPage extends StatelessWidget {
+final donationsProvider = FutureProvider<List<Map<String, dynamic>>>((ref) async {
+  final api = ref.watch(apiClientProvider);
+  final res = await api.get(ApiConfig.donations, requireAuth: true);
+  final data = res['data'] as List<dynamic>;
+  return data.map((e) => e as Map<String, dynamic>).toList();
+});
+
+class TaxVaultPage extends ConsumerWidget {
   const TaxVaultPage({super.key});
 
-  static const _donations = [
-    {'campaign': 'Aravalli Native Forest Revival', 'amount': 1000, 'date': '15 May 2026', 'status': 'Receipt Ready', 'id': 'BD80G-2026-00841'},
-    {'campaign': 'School Miyawaki Micro-Forests', 'amount': 500, 'date': '02 Apr 2026', 'status': 'Receipt Ready', 'id': 'BD80G-2026-00612'},
-    {'campaign': 'Lake Edge Green Buffer', 'amount': 2500, 'date': '18 Mar 2026', 'status': 'Pending', 'id': null},
-  ];
-
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
+    final donationsAsync = ref.watch(donationsProvider);
+
     return Scaffold(
       appBar: AppBar(
         title: const Text('80G Tax Vault'),
@@ -442,13 +447,24 @@ class TaxVaultPage extends StatelessWidget {
 
           // Donation list
           Expanded(
-            child: ListView.builder(
-              padding: const EdgeInsets.fromLTRB(16, 8, 16, 40),
-              itemCount: _donations.length,
-              itemBuilder: (_, i) => _DonationReceiptCard(data: _donations[i])
-                  .animate()
-                  .fadeIn(delay: (100 * i).ms)
-                  .slideY(begin: 0.05, end: 0, delay: (100 * i).ms),
+            child: donationsAsync.when(
+              loading: () => const Center(child: CircularProgressIndicator()),
+              error: (e, st) => Center(child: Text('Error loading donations: $e')),
+              data: (donations) {
+                if (donations.isEmpty) {
+                  return const Center(
+                    child: Text('You have not made any donations yet.', style: TextStyle(color: Colors.grey)),
+                  );
+                }
+                return ListView.builder(
+                  padding: const EdgeInsets.fromLTRB(16, 8, 16, 40),
+                  itemCount: donations.length,
+                  itemBuilder: (_, i) => _DonationReceiptCard(data: donations[i])
+                      .animate()
+                      .fadeIn(delay: (100 * i).ms)
+                      .slideY(begin: 0.05, end: 0, delay: (100 * i).ms),
+                );
+              },
             ),
           ),
 
@@ -482,7 +498,11 @@ class _DonationReceiptCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final isReady = data['status'] == 'Receipt Ready';
+    final status = data['status'] ?? 'Pending';
+    final isReady = status == 'Receipt Ready';
+    final amount = data['amount'] != null ? (data['amount'] as num).toInt() : 0;
+    final receiptId = data['receipt_id'] ?? data['id'];
+
     return Container(
       margin: const EdgeInsets.only(bottom: 12),
       padding: const EdgeInsets.all(18),
@@ -497,7 +517,7 @@ class _DonationReceiptCard extends StatelessWidget {
           Row(
             children: [
               Expanded(
-                child: Text(data['campaign'] as String, style: const TextStyle(fontWeight: FontWeight.w700, fontSize: 14)),
+                child: Text(data['campaign'] ?? 'General Donation', style: const TextStyle(fontWeight: FontWeight.w700, fontSize: 14)),
               ),
               Container(
                 padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
@@ -506,7 +526,7 @@ class _DonationReceiptCard extends StatelessWidget {
                   borderRadius: BorderRadius.circular(8),
                 ),
                 child: Text(
-                  data['status'] as String,
+                  status as String,
                   style: TextStyle(
                     color: isReady ? AppColors.forestGreen : AppColors.warningAmber,
                     fontSize: 11,
@@ -519,16 +539,16 @@ class _DonationReceiptCard extends StatelessWidget {
           const SizedBox(height: 8),
           Row(
             children: [
-              Text('₹${data['amount']}', style: const TextStyle(fontWeight: FontWeight.w700, color: AppColors.primaryBlue, fontSize: 16)),
+              Text('₹$amount', style: const TextStyle(fontWeight: FontWeight.w700, color: AppColors.primaryBlue, fontSize: 16)),
               const SizedBox(width: 12),
               Text(data['date'] as String, style: const TextStyle(color: AppColors.textMedium, fontSize: 13)),
             ],
           ),
-          if (data['id'] != null) ...[
+          if (receiptId != null) ...[
             const SizedBox(height: 4),
-            Text(data['id'] as String, style: const TextStyle(color: AppColors.textLight, fontSize: 11, fontFamily: 'monospace')),
+            Text(receiptId as String, style: const TextStyle(color: AppColors.textLight, fontSize: 11, fontFamily: 'monospace')),
           ],
-          if (isReady) ...[
+          if (isReady && data['receipt_url'] != null) ...[
             const SizedBox(height: 14),
             SizedBox(
               width: double.infinity,
@@ -536,7 +556,7 @@ class _DonationReceiptCard extends StatelessWidget {
               child: ElevatedButton.icon(
                 onPressed: () {
                   ScaffoldMessenger.of(context).showSnackBar(
-                    SnackBar(content: Text('Downloading receipt ${data['id']}...'), backgroundColor: AppColors.forestGreen),
+                    SnackBar(content: Text('Downloading receipt $receiptId...'), backgroundColor: AppColors.forestGreen),
                   );
                 },
                 icon: const Icon(Icons.picture_as_pdf_rounded, size: 16),
