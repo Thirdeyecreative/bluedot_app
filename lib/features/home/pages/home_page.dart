@@ -33,7 +33,7 @@ class _HomePageState extends ConsumerState<HomePage> {
     final banners = ref.watch(bannersProvider);
 
     return Scaffold(
-      backgroundColor: AppColors.backgroundCream,
+      backgroundColor: Colors.white,
       body: CustomScrollView(
         controller: _scroll,
         slivers: [
@@ -45,17 +45,13 @@ class _HomePageState extends ConsumerState<HomePage> {
             expandedHeight: 70,
             collapsedHeight: 70,
             shape: const RoundedRectangleBorder(
-              borderRadius: BorderRadius.vertical(bottom: Radius.circular(24)),
+              borderRadius: BorderRadius.vertical(bottom: Radius.circular(32)),
             ),
             flexibleSpace: ClipRRect(
-              borderRadius: const BorderRadius.vertical(bottom: Radius.circular(24)),
+              borderRadius: const BorderRadius.vertical(bottom: Radius.circular(32)),
               child: Container(
                 decoration: const BoxDecoration(
-                  gradient: LinearGradient(
-                    colors: [AppColors.primaryBlue, Color(0xFF2D3A8C)],
-                    begin: Alignment.topLeft,
-                    end: Alignment.bottomRight,
-                  ),
+                  color: AppColors.primaryBlue,
                 ),
               ),
             ),
@@ -114,7 +110,7 @@ class _HomePageState extends ConsumerState<HomePage> {
           // 4. Stories & Updates Header
           SliverToBoxAdapter(
             child: Padding(
-              padding: const EdgeInsets.fromLTRB(20, 24, 20, 8),
+              padding: const EdgeInsets.fromLTRB(24, 32, 24, 16),
               child: Row(
                 mainAxisAlignment: MainAxisAlignment.spaceBetween,
                 children: [
@@ -192,7 +188,7 @@ class _HomeQuickActions extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Padding(
-      padding: const EdgeInsets.fromLTRB(24, 24, 24, 8),
+      padding: const EdgeInsets.fromLTRB(24, 32, 24, 16),
       child: Row(
         mainAxisAlignment: MainAxisAlignment.spaceBetween,
         crossAxisAlignment: CrossAxisAlignment.start,

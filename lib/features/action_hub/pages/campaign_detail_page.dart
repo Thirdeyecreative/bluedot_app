@@ -15,7 +15,7 @@ class CampaignDetailPage extends ConsumerWidget {
     final campaignsAsync = ref.watch(campaignsProvider);
 
     return Scaffold(
-      backgroundColor: AppColors.backgroundCream,
+      backgroundColor: Colors.white,
       body: campaignsAsync.when(
         data: (campaigns) {
           final campaign = campaigns.firstWhere(
@@ -96,13 +96,11 @@ class CampaignDetailPage extends ConsumerWidget {
                       const SizedBox(height: 24),
                       // Progress Section
                       Container(
-                        padding: const EdgeInsets.all(16),
+                        padding: const EdgeInsets.all(24),
                         decoration: BoxDecoration(
                           color: Colors.white,
-                          borderRadius: BorderRadius.circular(16),
-                          boxShadow: [
-                            BoxShadow(color: Colors.black.withOpacity(0.04), blurRadius: 10, offset: const Offset(0, 4)),
-                          ],
+                          borderRadius: BorderRadius.circular(24),
+                          border: Border.all(color: AppColors.borderLight),
                         ),
                         child: Column(
                           children: [

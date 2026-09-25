@@ -56,6 +56,7 @@ class _EventDetailPageState extends ConsumerState<EventDetailPage> {
     final isRegistered = isRsvped || isVolunteered;
 
     return Scaffold(
+      backgroundColor: Colors.white,
       body: eventAsync.when(
         data: (e) => RefreshIndicator(
           onRefresh: () => ref.refresh(eventDetailProvider(widget.eventId).future),
@@ -620,7 +621,7 @@ class _DefaultEventHeader extends StatelessWidget {
   @override
   Widget build(BuildContext context) => Container(
         decoration: const BoxDecoration(
-          gradient: LinearGradient(colors: [AppColors.forestGreen, Color(0xFF3A5240)], begin: Alignment.topLeft, end: Alignment.bottomRight),
+          color: AppColors.primaryBlue,
         ),
         child: const Center(child: Icon(Icons.forest_rounded, color: Colors.white, size: 64)),
       );
