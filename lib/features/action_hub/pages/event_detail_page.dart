@@ -115,10 +115,6 @@ class _EventDetailPageState extends ConsumerState<EventDetailPage> {
                       ],
                       const Divider(height: 32),
 
-                      // ── Capacity stats row ──────────────────────────────────
-                      _CapacityRow(event: e).animate().fadeIn(delay: 100.ms),
-                      const Divider(height: 32),
-
                       // ── Tree stats (plantation drives) ──────────────────────
                       if (e.isPlantationDrive && e.treesTarget > 0) ...[
                         Row(
@@ -259,75 +255,7 @@ class _EventDetailPageState extends ConsumerState<EventDetailPage> {
   }
 }
 
-// ── Capacity row ──────────────────────────────────────────────────────────────
 
-class _CapacityRow extends StatelessWidget {
-  final PlantationEvent event;
-  const _CapacityRow({required this.event});
-
-  @override
-  Widget build(BuildContext context) {
-    return Row(
-      children: [
-        Expanded(
-          child: _CapacityChip(
-            icon: Icons.people_rounded,
-            label: 'Attendees',
-            count: event.attendeesCount,
-            max: event.maxParticipants,
-            color: AppColors.primaryBlue,
-          ),
-        ),
-        const SizedBox(width: 12),
-        Expanded(
-          child: _CapacityChip(
-            icon: Icons.volunteer_activism_rounded,
-            label: 'Volunteers',
-            count: event.volunteersCount,
-            max: event.volunteersRequired,
-            color: AppColors.forestGreen,
-          ),
-        ),
-      ],
-    );
-  }
-}
-
-class _CapacityChip extends StatelessWidget {
-  final IconData icon;
-  final String label;
-  final int count;
-  final int? max;
-  final Color color;
-  const _CapacityChip({required this.icon, required this.label, required this.count, this.max, required this.color});
-
-  @override
-  Widget build(BuildContext context) {
-    final isFull = max != null && count >= max!;
-    final text = max != null ? '$count / $max' : '$count';
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
-      decoration: BoxDecoration(
-        color: color.withAlpha(15),
-        borderRadius: BorderRadius.circular(12),
-        border: Border.all(color: color.withAlpha(40)),
-      ),
-      child: Row(
-        children: [
-          Icon(isFull ? Icons.block_rounded : icon, color: color, size: 18),
-          const SizedBox(width: 8),
-          Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Text(label, style: TextStyle(color: color, fontSize: 11, fontWeight: FontWeight.w600)),
-              Text(isFull ? 'Full' : text, style: TextStyle(color: isFull ? AppColors.terracotta : color, fontSize: 13, fontWeight: FontWeight.w700)),
-            ],
-          ),
-        ],
-      ),
-    );
-  }
-}
 
 // ── Bottom action bar ─────────────────────────────────────────────────────────
 // State machine: checked-out → checked-in → registered → unregistered
