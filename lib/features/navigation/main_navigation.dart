@@ -22,19 +22,27 @@ class MainNavigationShell extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final index = _currentIndex(context);
+    final location = GoRouterState.of(context).matchedLocation;
+    final isRootTab = _tabs.contains(location);
     
     return PopScope(
       canPop: false,
       onPopInvokedWithResult: (didPop, result) {
         if (didPop) return;
         
-        final router = GoRouter.of(context);
-        if (router.canPop()) {
-          router.pop();
-        } else if (index != 0) {
-          context.go('/home');
+        if (isRootTab) {
+          if (index != 0) {
+            context.go('/home');
+          } else {
+            SystemNavigator.pop();
+          }
         } else {
-          SystemNavigator.pop();
+          final router = GoRouter.of(context);
+          if (router.canPop()) {
+            router.pop();
+          } else {
+            context.go('/home');
+          }
         }
       },
       child: Scaffold(
