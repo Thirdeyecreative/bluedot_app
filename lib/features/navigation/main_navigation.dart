@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_animate/flutter_animate.dart';
 import 'package:go_router/go_router.dart';
 import '../../core/constants/app_colors.dart';
@@ -21,15 +22,31 @@ class MainNavigationShell extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final index = _currentIndex(context);
-    return Scaffold(
-      extendBody: true,
-      body: child,
-      floatingActionButton: GestureDetector(
-        onTap: () => context.push('/scanner'),
-        child: const _PulsingScanFab(),
+    
+    return PopScope(
+      canPop: false,
+      onPopInvokedWithResult: (didPop, result) {
+        if (didPop) return;
+        
+        final router = GoRouter.of(context);
+        if (router.canPop()) {
+          router.pop();
+        } else if (index != 0) {
+          context.go('/home');
+        } else {
+          SystemNavigator.pop();
+        }
+      },
+      child: Scaffold(
+        extendBody: true,
+        body: child,
+        floatingActionButton: GestureDetector(
+          onTap: () => context.push('/scanner'),
+          child: const _PulsingScanFab(),
+        ),
+        floatingActionButtonLocation: FloatingActionButtonLocation.centerDocked,
+        bottomNavigationBar: _BlueDotNavBar(currentIndex: index),
       ),
-      floatingActionButtonLocation: FloatingActionButtonLocation.centerDocked,
-      bottomNavigationBar: _BlueDotNavBar(currentIndex: index),
     );
   }
 }

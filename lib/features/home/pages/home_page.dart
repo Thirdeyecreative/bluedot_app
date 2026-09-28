@@ -75,36 +75,25 @@ class _HomePageState extends ConsumerState<HomePage> {
                   ),
                 ),
                 const Spacer(),
-                if (user != null)
-                  Container(
-                    padding: const EdgeInsets.symmetric(
-                      horizontal: 10,
-                      vertical: 5,
-                    ),
-                    decoration: BoxDecoration(
-                      color: Colors.white.withAlpha(30),
-                      borderRadius: BorderRadius.circular(20),
-                    ),
-                    child: Row(
-                      children: [
-                        const Icon(
-                          Icons.bolt_rounded,
-                          color: AppColors.primaryYellow,
-                          size: 16,
-                        ),
-                        const SizedBox(width: 4),
-                        Text(
-                          '${user.totalPoints} XP',
-                          style: const TextStyle(
-                            color: Colors.white,
-                            fontWeight: FontWeight.w700,
-                            fontSize: 12,
-                          ),
-                        ),
-                      ],
-                    ),
-                  ),
-                const SizedBox(width: 8),
+                IconButton(
+                  icon: const Icon(Icons.map_rounded, color: Colors.white),
+                  onPressed: () => context.push('/map'),
+                  constraints: const BoxConstraints(),
+                  padding: const EdgeInsets.symmetric(horizontal: 4),
+                ),
+                IconButton(
+                  icon: const Icon(Icons.leaderboard_rounded, color: Colors.white),
+                  onPressed: () => context.push('/profile/leaderboard'),
+                  constraints: const BoxConstraints(),
+                  padding: const EdgeInsets.symmetric(horizontal: 4),
+                ),
+                IconButton(
+                  icon: const Icon(Icons.add_location_alt_rounded, color: Colors.white),
+                  onPressed: () => context.push('/action-hub/suggest-site'),
+                  constraints: const BoxConstraints(),
+                  padding: const EdgeInsets.symmetric(horizontal: 4),
+                ),
+                const SizedBox(width: 4),
                 const _NotificationBell(),
               ],
             ),
@@ -127,8 +116,7 @@ class _HomePageState extends ConsumerState<HomePage> {
             ),
           ),
 
-          // 3. Quick Actions
-          const SliverToBoxAdapter(child: _HomeQuickActions()),
+
 
           // 3.1 Upcoming Events
           SliverToBoxAdapter(
