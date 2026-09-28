@@ -122,6 +122,7 @@ class ScanHistoryItem {
   final Map<String, dynamic>? plantnetSummary;
   final PlantNetData? plantnetData;
   final SpeciesInfo? species;
+  final int status;
 
   const ScanHistoryItem({
     required this.id,
@@ -133,6 +134,7 @@ class ScanHistoryItem {
     this.plantnetSummary,
     this.plantnetData,
     this.species,
+    this.status = 2,
   });
 
   bool get hasLocation => lat != null && lng != null;
@@ -151,5 +153,6 @@ class ScanHistoryItem {
         species: json['species'] != null
             ? SpeciesInfo.fromJson(json['species'] as Map<String, dynamic>)
             : null,
+        status: json['status'] as int? ?? 2,
       );
 }

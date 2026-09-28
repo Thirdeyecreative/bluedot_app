@@ -464,8 +464,8 @@ class _ScansHistory extends StatelessWidget {
                             ),
                           ),
                           Icon(
-                            isPendingReview ? Icons.hourglass_top_rounded : Icons.verified_rounded,
-                            color: isPendingReview ? AppColors.warningAmber : AppColors.forestGreen,
+                            item.status == 2 ? Icons.hourglass_top_rounded : item.status == 1 ? Icons.verified_rounded : Icons.cancel_rounded,
+                            color: item.status == 2 ? AppColors.warningAmber : item.status == 1 ? AppColors.forestGreen : Colors.red,
                             size: 18,
                           ),
                           const SizedBox(width: 4),

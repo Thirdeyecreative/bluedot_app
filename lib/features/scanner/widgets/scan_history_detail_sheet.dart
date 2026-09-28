@@ -106,13 +106,10 @@ class ScanHistoryDetailSheet extends StatelessWidget {
                       ),
                     if (pn?.family != null)
                       PillTag(icon: Icons.category_rounded, label: pn!.family!, color: AppColors.slateBlue),
-                    // The approval status you asked to surface here: whether
-                    // this species is still awaiting admin review, or already
-                    // live in the Tree Encyclopedia.
                     PillTag(
-                      icon: species?.isPendingReview == true ? Icons.hourglass_top_rounded : Icons.check_circle_rounded,
-                      label: species?.isPendingReview == true ? 'Pending review' : 'Approved',
-                      color: species?.isPendingReview == true ? AppColors.warningAmber : AppColors.forestGreen,
+                      icon: item.status == 2 ? Icons.hourglass_top_rounded : item.status == 1 ? Icons.check_circle_rounded : Icons.cancel_rounded,
+                      label: item.status == 2 ? 'Tag Pending review' : item.status == 1 ? 'Tag Approved' : 'Tag Rejected',
+                      color: item.status == 2 ? AppColors.warningAmber : item.status == 1 ? AppColors.forestGreen : Colors.red,
                     ),
                   ],
                 ).animate().fadeIn(delay: 150.ms),
