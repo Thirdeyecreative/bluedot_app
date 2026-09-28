@@ -5,7 +5,6 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import '../../../core/constants/app_colors.dart';
 import '../../../core/widgets/skeletons.dart';
-import '../../auth/providers/auth_provider.dart';
 import '../../action_hub/providers/action_provider.dart';
 import '../../action_hub/models/event_model.dart';
 import '../models/campaign_model.dart';
@@ -31,7 +30,6 @@ class _HomePageState extends ConsumerState<HomePage> {
 
   @override
   Widget build(BuildContext context) {
-    final user = ref.watch(currentUserProvider);
     final blogs = ref.watch(blogsProvider);
     final banners = ref.watch(bannersProvider);
 

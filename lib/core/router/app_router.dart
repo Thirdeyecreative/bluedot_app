@@ -2,7 +2,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
-import 'package:supabase_flutter/supabase_flutter.dart' as supabase;
 
 import '../../features/auth/providers/auth_provider.dart';
 import '../../features/auth/pages/login_page.dart';
@@ -56,7 +55,7 @@ final routerProvider = Provider<GoRouter>((ref) {
       // If logged in, check if profile is complete.
       // currentUser is null when the splash page hasn't fetched it yet — let it through.
       // fullName is null when the backend created a ghost user with empty name.
-      final needsProfileCompletion = currentUser != null && currentUser.fullName == null;
+      final needsProfileCompletion = currentUser.fullName == null;
       
       if (needsProfileCompletion) {
         return isCompleteProfile ? null : '/complete-profile';
@@ -91,70 +90,86 @@ final routerProvider = Provider<GoRouter>((ref) {
       GoRoute(path: '/map', builder: (__, _) => const EcoGardenPage()),
       GoRoute(path: '/notifications', builder: (__, _) => const NotificationsPage()),
 
-      ShellRoute(
-        builder: (_, __, child) => MainNavigationShell(child: child),
-        routes: [
-          GoRoute(
-            path: '/home',
-            builder: (__, _) => const HomePage(),
+      StatefulShellRoute.indexedStack(
+        builder: (_, __, navigationShell) => MainNavigationShell(navigationShell: navigationShell),
+        branches: [
+          StatefulShellBranch(
             routes: [
               GoRoute(
-                path: 'blog/:slug',
-                builder: (_, state) => BlogDetailPage(slug: state.pathParameters['slug']!),
-              ),
-            ],
-          ),
-          GoRoute(
-            path: '/action-hub',
-            builder: (__, _) => const ActionHubPage(),
-            routes: [
-              GoRoute(
-                path: 'campaign/:id',
-                builder: (_, state) => CampaignDetailPage(campaignId: state.pathParameters['id']!),
-              ),
-              GoRoute(
-                path: 'event/:id',
-                builder: (_, state) => EventDetailPage(eventId: state.pathParameters['id']!),
+                path: '/home',
+                builder: (__, _) => const HomePage(),
                 routes: [
                   GoRoute(
-                    path: 'checkin',
-                    builder: (_, state) => EventCheckinPage(eventId: state.pathParameters['id']!),
+                    path: 'blog/:slug',
+                    builder: (_, state) => BlogDetailPage(slug: state.pathParameters['slug']!),
                   ),
                 ],
               ),
-              GoRoute(
-                path: 'suggest-site',
-                builder: (__, _) => const SuggestSitePage(),
-              ),
             ],
           ),
-          GoRoute(
-            path: '/directory',
-            builder: (__, _) => const DirectoryPage(),
+          StatefulShellBranch(
             routes: [
               GoRoute(
-                path: 'species/:id',
-                builder: (_, state) => SpeciesDetailPage(speciesId: state.pathParameters['id']!),
-              ),
-            ],
-          ),
-          GoRoute(
-            path: '/profile',
-            builder: (__, _) => const ProfilePage(),
-            routes: [
-              GoRoute(path: 'badges', builder: (__, _) => const BadgesPage()),
-              GoRoute(path: 'leaderboard', builder: (__, _) => const LeaderboardPage()),
-              GoRoute(path: 'edit', builder: (__, _) => const EditProfilePage()),
-              GoRoute(path: 'certificates', builder: (__, _) => const CertificatesPage()),
-              GoRoute(
-                path: 'settings',
-                builder: (__, _) => const SettingsPage(),
+                path: '/action-hub',
+                builder: (__, _) => const ActionHubPage(),
                 routes: [
-                  GoRoute(path: 'tax-vault', builder: (__, _) => const TaxVaultPage()),
+                  GoRoute(
+                    path: 'campaign/:id',
+                    builder: (_, state) => CampaignDetailPage(campaignId: state.pathParameters['id']!),
+                  ),
+                  GoRoute(
+                    path: 'event/:id',
+                    builder: (_, state) => EventDetailPage(eventId: state.pathParameters['id']!),
+                    routes: [
+                      GoRoute(
+                        path: 'checkin',
+                        builder: (_, state) => EventCheckinPage(eventId: state.pathParameters['id']!),
+                      ),
+                    ],
+                  ),
+                  GoRoute(
+                    path: 'suggest-site',
+                    builder: (__, _) => const SuggestSitePage(),
+                  ),
+                ],
+              ),
+            ],
+          ),
+          StatefulShellBranch(
+            routes: [
+              GoRoute(
+                path: '/directory',
+                builder: (__, _) => const DirectoryPage(),
+                routes: [
+                  GoRoute(
+                    path: 'species/:id',
+                    builder: (_, state) => SpeciesDetailPage(speciesId: state.pathParameters['id']!),
+                  ),
+                ],
+              ),
+            ],
+          ),
+          StatefulShellBranch(
+            routes: [
+              GoRoute(
+                path: '/profile',
+                builder: (__, _) => const ProfilePage(),
+                routes: [
+                  GoRoute(path: 'badges', builder: (__, _) => const BadgesPage()),
+                  GoRoute(path: 'leaderboard', builder: (__, _) => const LeaderboardPage()),
                   GoRoute(path: 'edit', builder: (__, _) => const EditProfilePage()),
-                  GoRoute(path: 'terms', builder: (__, _) => const TermsPage()),
-                  GoRoute(path: 'privacy', builder: (__, _) => const PrivacyPage()),
                   GoRoute(path: 'certificates', builder: (__, _) => const CertificatesPage()),
+                  GoRoute(
+                    path: 'settings',
+                    builder: (__, _) => const SettingsPage(),
+                    routes: [
+                      GoRoute(path: 'tax-vault', builder: (__, _) => const TaxVaultPage()),
+                      GoRoute(path: 'edit', builder: (__, _) => const EditProfilePage()),
+                      GoRoute(path: 'terms', builder: (__, _) => const TermsPage()),
+                      GoRoute(path: 'privacy', builder: (__, _) => const PrivacyPage()),
+                      GoRoute(path: 'certificates', builder: (__, _) => const CertificatesPage()),
+                    ],
+                  ),
                 ],
               ),
             ],

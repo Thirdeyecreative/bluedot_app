@@ -6,54 +6,31 @@ import '../../core/constants/app_colors.dart';
 import '../../core/constants/app_assets.dart';
 
 class MainNavigationShell extends StatelessWidget {
-  final Widget child;
-  const MainNavigationShell({super.key, required this.child});
+  final StatefulNavigationShell navigationShell;
+  const MainNavigationShell({super.key, required this.navigationShell});
 
-  static const _tabs = ['/home', '/action-hub', '/directory', '/profile'];
-
-  int _currentIndex(BuildContext context) {
-    final location = GoRouterState.of(context).matchedLocation;
-    for (int i = 0; i < _tabs.length; i++) {
-      if (location.startsWith(_tabs[i])) return i;
-    }
-    return 0;
+  void _onTapNav(int index) {
+    navigationShell.goBranch(
+      index,
+      initialLocation: index == navigationShell.currentIndex,
+    );
   }
 
   @override
   Widget build(BuildContext context) {
-    final index = _currentIndex(context);
-    final location = GoRouterState.of(context).matchedLocation;
-    final isRootTab = _tabs.contains(location);
-    
-    return PopScope(
-      canPop: false,
-      onPopInvokedWithResult: (didPop, result) {
-        if (didPop) return;
-        
-        if (isRootTab) {
-          if (index != 0) {
-            context.go('/home');
-          } else {
-            SystemNavigator.pop();
-          }
-        } else {
-          final router = GoRouter.of(context);
-          if (router.canPop()) {
-            router.pop();
-          } else {
-            context.go('/home');
-          }
-        }
-      },
-      child: Scaffold(
-        extendBody: true,
-        body: child,
-        floatingActionButton: GestureDetector(
-          onTap: () => context.push('/scanner'),
-          child: const _PulsingScanFab(),
-        ),
-        floatingActionButtonLocation: FloatingActionButtonLocation.centerDocked,
-        bottomNavigationBar: _BlueDotNavBar(currentIndex: index),
+    final currentIndex = navigationShell.currentIndex;
+
+    return Scaffold(
+      extendBody: true,
+      body: navigationShell,
+      floatingActionButton: GestureDetector(
+        onTap: () => context.push('/scanner'),
+        child: const _PulsingScanFab(),
+      ),
+      floatingActionButtonLocation: FloatingActionButtonLocation.centerDocked,
+      bottomNavigationBar: _BlueDotNavBar(
+        currentIndex: currentIndex,
+        onTapNav: _onTapNav,
       ),
     );
   }
@@ -61,13 +38,18 @@ class MainNavigationShell extends StatelessWidget {
 
 class _BlueDotNavBar extends StatelessWidget {
   final int currentIndex;
-  const _BlueDotNavBar({required this.currentIndex});
+  final ValueChanged<int> onTapNav;
+
+  const _BlueDotNavBar({
+    required this.currentIndex,
+    required this.onTapNav,
+  });
 
   static const _items = [
-    (icon: Icons.home_rounded, label: 'Home', route: '/home'),
-    (icon: Icons.hub_rounded, label: 'Action Hub', route: '/action-hub'),
-    (icon: Icons.local_florist_rounded, label: 'Directory', route: '/directory'),
-    (icon: Icons.person_rounded, label: 'Profile', route: '/profile'),
+    (icon: Icons.home_rounded, label: 'Home'),
+    (icon: Icons.hub_rounded, label: 'Action Hub'),
+    (icon: Icons.local_florist_rounded, label: 'Directory'),
+    (icon: Icons.person_rounded, label: 'Profile'),
   ];
 
   @override
@@ -87,7 +69,7 @@ class _BlueDotNavBar extends StatelessWidget {
               icon: _items[0].icon,
               label: _items[0].label,
               selected: currentIndex == 0,
-              onTap: () => context.go(_items[0].route),
+              onTap: () => onTapNav(0),
             ),
           ),
           Expanded(
@@ -95,7 +77,7 @@ class _BlueDotNavBar extends StatelessWidget {
               icon: _items[1].icon,
               label: _items[1].label,
               selected: currentIndex == 1,
-              onTap: () => context.go(_items[1].route),
+              onTap: () => onTapNav(1),
             ),
           ),
           const SizedBox(width: 72), // Empty space for the docked FAB notch
@@ -104,7 +86,7 @@ class _BlueDotNavBar extends StatelessWidget {
               icon: _items[2].icon,
               label: _items[2].label,
               selected: currentIndex == 2,
-              onTap: () => context.go(_items[2].route),
+              onTap: () => onTapNav(2),
             ),
           ),
           Expanded(
@@ -112,7 +94,7 @@ class _BlueDotNavBar extends StatelessWidget {
               icon: _items[3].icon,
               label: _items[3].label,
               selected: currentIndex == 3,
-              onTap: () => context.go(_items[3].route),
+              onTap: () => onTapNav(3),
             ),
           ),
         ],

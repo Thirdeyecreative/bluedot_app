@@ -1,4 +1,4 @@
-﻿import 'package:flutter/material.dart' hide Badge;
+import 'package:flutter/material.dart' hide Badge;
 import 'package:flutter_animate/flutter_animate.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
@@ -38,8 +38,14 @@ class ProfilePage extends ConsumerWidget {
       );
     }
 
-    return Scaffold(
-      body: CustomScrollView(
+    return PopScope(
+      canPop: false,
+      onPopInvokedWithResult: (didPop, _) {
+        if (didPop) return;
+        context.go('/home');
+      },
+      child: Scaffold(
+        body: CustomScrollView(
         slivers: [
           SliverAppBar(
             pinned: true,
@@ -76,7 +82,7 @@ class ProfilePage extends ConsumerWidget {
           ),
         ],
       ),
-    );
+    ));
   }
 }
 

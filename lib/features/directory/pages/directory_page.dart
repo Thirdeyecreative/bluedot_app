@@ -1,4 +1,4 @@
-﻿import 'package:cached_network_image/cached_network_image.dart';
+import 'package:cached_network_image/cached_network_image.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_animate/flutter_animate.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -28,8 +28,14 @@ class _DirectoryPageState extends ConsumerState<DirectoryPage> {
   Widget build(BuildContext context) {
     final species = ref.watch(speciesListProvider);
 
-    return Scaffold(
-      body: CustomScrollView(
+    return PopScope(
+      canPop: false,
+      onPopInvokedWithResult: (didPop, _) {
+        if (didPop) return;
+        context.go('/home');
+      },
+      child: Scaffold(
+        body: CustomScrollView(
         slivers: [
           SliverAppBar(
             floating: true,
@@ -101,7 +107,7 @@ class _DirectoryPageState extends ConsumerState<DirectoryPage> {
           ),
         ],
       ),
-    );
+    ));
   }
 }
 

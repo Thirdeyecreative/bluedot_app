@@ -17,7 +17,8 @@ class ActionHubPage extends ConsumerStatefulWidget {
   ConsumerState<ActionHubPage> createState() => _ActionHubPageState();
 }
 
-class _ActionHubPageState extends ConsumerState<ActionHubPage> with SingleTickerProviderStateMixin {
+class _ActionHubPageState extends ConsumerState<ActionHubPage>
+    with SingleTickerProviderStateMixin {
   late TabController _tab;
 
   @override
@@ -34,35 +35,50 @@ class _ActionHubPageState extends ConsumerState<ActionHubPage> with SingleTicker
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      body: NestedScrollView(
-        headerSliverBuilder: (_, _) => [
-          SliverAppBar(
-            floating: true,
-            snap: true,
-            title: Text('Action Hub', style: Theme.of(context).textTheme.titleLarge?.copyWith(fontWeight: FontWeight.w700)),
-            actions: const [],
-            bottom: TabBar(
-              controller: _tab,
-              labelColor: AppColors.primaryBlue,
-              unselectedLabelColor: AppColors.slateBlue,
-              indicatorColor: AppColors.primaryBlue,
-              indicatorWeight: 3,
-              labelStyle: const TextStyle(fontWeight: FontWeight.w700, fontSize: 14),
-              unselectedLabelStyle: const TextStyle(fontWeight: FontWeight.w400, fontSize: 14),
-              tabs: const [
-                Tab(text: 'Campaigns'),
-                Tab(text: 'Events'),
-              ],
+    return PopScope(
+      canPop: false,
+      onPopInvokedWithResult: (didPop, _) {
+        if (didPop) return;
+        context.go('/home');
+      },
+      child: Scaffold(
+        body: NestedScrollView(
+          headerSliverBuilder: (_, _) => [
+            SliverAppBar(
+              floating: true,
+              snap: true,
+              title: Text(
+                'Action Hub',
+                style: Theme.of(
+                  context,
+                ).textTheme.titleLarge?.copyWith(fontWeight: FontWeight.w700),
+              ),
+              actions: const [],
+              bottom: TabBar(
+                controller: _tab,
+                labelColor: AppColors.primaryBlue,
+                unselectedLabelColor: AppColors.slateBlue,
+                indicatorColor: AppColors.primaryBlue,
+                indicatorWeight: 3,
+                labelStyle: const TextStyle(
+                  fontWeight: FontWeight.w700,
+                  fontSize: 14,
+                ),
+                unselectedLabelStyle: const TextStyle(
+                  fontWeight: FontWeight.w400,
+                  fontSize: 14,
+                ),
+                tabs: const [
+                  Tab(text: 'Campaigns'),
+                  Tab(text: 'Events'),
+                ],
+              ),
             ),
-          ),
-        ],
-        body: TabBarView(
-          controller: _tab,
-          children: [
-            _CampaignsTab(),
-            _DrivesTab(),
           ],
+          body: TabBarView(
+            controller: _tab,
+            children: [_CampaignsTab(), _DrivesTab()],
+          ),
         ),
       ),
     );
@@ -116,7 +132,9 @@ class _EventDriveCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final filled = (event.maxParticipants != null && event.maxParticipants! > 0) ? event.attendeesCount / event.maxParticipants! : 0.0;
+    final filled = (event.maxParticipants != null && event.maxParticipants! > 0)
+        ? event.attendeesCount / event.maxParticipants!
+        : 0.0;
     final isNearFull = filled >= 0.85;
 
     return GestureDetector(
@@ -133,18 +151,23 @@ class _EventDriveCard extends StatelessWidget {
           children: [
             if (event.thumbnailUrl != null)
               ClipRRect(
-                borderRadius: const BorderRadius.vertical(top: Radius.circular(17)),
+                borderRadius: const BorderRadius.vertical(
+                  top: Radius.circular(17),
+                ),
                 child: CachedNetworkImage(
                   imageUrl: event.thumbnailUrl!,
                   height: 160,
                   width: double.infinity,
                   fit: BoxFit.cover,
-                  placeholder: (_, _) => Container(height: 160, color: AppColors.borderLight),
+                  placeholder: (_, _) =>
+                      Container(height: 160, color: AppColors.borderLight),
                   errorWidget: (_, _, _) => _EventImageFallback(),
                 ),
               )
             else
-              _EventImageFallback(radius: const BorderRadius.vertical(top: Radius.circular(17))),
+              _EventImageFallback(
+                radius: const BorderRadius.vertical(top: Radius.circular(17)),
+              ),
 
             Padding(
               padding: const EdgeInsets.all(16),
@@ -153,7 +176,10 @@ class _EventDriveCard extends StatelessWidget {
                 children: [
                   Row(
                     children: [
-                      _Tag(label: event.eventStatus ?? 'Upcoming', color: AppColors.primaryBlue),
+                      _Tag(
+                        label: event.eventStatus ?? 'Upcoming',
+                        color: AppColors.primaryBlue,
+                      ),
                       if (isNearFull && !event.isAttendeeFull) ...[
                         const SizedBox(width: 8),
                         _Tag(label: 'Almost Full', color: AppColors.terracotta),
@@ -164,23 +190,54 @@ class _EventDriveCard extends StatelessWidget {
                       ],
                       const Spacer(),
                       if (event.isPlantationDrive)
-                        const Icon(Icons.park_rounded, size: 16, color: AppColors.forestGreen),
+                        const Icon(
+                          Icons.park_rounded,
+                          size: 16,
+                          color: AppColors.forestGreen,
+                        ),
                     ],
                   ),
                   const SizedBox(height: 10),
-                  Text(event.title, style: const TextStyle(fontWeight: FontWeight.w700, fontSize: 16)),
+                  Text(
+                    event.title,
+                    style: const TextStyle(
+                      fontWeight: FontWeight.w700,
+                      fontSize: 16,
+                    ),
+                  ),
                   const SizedBox(height: 8),
                   Row(
                     children: [
-                      const Icon(Icons.calendar_today_rounded, size: 13, color: AppColors.textMedium),
+                      const Icon(
+                        Icons.calendar_today_rounded,
+                        size: 13,
+                        color: AppColors.textMedium,
+                      ),
                       const SizedBox(width: 5),
-                      Text(event.formattedDate, style: const TextStyle(color: AppColors.textMedium, fontSize: 12)),
+                      Text(
+                        event.formattedDate,
+                        style: const TextStyle(
+                          color: AppColors.textMedium,
+                          fontSize: 12,
+                        ),
+                      ),
                       if (event.siteName != null) ...[
                         const SizedBox(width: 14),
-                        const Icon(Icons.location_on_rounded, size: 13, color: AppColors.textMedium),
+                        const Icon(
+                          Icons.location_on_rounded,
+                          size: 13,
+                          color: AppColors.textMedium,
+                        ),
                         const SizedBox(width: 3),
                         Expanded(
-                          child: Text(event.siteName!, overflow: TextOverflow.ellipsis, style: const TextStyle(color: AppColors.textMedium, fontSize: 12)),
+                          child: Text(
+                            event.siteName!,
+                            overflow: TextOverflow.ellipsis,
+                            style: const TextStyle(
+                              color: AppColors.textMedium,
+                              fontSize: 12,
+                            ),
+                          ),
                         ),
                       ],
                     ],
@@ -191,11 +248,23 @@ class _EventDriveCard extends StatelessWidget {
                     children: [
                       Text(
                         '${event.attendeesCount}/${event.maxParticipants ?? '∞'} Slots Filled',
-                        style: TextStyle(fontWeight: FontWeight.w600, fontSize: 12, color: isNearFull ? AppColors.terracotta : AppColors.textMedium),
+                        style: TextStyle(
+                          fontWeight: FontWeight.w600,
+                          fontSize: 12,
+                          color: isNearFull
+                              ? AppColors.terracotta
+                              : AppColors.textMedium,
+                        ),
                       ),
                       Text(
                         '${(filled * 100).toInt()}%',
-                        style: TextStyle(fontWeight: FontWeight.w700, fontSize: 12, color: isNearFull ? AppColors.terracotta : AppColors.primaryBlue),
+                        style: TextStyle(
+                          fontWeight: FontWeight.w700,
+                          fontSize: 12,
+                          color: isNearFull
+                              ? AppColors.terracotta
+                              : AppColors.primaryBlue,
+                        ),
                       ),
                     ],
                   ),
@@ -205,7 +274,9 @@ class _EventDriveCard extends StatelessWidget {
                     child: LinearProgressIndicator(
                       value: filled.clamp(0, 1),
                       backgroundColor: AppColors.borderLight,
-                      color: isNearFull ? AppColors.terracotta : AppColors.primaryBlue,
+                      color: isNearFull
+                          ? AppColors.terracotta
+                          : AppColors.primaryBlue,
                       minHeight: 6,
                     ),
                   ),
@@ -224,11 +295,16 @@ class _EventImageFallback extends StatelessWidget {
   const _EventImageFallback({this.radius});
   @override
   Widget build(BuildContext context) => Container(
-        height: 120,
-        width: double.infinity,
-        decoration: BoxDecoration(color: AppColors.primaryBlue.withAlpha(15), borderRadius: radius),
-        child: const Center(child: Icon(Icons.forest_rounded, color: AppColors.primaryBlue, size: 44)),
-      );
+    height: 120,
+    width: double.infinity,
+    decoration: BoxDecoration(
+      color: AppColors.primaryBlue.withAlpha(15),
+      borderRadius: radius,
+    ),
+    child: const Center(
+      child: Icon(Icons.forest_rounded, color: AppColors.primaryBlue, size: 44),
+    ),
+  );
 }
 
 // ── Tab 2: Active Campaigns ───────────────────────────────────────────────────
@@ -284,89 +360,148 @@ class _CampaignFundingCard extends StatelessWidget {
     return GestureDetector(
       onTap: () => context.push('/action-hub/campaign/${campaign.id}'),
       child: Container(
-      margin: const EdgeInsets.only(bottom: 14),
-      decoration: BoxDecoration(
-        color: AppColors.surfaceCard,
-        borderRadius: BorderRadius.circular(18),
-        border: Border.all(color: AppColors.borderLight),
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          // Campaign image header
-          if (campaign.thumbnailUrl != null)
-            ClipRRect(
-              borderRadius: const BorderRadius.vertical(top: Radius.circular(17)),
-              child: CachedNetworkImage(
-                imageUrl: campaign.thumbnailUrl!,
-                height: 160,
-                width: double.infinity,
-                fit: BoxFit.cover,
-                placeholder: (_, _) => Container(height: 160, color: AppColors.borderLight),
-                errorWidget: (_, _, _) => _CampaignImageFallback(),
+        margin: const EdgeInsets.only(bottom: 14),
+        decoration: BoxDecoration(
+          color: AppColors.surfaceCard,
+          borderRadius: BorderRadius.circular(18),
+          border: Border.all(color: AppColors.borderLight),
+        ),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            // Campaign image header
+            if (campaign.thumbnailUrl != null)
+              ClipRRect(
+                borderRadius: const BorderRadius.vertical(
+                  top: Radius.circular(17),
+                ),
+                child: CachedNetworkImage(
+                  imageUrl: campaign.thumbnailUrl!,
+                  height: 160,
+                  width: double.infinity,
+                  fit: BoxFit.cover,
+                  placeholder: (_, _) =>
+                      Container(height: 160, color: AppColors.borderLight),
+                  errorWidget: (_, _, _) => _CampaignImageFallback(),
+                ),
+              )
+            else
+              _CampaignImageFallback(
+                radius: const BorderRadius.vertical(top: Radius.circular(17)),
               ),
-            )
-          else
-            _CampaignImageFallback(radius: const BorderRadius.vertical(top: Radius.circular(17))),
 
-          Padding(
-            padding: const EdgeInsets.all(20),
-            child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Row(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Expanded(child: Text(campaign.title, style: const TextStyle(fontWeight: FontWeight.w700, fontSize: 16))),
-              if (isNearlyFunded) ...[
-                const SizedBox(width: 8),
-                _Tag(label: 'Nearly Funded', color: AppColors.terracotta),
-              ],
-            ],
-          ),
-          if (campaign.description != null) ...[
-            const SizedBox(height: 6),
-            Text(_stripHtmlIfNeeded(campaign.description!), maxLines: 2, overflow: TextOverflow.ellipsis, style: const TextStyle(color: AppColors.textMedium, fontSize: 13, height: 1.4)),
-          ],
-          const SizedBox(height: 18),
-          ClipRRect(
-            borderRadius: BorderRadius.circular(6),
-            child: LinearProgressIndicator(value: pct.clamp(0, 1), backgroundColor: AppColors.borderLight, color: AppColors.primaryYellow, minHeight: 10),
-          ),
-          const SizedBox(height: 10),
-          Row(
-            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-            children: [
-              Column(
+            Padding(
+              padding: const EdgeInsets.all(20),
+              child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  Text('₹${_fmt(campaign.currentAmountRaised)} raised',
-                      style: const TextStyle(fontWeight: FontWeight.w700, fontSize: 16, color: AppColors.primaryBlue)),
-                  Text('of ₹${_fmt(campaign.targetAmount)} goal', style: const TextStyle(color: AppColors.textMedium, fontSize: 12)),
+                  Row(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Expanded(
+                        child: Text(
+                          campaign.title,
+                          style: const TextStyle(
+                            fontWeight: FontWeight.w700,
+                            fontSize: 16,
+                          ),
+                        ),
+                      ),
+                      if (isNearlyFunded) ...[
+                        const SizedBox(width: 8),
+                        _Tag(
+                          label: 'Nearly Funded',
+                          color: AppColors.terracotta,
+                        ),
+                      ],
+                    ],
+                  ),
+                  if (campaign.description != null) ...[
+                    const SizedBox(height: 6),
+                    Text(
+                      _stripHtmlIfNeeded(campaign.description!),
+                      maxLines: 2,
+                      overflow: TextOverflow.ellipsis,
+                      style: const TextStyle(
+                        color: AppColors.textMedium,
+                        fontSize: 13,
+                        height: 1.4,
+                      ),
+                    ),
+                  ],
+                  const SizedBox(height: 18),
+                  ClipRRect(
+                    borderRadius: BorderRadius.circular(6),
+                    child: LinearProgressIndicator(
+                      value: pct.clamp(0, 1),
+                      backgroundColor: AppColors.borderLight,
+                      color: AppColors.primaryYellow,
+                      minHeight: 10,
+                    ),
+                  ),
+                  const SizedBox(height: 10),
+                  Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                    children: [
+                      Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(
+                            '₹${_fmt(campaign.currentAmountRaised)} raised',
+                            style: const TextStyle(
+                              fontWeight: FontWeight.w700,
+                              fontSize: 16,
+                              color: AppColors.primaryBlue,
+                            ),
+                          ),
+                          Text(
+                            'of ₹${_fmt(campaign.targetAmount)} goal',
+                            style: const TextStyle(
+                              color: AppColors.textMedium,
+                              fontSize: 12,
+                            ),
+                          ),
+                        ],
+                      ),
+                      Text(
+                        '${(pct * 100).toInt()}%',
+                        style: TextStyle(
+                          fontWeight: FontWeight.w800,
+                          fontSize: 22,
+                          color: isNearlyFunded
+                              ? AppColors.terracotta
+                              : AppColors.primaryYellow,
+                        ),
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: 18),
+                  SizedBox(
+                    width: double.infinity,
+                    child: ElevatedButton(
+                      onPressed: () => _showDonation(context),
+                      style: ElevatedButton.styleFrom(
+                        minimumSize: const Size(0, 48),
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(12),
+                        ),
+                      ),
+                      child: const Text(
+                        'Donate Now',
+                        style: TextStyle(
+                          fontSize: 14,
+                          fontWeight: FontWeight.w700,
+                        ),
+                      ),
+                    ),
+                  ),
                 ],
               ),
-              Text('${(pct * 100).toInt()}%',
-                  style: TextStyle(fontWeight: FontWeight.w800, fontSize: 22, color: isNearlyFunded ? AppColors.terracotta : AppColors.primaryYellow)),
-            ],
-          ),
-          const SizedBox(height: 18),
-          SizedBox(
-            width: double.infinity,
-            child: ElevatedButton(
-              onPressed: () => _showDonation(context),
-              style: ElevatedButton.styleFrom(
-                minimumSize: const Size(0, 48),
-                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-              ),
-              child: const Text('Donate Now', style: TextStyle(fontSize: 14, fontWeight: FontWeight.w700)),
             ),
-          ),
-        ],
-            ),
-          ),
-        ],
+          ],
+        ),
       ),
-    ));
+    );
   }
 
   String _fmt(double v) {
@@ -392,11 +527,20 @@ class _CampaignImageFallback extends StatelessWidget {
   const _CampaignImageFallback({this.radius});
   @override
   Widget build(BuildContext context) => Container(
-        height: 160,
-        width: double.infinity,
-        decoration: BoxDecoration(color: AppColors.forestGreen.withAlpha(20), borderRadius: radius),
-        child: const Center(child: Icon(Icons.volunteer_activism_rounded, color: AppColors.forestGreen, size: 44)),
-      );
+    height: 160,
+    width: double.infinity,
+    decoration: BoxDecoration(
+      color: AppColors.forestGreen.withAlpha(20),
+      borderRadius: radius,
+    ),
+    child: const Center(
+      child: Icon(
+        Icons.volunteer_activism_rounded,
+        color: AppColors.forestGreen,
+        size: 44,
+      ),
+    ),
+  );
 }
 
 // ── Donation Sheet ────────────────────────────────────────────────────────────
@@ -424,114 +568,188 @@ class _DonationSheetState extends State<DonationSheet> {
   @override
   Widget build(BuildContext context) {
     return Padding(
-      padding: EdgeInsets.only(bottom: MediaQuery.of(context).viewInsets.bottom),
+      padding: EdgeInsets.only(
+        bottom: MediaQuery.of(context).viewInsets.bottom,
+      ),
       child: Container(
-        decoration: const BoxDecoration(color: AppColors.backgroundCream, borderRadius: BorderRadius.vertical(top: Radius.circular(28))),
+        decoration: const BoxDecoration(
+          color: AppColors.backgroundCream,
+          borderRadius: BorderRadius.vertical(top: Radius.circular(28)),
+        ),
         child: SingleChildScrollView(
-        padding: EdgeInsets.fromLTRB(
-            24, 20, 24, 24 + MediaQuery.of(context).viewPadding.bottom),
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Center(child: Container(width: 40, height: 4, decoration: BoxDecoration(color: AppColors.borderMedium, borderRadius: BorderRadius.circular(2)))),
-            const SizedBox(height: 20),
-            Text('Support Campaign', style: Theme.of(context).textTheme.titleLarge?.copyWith(fontWeight: FontWeight.w700)),
-            const SizedBox(height: 4),
-            Text(widget.campaign.title, style: const TextStyle(color: AppColors.textMedium, fontSize: 13)),
-            const SizedBox(height: 20),
-            Row(
-              children: [
-                for (final a in [800, 1000, -1])
-                  Expanded(
-                    child: Padding(
-                      padding: const EdgeInsets.only(right: 8),
-                      child: GestureDetector(
-                        onTap: () => setState(() => _selected = a),
-                        child: AnimatedContainer(
-                          duration: 150.ms,
-                          height: 44,
-                          decoration: BoxDecoration(
-                            color: _selected == a ? AppColors.primaryBlue : AppColors.surfaceCard,
-                            borderRadius: BorderRadius.circular(10),
-                            border: Border.all(color: _selected == a ? AppColors.primaryBlue : AppColors.borderLight),
-                          ),
-                          child: Center(
-                            child: Text(a == -1 ? 'Custom' : '₹$a',
-                                style: TextStyle(fontWeight: FontWeight.w700, color: _selected == a ? Colors.white : AppColors.textDark, fontSize: 13)),
+          padding: EdgeInsets.fromLTRB(
+            24,
+            20,
+            24,
+            24 + MediaQuery.of(context).viewPadding.bottom,
+          ),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Center(
+                child: Container(
+                  width: 40,
+                  height: 4,
+                  decoration: BoxDecoration(
+                    color: AppColors.borderMedium,
+                    borderRadius: BorderRadius.circular(2),
+                  ),
+                ),
+              ),
+              const SizedBox(height: 20),
+              Text(
+                'Support Campaign',
+                style: Theme.of(
+                  context,
+                ).textTheme.titleLarge?.copyWith(fontWeight: FontWeight.w700),
+              ),
+              const SizedBox(height: 4),
+              Text(
+                widget.campaign.title,
+                style: const TextStyle(
+                  color: AppColors.textMedium,
+                  fontSize: 13,
+                ),
+              ),
+              const SizedBox(height: 20),
+              Row(
+                children: [
+                  for (final a in [800, 1000, -1])
+                    Expanded(
+                      child: Padding(
+                        padding: const EdgeInsets.only(right: 8),
+                        child: GestureDetector(
+                          onTap: () => setState(() => _selected = a),
+                          child: AnimatedContainer(
+                            duration: 150.ms,
+                            height: 44,
+                            decoration: BoxDecoration(
+                              color: _selected == a
+                                  ? AppColors.primaryBlue
+                                  : AppColors.surfaceCard,
+                              borderRadius: BorderRadius.circular(10),
+                              border: Border.all(
+                                color: _selected == a
+                                    ? AppColors.primaryBlue
+                                    : AppColors.borderLight,
+                              ),
+                            ),
+                            child: Center(
+                              child: Text(
+                                a == -1 ? 'Custom' : '₹$a',
+                                style: TextStyle(
+                                  fontWeight: FontWeight.w700,
+                                  color: _selected == a
+                                      ? Colors.white
+                                      : AppColors.textDark,
+                                  fontSize: 13,
+                                ),
+                              ),
+                            ),
                           ),
                         ),
                       ),
                     ),
+                ],
+              ),
+              if (_selected == -1) ...[
+                const SizedBox(height: 16),
+                TextField(
+                  controller: _customCtrl,
+                  keyboardType: TextInputType.number,
+                  decoration: const InputDecoration(
+                    hintText: 'Enter amount',
+                    prefixText: '₹ ',
+                    prefixStyle: TextStyle(
+                      color: AppColors.textDark,
+                      fontWeight: FontWeight.w600,
+                      fontSize: 16,
+                    ),
                   ),
+                ),
               ],
-            ),
-            if (_selected == -1) ...[
-              const SizedBox(height: 16),
-              TextField(
-                controller: _customCtrl,
-                keyboardType: TextInputType.number,
-                decoration: const InputDecoration(
-                  hintText: 'Enter amount',
-                  prefixText: '₹ ',
-                  prefixStyle: TextStyle(color: AppColors.textDark, fontWeight: FontWeight.w600, fontSize: 16),
+              if (_showPan) ...[
+                const SizedBox(height: 20),
+                Text(
+                  'PAN Number',
+                  style: Theme.of(
+                    context,
+                  ).textTheme.bodyMedium?.copyWith(fontWeight: FontWeight.w600),
                 ),
-              ),
-            ],
-            if (_showPan) ...[
-              const SizedBox(height: 20),
-              Text('PAN Number', style: Theme.of(context).textTheme.bodyMedium?.copyWith(fontWeight: FontWeight.w600)),
-              const SizedBox(height: 8),
-              TextField(
-                controller: _panCtrl,
-                textCapitalization: TextCapitalization.characters,
-                decoration: const InputDecoration(hintText: 'ABCDE1234F', prefixIcon: Icon(Icons.lock_outline_rounded), helperText: 'Required for 80G tax exemption certificate'),
-              ),
-            ],
-            const SizedBox(height: 24),
-            SizedBox(
-              width: double.infinity,
-              height: 52,
-              child: ElevatedButton(
-                onPressed: () {
-                  int amount = _selected;
-                  if (_selected == -1) {
-                    amount = int.tryParse(_customCtrl.text.trim()) ?? 0;
-                    if (amount <= 0) {
-                      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Please enter a valid amount'), backgroundColor: AppColors.errorRed));
-                      return;
+                const SizedBox(height: 8),
+                TextField(
+                  controller: _panCtrl,
+                  textCapitalization: TextCapitalization.characters,
+                  decoration: const InputDecoration(
+                    hintText: 'ABCDE1234F',
+                    prefixIcon: Icon(Icons.lock_outline_rounded),
+                    helperText: 'Required for 80G tax exemption certificate',
+                  ),
+                ),
+              ],
+              const SizedBox(height: 24),
+              SizedBox(
+                width: double.infinity,
+                height: 52,
+                child: ElevatedButton(
+                  onPressed: () {
+                    int amount = _selected;
+                    if (_selected == -1) {
+                      amount = int.tryParse(_customCtrl.text.trim()) ?? 0;
+                      if (amount <= 0) {
+                        ScaffoldMessenger.of(context).showSnackBar(
+                          const SnackBar(
+                            content: Text('Please enter a valid amount'),
+                            backgroundColor: AppColors.errorRed,
+                          ),
+                        );
+                        return;
+                      }
                     }
-                  }
 
-                  if (!_showPan) {
-                    setState(() => _showPan = true);
-                  } else {
-                    Navigator.pop(context);
-                    ScaffoldMessenger.of(context).showSnackBar(
-                      SnackBar(content: Text('Donation of ₹$amount initiated!'), backgroundColor: AppColors.forestGreen),
-                    );
-                  }
-                },
-                child: Builder(
-                  builder: (_) {
-                    String label = 'Donate';
-                    if (_selected != -1) {
-                      label += ' ₹$_selected';
+                    if (!_showPan) {
+                      setState(() => _showPan = true);
+                    } else {
+                      Navigator.pop(context);
+                      ScaffoldMessenger.of(context).showSnackBar(
+                        SnackBar(
+                          content: Text('Donation of ₹$amount initiated!'),
+                          backgroundColor: AppColors.forestGreen,
+                        ),
+                      );
                     }
-                    return Text(_showPan ? label.replaceAll('Donate', 'Proceed to Pay') : label);
-                  }
+                  },
+                  child: Builder(
+                    builder: (_) {
+                      String label = 'Donate';
+                      if (_selected != -1) {
+                        label += ' ₹$_selected';
+                      }
+                      return Text(
+                        _showPan
+                            ? label.replaceAll('Donate', 'Proceed to Pay')
+                            : label,
+                      );
+                    },
+                  ),
                 ),
               ),
-            ),
-            if (!_showPan)
-              Center(
-                child: TextButton(
-                  onPressed: () => setState(() => _showPan = true),
-                  child: const Text('Unlock 80G Tax Benefit →', style: TextStyle(color: AppColors.primaryBlue, fontSize: 13)),
+              if (!_showPan)
+                Center(
+                  child: TextButton(
+                    onPressed: () => setState(() => _showPan = true),
+                    child: const Text(
+                      'Unlock 80G Tax Benefit →',
+                      style: TextStyle(
+                        color: AppColors.primaryBlue,
+                        fontSize: 13,
+                      ),
+                    ),
+                  ),
                 ),
-              ),
-          ],
-        ),
+            ],
+          ),
         ),
       ),
     );
@@ -546,10 +764,16 @@ class _Tag extends StatelessWidget {
   const _Tag({required this.label, required this.color});
   @override
   Widget build(BuildContext context) => Container(
-        padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
-        decoration: BoxDecoration(color: color.withAlpha(20), borderRadius: BorderRadius.circular(8)),
-        child: Text(label, style: TextStyle(color: color, fontSize: 11, fontWeight: FontWeight.w600)),
-      );
+    padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+    decoration: BoxDecoration(
+      color: color.withAlpha(20),
+      borderRadius: BorderRadius.circular(8),
+    ),
+    child: Text(
+      label,
+      style: TextStyle(color: color, fontSize: 11, fontWeight: FontWeight.w600),
+    ),
+  );
 }
 
 String _stripHtmlIfNeeded(String text) {
