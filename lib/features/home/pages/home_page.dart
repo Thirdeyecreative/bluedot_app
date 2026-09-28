@@ -6,6 +6,9 @@ import 'package:go_router/go_router.dart';
 import '../../../core/constants/app_colors.dart';
 import '../../../core/widgets/skeletons.dart';
 import '../../auth/providers/auth_provider.dart';
+import '../../action_hub/providers/action_provider.dart';
+import '../../action_hub/models/event_model.dart';
+import '../models/campaign_model.dart';
 import '../models/blog_model.dart';
 import '../providers/home_provider.dart';
 import '../widgets/promo_banner_carousel.dart';
@@ -48,34 +51,56 @@ class _HomePageState extends ConsumerState<HomePage> {
               borderRadius: BorderRadius.vertical(bottom: Radius.circular(32)),
             ),
             flexibleSpace: ClipRRect(
-              borderRadius: const BorderRadius.vertical(bottom: Radius.circular(32)),
+              borderRadius: const BorderRadius.vertical(
+                bottom: Radius.circular(32),
+              ),
               child: Container(
-                decoration: const BoxDecoration(
-                  color: AppColors.primaryBlue,
-                ),
+                decoration: const BoxDecoration(color: AppColors.primaryBlue),
               ),
             ),
             title: Row(
               children: [
-                const Icon(Icons.eco_rounded, color: AppColors.primaryYellow, size: 22),
+                const Icon(
+                  Icons.eco_rounded,
+                  color: AppColors.primaryYellow,
+                  size: 22,
+                ),
                 const SizedBox(width: 8),
                 const Text(
                   'BlueDot',
-                  style: TextStyle(color: Colors.white, fontSize: 18, fontWeight: FontWeight.w700),
+                  style: TextStyle(
+                    color: Colors.white,
+                    fontSize: 18,
+                    fontWeight: FontWeight.w700,
+                  ),
                 ),
                 const Spacer(),
                 if (user != null)
                   Container(
-                    padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 10,
+                      vertical: 5,
+                    ),
                     decoration: BoxDecoration(
                       color: Colors.white.withAlpha(30),
                       borderRadius: BorderRadius.circular(20),
                     ),
                     child: Row(
                       children: [
-                        const Icon(Icons.bolt_rounded, color: AppColors.primaryYellow, size: 16),
+                        const Icon(
+                          Icons.bolt_rounded,
+                          color: AppColors.primaryYellow,
+                          size: 16,
+                        ),
                         const SizedBox(width: 4),
-                        Text('${user.totalPoints} XP', style: const TextStyle(color: Colors.white, fontWeight: FontWeight.w700, fontSize: 12)),
+                        Text(
+                          '${user.totalPoints} XP',
+                          style: const TextStyle(
+                            color: Colors.white,
+                            fontWeight: FontWeight.w700,
+                            fontSize: 12,
+                          ),
+                        ),
                       ],
                     ),
                   ),
@@ -103,29 +128,148 @@ class _HomePageState extends ConsumerState<HomePage> {
           ),
 
           // 3. Quick Actions
-          const SliverToBoxAdapter(
-            child: _HomeQuickActions(),
+          const SliverToBoxAdapter(child: _HomeQuickActions()),
+
+          // 3.1 Upcoming Events
+          SliverToBoxAdapter(
+            child:
+                Padding(
+                      padding: const EdgeInsets.fromLTRB(24, 32, 24, 16),
+                      child: Row(
+                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                        children: [
+                          Text(
+                            'Upcoming Events',
+                            style: Theme.of(context).textTheme.titleMedium
+                                ?.copyWith(fontWeight: FontWeight.w700),
+                          ),
+                          TextButton(
+                            onPressed: () => context.go('/action-hub'),
+                            child: const Text('View all'),
+                          ),
+                        ],
+                      ),
+                    )
+                    .animate()
+                    .fadeIn(duration: 400.ms)
+                    .slideY(begin: 0.1, end: 0, curve: Curves.easeOut),
+          ),
+          SliverToBoxAdapter(
+            child: ref
+                .watch(eventsProvider)
+                .when(
+                  data: (list) => list.isEmpty
+                      ? const Padding(
+                          padding: EdgeInsets.symmetric(horizontal: 24),
+                          child: Text('No upcoming events.'),
+                        )
+                      : SizedBox(
+                          height: 220,
+                          child: ListView.builder(
+                            scrollDirection: Axis.horizontal,
+                            padding: const EdgeInsets.symmetric(horizontal: 16),
+                            itemCount: list.length > 5
+                                ? 5
+                                : list.length, // Show top 5
+                            itemBuilder: (_, i) =>
+                                _HomeEventCard(event: list[i]),
+                          ),
+                        ),
+                  loading: () => const SkeletonCardList(
+                    count: 2,
+                    height: 200,
+                    padding: EdgeInsets.symmetric(horizontal: 16),
+                  ),
+                  error: (_, _) => const SizedBox.shrink(),
+                ),
+          ),
+
+          // 3.2 Active Campaigns
+          SliverToBoxAdapter(
+            child:
+                Padding(
+                      padding: const EdgeInsets.fromLTRB(24, 32, 24, 16),
+                      child: Row(
+                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                        children: [
+                          Text(
+                            'Active Campaigns',
+                            style: Theme.of(context).textTheme.titleMedium
+                                ?.copyWith(fontWeight: FontWeight.w700),
+                          ),
+                          TextButton(
+                            onPressed: () => context.go('/action-hub'),
+                            child: const Text('View all'),
+                          ),
+                        ],
+                      ),
+                    )
+                    .animate()
+                    .fadeIn(duration: 400.ms)
+                    .slideY(begin: 0.1, end: 0, curve: Curves.easeOut),
+          ),
+          SliverToBoxAdapter(
+            child: ref
+                .watch(campaignsProvider)
+                .when(
+                  data: (list) => list.isEmpty
+                      ? const Padding(
+                          padding: EdgeInsets.symmetric(horizontal: 24),
+                          child: Text('No active campaigns.'),
+                        )
+                      : SizedBox(
+                          height: 240,
+                          child: ListView.builder(
+                            scrollDirection: Axis.horizontal,
+                            padding: const EdgeInsets.symmetric(horizontal: 16),
+                            itemCount: list.length > 5
+                                ? 5
+                                : list.length, // Show top 5
+                            itemBuilder: (_, i) =>
+                                _HomeCampaignCard(campaign: list[i]),
+                          ),
+                        ),
+                  loading: () => const SkeletonCardList(
+                    count: 2,
+                    height: 220,
+                    padding: EdgeInsets.symmetric(horizontal: 16),
+                  ),
+                  error: (_, _) => const SizedBox.shrink(),
+                ),
           ),
 
           // 4. Stories & Updates Header
           SliverToBoxAdapter(
-            child: Padding(
-              padding: const EdgeInsets.fromLTRB(24, 32, 24, 16),
-              child: Row(
-                mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                children: [
-                  Text('Stories & Updates', style: Theme.of(context).textTheme.titleMedium?.copyWith(fontWeight: FontWeight.w700)),
-                  TextButton(onPressed: () {}, child: const Text('See all')),
-                ],
-              ),
-            ).animate().fadeIn(duration: 400.ms).slideY(begin: 0.1, end: 0, curve: Curves.easeOut),
+            child:
+                Padding(
+                      padding: const EdgeInsets.fromLTRB(24, 32, 24, 16),
+                      child: Row(
+                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                        children: [
+                          Text(
+                            'Stories & Updates',
+                            style: Theme.of(context).textTheme.titleMedium
+                                ?.copyWith(fontWeight: FontWeight.w700),
+                          ),
+                          TextButton(
+                            onPressed: () {},
+                            child: const Text('See all'),
+                          ),
+                        ],
+                      ),
+                    )
+                    .animate()
+                    .fadeIn(duration: 400.ms)
+                    .slideY(begin: 0.1, end: 0, curve: Curves.easeOut),
           ),
 
           // 5. Blog Grid
           SliverToBoxAdapter(
             child: blogs.when(
               data: (list) => Padding(
-                padding: const EdgeInsets.only(bottom: 120), // Padding for bottom nav & FAB
+                padding: const EdgeInsets.only(
+                  bottom: 120,
+                ), // Padding for bottom nav & FAB
                 child: _BlogGrid(blogs: list),
               ),
               loading: () => const SkeletonCardList(
@@ -135,7 +279,10 @@ class _HomePageState extends ConsumerState<HomePage> {
               ),
               error: (_, _) => const Padding(
                 padding: EdgeInsets.all(24),
-                child: Text('Could not load stories', textAlign: TextAlign.center),
+                child: Text(
+                  'Could not load stories',
+                  textAlign: TextAlign.center,
+                ),
               ),
             ),
           ),
@@ -155,7 +302,10 @@ class _NotificationBell extends ConsumerWidget {
       clipBehavior: Clip.none,
       children: [
         IconButton(
-          icon: const Icon(Icons.notifications_none_rounded, color: Colors.white),
+          icon: const Icon(
+            Icons.notifications_none_rounded,
+            color: Colors.white,
+          ),
           onPressed: () => context.push('/notifications'),
         ),
         if (unread > 0)
@@ -173,7 +323,11 @@ class _NotificationBell extends ConsumerWidget {
               child: Text(
                 unread > 9 ? '9+' : '$unread',
                 textAlign: TextAlign.center,
-                style: const TextStyle(color: Colors.white, fontSize: 10, fontWeight: FontWeight.w800),
+                style: const TextStyle(
+                  color: Colors.white,
+                  fontSize: 10,
+                  fontWeight: FontWeight.w800,
+                ),
               ),
             ),
           ),
@@ -188,32 +342,35 @@ class _HomeQuickActions extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Padding(
-      padding: const EdgeInsets.fromLTRB(24, 32, 24, 16),
-      child: Row(
-        mainAxisAlignment: MainAxisAlignment.spaceBetween,
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          _QuickActionButton(
-            icon: Icons.map_rounded,
-            label: 'Eco Garden',
-            color: AppColors.forestGreen,
-            onTap: () => context.push('/map'),
+          padding: const EdgeInsets.fromLTRB(24, 32, 24, 16),
+          child: Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              _QuickActionButton(
+                icon: Icons.map_rounded,
+                label: 'Eco Garden',
+                color: AppColors.forestGreen,
+                onTap: () => context.push('/map'),
+              ),
+              _QuickActionButton(
+                icon: Icons.leaderboard_rounded,
+                label: 'Leaderboard',
+                color: AppColors.primaryBlue,
+                onTap: () => context.push('/profile/leaderboard'),
+              ),
+              _QuickActionButton(
+                icon: Icons.add_location_alt_rounded,
+                label: 'Suggest Site',
+                color: AppColors.terracotta,
+                onTap: () => context.push('/action-hub/suggest-site'),
+              ),
+            ],
           ),
-          _QuickActionButton(
-            icon: Icons.leaderboard_rounded,
-            label: 'Leaderboard',
-            color: AppColors.primaryBlue,
-            onTap: () => context.push('/profile/leaderboard'),
-          ),
-          _QuickActionButton(
-            icon: Icons.add_location_alt_rounded,
-            label: 'Suggest Site',
-            color: AppColors.terracotta,
-            onTap: () => context.push('/action-hub/suggest-site'),
-          ),
-        ],
-      ),
-    ).animate().fadeIn(duration: 400.ms).slideY(begin: 0.1, end: 0, curve: Curves.easeOut);
+        )
+        .animate()
+        .fadeIn(duration: 400.ms)
+        .slideY(begin: 0.1, end: 0, curve: Curves.easeOut);
   }
 }
 
@@ -222,7 +379,7 @@ class _QuickActionButton extends StatelessWidget {
   final String label;
   final Color color;
   final VoidCallback onTap;
-  
+
   const _QuickActionButton({
     required this.icon,
     required this.label,
@@ -232,36 +389,45 @@ class _QuickActionButton extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) => GestureDetector(
-        onTap: onTap,
-        behavior: HitTestBehavior.opaque,
-        child: SizedBox(
-          width: 86, // Fixed width so text wraps cleanly if needed
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              Container(
-                width: 64,
-                height: 64,
-                decoration: BoxDecoration(
-                  color: Colors.white,
-                  shape: BoxShape.circle,
-                  boxShadow: [
-                    BoxShadow(color: color.withAlpha(30), blurRadius: 16, offset: const Offset(0, 6)),
-                  ],
-                  border: Border.all(color: color.withAlpha(30), width: 1.5),
+    onTap: onTap,
+    behavior: HitTestBehavior.opaque,
+    child: SizedBox(
+      width: 86, // Fixed width so text wraps cleanly if needed
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Container(
+            width: 64,
+            height: 64,
+            decoration: BoxDecoration(
+              color: Colors.white,
+              shape: BoxShape.circle,
+              boxShadow: [
+                BoxShadow(
+                  color: color.withAlpha(30),
+                  blurRadius: 16,
+                  offset: const Offset(0, 6),
                 ),
-                child: Icon(icon, color: color, size: 28),
-              ),
-              const SizedBox(height: 10),
-              Text(
-                label,
-                textAlign: TextAlign.center,
-                style: const TextStyle(fontWeight: FontWeight.w600, color: AppColors.textDark, fontSize: 13, height: 1.2),
-              ),
-            ],
+              ],
+              border: Border.all(color: color.withAlpha(30), width: 1.5),
+            ),
+            child: Icon(icon, color: color, size: 28),
           ),
-        ),
-      );
+          const SizedBox(height: 10),
+          Text(
+            label,
+            textAlign: TextAlign.center,
+            style: const TextStyle(
+              fontWeight: FontWeight.w600,
+              color: AppColors.textDark,
+              fontSize: 13,
+              height: 1.2,
+            ),
+          ),
+        ],
+      ),
+    ),
+  );
 }
 
 class _BlogGrid extends StatelessWidget {
@@ -279,7 +445,12 @@ class _BlogGrid extends StatelessWidget {
       itemBuilder: (_, i) => _BlogCard(blog: blogs[i])
           .animate()
           .fadeIn(delay: (100 * i).ms, duration: 400.ms)
-          .slideY(begin: 0.1, end: 0, delay: (100 * i).ms, curve: Curves.easeOut),
+          .slideY(
+            begin: 0.1,
+            end: 0,
+            delay: (100 * i).ms,
+            curve: Curves.easeOut,
+          ),
     );
   }
 }
@@ -297,23 +468,33 @@ class _BlogCard extends StatelessWidget {
           color: Colors.white,
           borderRadius: BorderRadius.circular(16),
           boxShadow: [
-            BoxShadow(color: Colors.black.withOpacity(0.03), blurRadius: 12, offset: const Offset(0, 4)),
+            BoxShadow(
+              color: Colors.black.withOpacity(0.03),
+              blurRadius: 12,
+              offset: const Offset(0, 4),
+            ),
           ],
         ),
         child: Row(
           children: [
             if (blog.thumbnailUrl != null)
               ClipRRect(
-                borderRadius: const BorderRadius.horizontal(left: Radius.circular(15)),
+                borderRadius: const BorderRadius.horizontal(
+                  left: Radius.circular(15),
+                ),
                 child: CachedNetworkImage(
                   imageUrl: blog.thumbnailUrl!,
                   width: 100,
                   height: 100,
                   fit: BoxFit.cover,
-                  placeholder: (_, _) => Container(color: AppColors.borderLight),
+                  placeholder: (_, _) =>
+                      Container(color: AppColors.borderLight),
                   errorWidget: (_, _, _) => Container(
                     color: AppColors.primaryBlue.withAlpha(20),
-                    child: const Icon(Icons.article_rounded, color: AppColors.slateBlue),
+                    child: const Icon(
+                      Icons.article_rounded,
+                      color: AppColors.slateBlue,
+                    ),
                   ),
                 ),
               )
@@ -323,9 +504,15 @@ class _BlogCard extends StatelessWidget {
                 height: 100,
                 decoration: const BoxDecoration(
                   color: Color(0xFFECF0FF),
-                  borderRadius: BorderRadius.horizontal(left: Radius.circular(15)),
+                  borderRadius: BorderRadius.horizontal(
+                    left: Radius.circular(15),
+                  ),
                 ),
-                child: const Icon(Icons.article_rounded, color: AppColors.primaryBlue, size: 32),
+                child: const Icon(
+                  Icons.article_rounded,
+                  color: AppColors.primaryBlue,
+                  size: 32,
+                ),
               ),
             Expanded(
               child: Padding(
@@ -337,7 +524,10 @@ class _BlogCard extends StatelessWidget {
                       blog.title,
                       maxLines: 2,
                       overflow: TextOverflow.ellipsis,
-                      style: const TextStyle(fontWeight: FontWeight.w600, fontSize: 14),
+                      style: const TextStyle(
+                        fontWeight: FontWeight.w600,
+                        fontSize: 14,
+                      ),
                     ),
                     if (blog.excerpt != null) ...[
                       const SizedBox(height: 6),
@@ -345,19 +535,42 @@ class _BlogCard extends StatelessWidget {
                         _stripHtmlIfNeeded(blog.excerpt!),
                         maxLines: 2,
                         overflow: TextOverflow.ellipsis,
-                        style: const TextStyle(fontSize: 12, color: AppColors.textMedium),
+                        style: const TextStyle(
+                          fontSize: 12,
+                          color: AppColors.textMedium,
+                        ),
                       ),
                     ],
                     const SizedBox(height: 8),
                     Row(
                       children: [
-                        const Icon(Icons.person_outline_rounded, size: 12, color: AppColors.textLight),
+                        const Icon(
+                          Icons.person_outline_rounded,
+                          size: 12,
+                          color: AppColors.textLight,
+                        ),
                         const SizedBox(width: 4),
-                        Text(blog.author ?? 'BlueDot', style: const TextStyle(fontSize: 11, color: AppColors.textLight)),
+                        Text(
+                          blog.author ?? 'BlueDot',
+                          style: const TextStyle(
+                            fontSize: 11,
+                            color: AppColors.textLight,
+                          ),
+                        ),
                         const Spacer(),
-                        const Icon(Icons.remove_red_eye_outlined, size: 12, color: AppColors.textLight),
+                        const Icon(
+                          Icons.remove_red_eye_outlined,
+                          size: 12,
+                          color: AppColors.textLight,
+                        ),
                         const SizedBox(width: 4),
-                        Text('${blog.views}', style: const TextStyle(fontSize: 11, color: AppColors.textLight)),
+                        Text(
+                          '${blog.views}',
+                          style: const TextStyle(
+                            fontSize: 11,
+                            color: AppColors.textLight,
+                          ),
+                        ),
                       ],
                     ),
                   ],
@@ -376,3 +589,236 @@ String _stripHtmlIfNeeded(String text) {
   return text.replaceAll(exp, '').replaceAll('**', '').trim();
 }
 
+class _HomeEventCard extends StatelessWidget {
+  final PlantationEvent event;
+  const _HomeEventCard({required this.event});
+
+  @override
+  Widget build(BuildContext context) {
+    return GestureDetector(
+      onTap: () => context.push('/action-hub/event/${event.id}'),
+      child: Container(
+        width: 260,
+        margin: const EdgeInsets.only(right: 16),
+        decoration: BoxDecoration(
+          color: AppColors.surfaceCard,
+          borderRadius: BorderRadius.circular(16),
+          border: Border.all(color: AppColors.borderLight),
+        ),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            if (event.thumbnailUrl != null)
+              ClipRRect(
+                borderRadius: const BorderRadius.vertical(
+                  top: Radius.circular(15),
+                ),
+                child: CachedNetworkImage(
+                  imageUrl: event.thumbnailUrl!,
+                  height: 110,
+                  width: double.infinity,
+                  fit: BoxFit.cover,
+                  placeholder: (_, _) =>
+                      Container(height: 110, color: AppColors.borderLight),
+                  errorWidget: (_, _, _) => Container(
+                    height: 110,
+                    color: AppColors.primaryBlue.withAlpha(20),
+                    child: const Icon(Icons.park, color: AppColors.primaryBlue),
+                  ),
+                ),
+              )
+            else
+              Container(
+                height: 110,
+                decoration: BoxDecoration(
+                  color: AppColors.primaryBlue.withAlpha(20),
+                  borderRadius: const BorderRadius.vertical(
+                    top: Radius.circular(15),
+                  ),
+                ),
+                child: const Center(
+                  child: Icon(Icons.park, color: AppColors.primaryBlue),
+                ),
+              ),
+            Padding(
+              padding: const EdgeInsets.all(12),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    event.title,
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                    style: const TextStyle(
+                      fontWeight: FontWeight.w700,
+                      fontSize: 14,
+                    ),
+                  ),
+                  const SizedBox(height: 6),
+                  Row(
+                    children: [
+                      const Icon(
+                        Icons.calendar_today_rounded,
+                        size: 12,
+                        color: AppColors.textMedium,
+                      ),
+                      const SizedBox(width: 4),
+                      Text(
+                        event.formattedDate,
+                        style: const TextStyle(
+                          color: AppColors.textMedium,
+                          fontSize: 11,
+                        ),
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: 12),
+                  Row(
+                    children: [
+                      Container(
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: 8,
+                          vertical: 4,
+                        ),
+                        decoration: BoxDecoration(
+                          color: AppColors.primaryBlue.withAlpha(20),
+                          borderRadius: BorderRadius.circular(8),
+                        ),
+                        child: Text(
+                          event.eventStatus ?? 'Upcoming',
+                          style: const TextStyle(
+                            color: AppColors.primaryBlue,
+                            fontSize: 10,
+                            fontWeight: FontWeight.w700,
+                          ),
+                        ),
+                      ),
+                      const Spacer(),
+                      if (event.isPlantationDrive)
+                        const Icon(
+                          Icons.eco_rounded,
+                          size: 14,
+                          color: AppColors.forestGreen,
+                        ),
+                    ],
+                  ),
+                ],
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+class _HomeCampaignCard extends StatelessWidget {
+  final Campaign campaign;
+  const _HomeCampaignCard({required this.campaign});
+
+  @override
+  Widget build(BuildContext context) {
+    final pct = campaign.progressPercent;
+    return GestureDetector(
+      onTap: () => context.push('/action-hub/campaign/${campaign.id}'),
+      child: Container(
+        width: 260,
+        margin: const EdgeInsets.only(right: 16),
+        decoration: BoxDecoration(
+          color: AppColors.surfaceCard,
+          borderRadius: BorderRadius.circular(16),
+          border: Border.all(color: AppColors.borderLight),
+        ),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            if (campaign.thumbnailUrl != null)
+              ClipRRect(
+                borderRadius: const BorderRadius.vertical(
+                  top: Radius.circular(15),
+                ),
+                child: CachedNetworkImage(
+                  imageUrl: campaign.thumbnailUrl!,
+                  height: 110,
+                  width: double.infinity,
+                  fit: BoxFit.cover,
+                  placeholder: (_, _) =>
+                      Container(height: 110, color: AppColors.borderLight),
+                  errorWidget: (_, _, _) => Container(
+                    height: 110,
+                    color: AppColors.primaryBlue.withAlpha(20),
+                    child: const Icon(
+                      Icons.campaign,
+                      color: AppColors.primaryBlue,
+                    ),
+                  ),
+                ),
+              )
+            else
+              Container(
+                height: 110,
+                decoration: BoxDecoration(
+                  color: AppColors.primaryBlue.withAlpha(20),
+                  borderRadius: const BorderRadius.vertical(
+                    top: Radius.circular(15),
+                  ),
+                ),
+                child: const Center(
+                  child: Icon(Icons.campaign, color: AppColors.primaryBlue),
+                ),
+              ),
+            Padding(
+              padding: const EdgeInsets.all(12),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    campaign.title,
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                    style: const TextStyle(
+                      fontWeight: FontWeight.w700,
+                      fontSize: 14,
+                    ),
+                  ),
+                  const SizedBox(height: 12),
+                  ClipRRect(
+                    borderRadius: BorderRadius.circular(4),
+                    child: LinearProgressIndicator(
+                      value: pct.clamp(0, 1),
+                      backgroundColor: AppColors.borderLight,
+                      color: AppColors.primaryYellow,
+                      minHeight: 6,
+                    ),
+                  ),
+                  const SizedBox(height: 8),
+                  Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                    children: [
+                      Text(
+                        '₹${(campaign.currentAmountRaised).toInt()}',
+                        style: const TextStyle(
+                          fontWeight: FontWeight.w700,
+                          fontSize: 12,
+                          color: AppColors.primaryBlue,
+                        ),
+                      ),
+                      Text(
+                        '${(pct * 100).toInt()}%',
+                        style: const TextStyle(
+                          fontWeight: FontWeight.w700,
+                          fontSize: 12,
+                          color: AppColors.primaryYellow,
+                        ),
+                      ),
+                    ],
+                  ),
+                ],
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
