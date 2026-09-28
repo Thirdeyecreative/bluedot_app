@@ -20,17 +20,26 @@ class MainNavigationShell extends StatelessWidget {
   Widget build(BuildContext context) {
     final currentIndex = navigationShell.currentIndex;
 
-    return Scaffold(
-      extendBody: true,
-      body: navigationShell,
-      floatingActionButton: GestureDetector(
-        onTap: () => context.push('/scanner'),
-        child: const _PulsingScanFab(),
-      ),
-      floatingActionButtonLocation: FloatingActionButtonLocation.centerDocked,
-      bottomNavigationBar: _BlueDotNavBar(
-        currentIndex: currentIndex,
-        onTapNav: _onTapNav,
+    return PopScope(
+      canPop: currentIndex == 0,
+      onPopInvokedWithResult: (didPop, _) {
+        if (didPop) return;
+        if (currentIndex != 0) {
+          navigationShell.goBranch(0);
+        }
+      },
+      child: Scaffold(
+        extendBody: true,
+        body: navigationShell,
+        floatingActionButton: GestureDetector(
+          onTap: () => context.push('/scanner'),
+          child: const _PulsingScanFab(),
+        ),
+        floatingActionButtonLocation: FloatingActionButtonLocation.centerDocked,
+        bottomNavigationBar: _BlueDotNavBar(
+          currentIndex: currentIndex,
+          onTapNav: _onTapNav,
+        ),
       ),
     );
   }
