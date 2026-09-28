@@ -7,6 +7,7 @@ import 'package:go_router/go_router.dart';
 import 'package:latlong2/latlong.dart';
 import 'package:permission_handler/permission_handler.dart';
 import '../../../core/constants/app_colors.dart';
+import '../../../core/widgets/skeletons.dart';
 import '../../scanner/models/scan_result_model.dart';
 import '../../scanner/providers/scanner_provider.dart';
 import '../../scanner/widgets/scan_history_detail_sheet.dart';
@@ -76,9 +77,42 @@ class _EcoGardenPageState extends ConsumerState<EcoGardenPage> {
   @override
   Widget build(BuildContext context) {
     if (!_locationResolved) {
-      return const Scaffold(
-        backgroundColor: AppColors.backgroundCream,
-        body: Center(child: CircularProgressIndicator(color: AppColors.primaryBlue)),
+      return Scaffold(
+        backgroundColor: Colors.white,
+        body: AppSkeleton(
+          child: Stack(
+            children: [
+              const Bone(width: double.infinity, height: double.infinity),
+              SafeArea(
+                child: Padding(
+                  padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                  child: Row(
+                    children: [
+                      Bone(width: 48, height: 48, borderRadius: BorderRadius.circular(24)),
+                      const SizedBox(width: 12),
+                      Expanded(
+                        child: Bone(height: 48, borderRadius: BorderRadius.circular(50)),
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+              Positioned(
+                top: 80,
+                right: 16,
+                child: SafeArea(
+                  child: Column(
+                    children: [
+                      Bone(width: 48, height: 48, borderRadius: BorderRadius.circular(16)),
+                      const SizedBox(height: 8),
+                      Bone(width: 48, height: 48, borderRadius: BorderRadius.circular(16)),
+                    ],
+                  ),
+                ),
+              ),
+            ],
+          ),
+        ),
       );
     }
 

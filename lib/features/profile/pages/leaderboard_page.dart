@@ -2,6 +2,7 @@ import 'package:flutter/material.dart' hide Badge;
 import 'package:flutter_animate/flutter_animate.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../core/constants/app_colors.dart';
+import '../../../core/widgets/skeletons.dart';
 import '../../auth/providers/auth_provider.dart';
 
 import '../providers/leaderboard_provider.dart';
@@ -17,7 +18,55 @@ class LeaderboardPage extends ConsumerWidget {
     return Scaffold(
       backgroundColor: AppColors.primaryBlue,
       body: leaderboardState.when(
-        loading: () => const Center(child: CircularProgressIndicator(color: Colors.white)),
+        loading: () => AppSkeleton(
+          child: Column(
+            children: [
+              SafeArea(
+                bottom: false,
+                child: Padding(
+                  padding: const EdgeInsets.fromLTRB(16, 8, 16, 0),
+                  child: Column(
+                    children: [
+                      const Row(
+                        mainAxisAlignment: MainAxisAlignment.center,
+                        children: [Bone(width: 150, height: 24)],
+                      ),
+                      const SizedBox(height: 24),
+                      Row(
+                        crossAxisAlignment: CrossAxisAlignment.end,
+                        mainAxisAlignment: MainAxisAlignment.center,
+                        children: [
+                          Bone(width: 76, height: 120, borderRadius: const BorderRadius.vertical(top: Radius.circular(10))),
+                          const SizedBox(width: 12),
+                          Bone(width: 90, height: 160, borderRadius: const BorderRadius.vertical(top: Radius.circular(10))),
+                          const SizedBox(width: 12),
+                          Bone(width: 76, height: 100, borderRadius: const BorderRadius.vertical(top: Radius.circular(10))),
+                        ],
+                      ),
+                      const SizedBox(height: 8),
+                    ],
+                  ),
+                ),
+              ),
+              Expanded(
+                child: Container(
+                  decoration: const BoxDecoration(
+                    color: Colors.white,
+                    borderRadius: BorderRadius.vertical(top: Radius.circular(28)),
+                  ),
+                  child: ListView.builder(
+                    padding: const EdgeInsets.fromLTRB(16, 16, 16, 130),
+                    itemCount: 6,
+                    itemBuilder: (_, i) => Padding(
+                      padding: const EdgeInsets.only(bottom: 10),
+                      child: Bone(width: double.infinity, height: 70, borderRadius: BorderRadius.circular(14)),
+                    ),
+                  ),
+                ),
+              ),
+            ],
+          ),
+        ),
         error: (err, stack) => Center(child: Text('Error: $err', style: const TextStyle(color: Colors.white))),
         data: (leaderboardData) {
           // Use the `is_current_user` flag from the API — not fragile name matching
