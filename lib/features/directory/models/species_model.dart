@@ -1,3 +1,5 @@
+import '../../../core/config/api_config.dart';
+
 class TreeSpecies {
   final String id;
   final String localName;
@@ -33,5 +35,10 @@ class TreeSpecies {
         nativeRegion: json['native_region'] as String?,
       );
 
-  String? get thumbnailUrl => imageUrls.isNotEmpty ? imageUrls.first : null;
+  String? get thumbnailUrl {
+    if (imageUrls.isEmpty) return null;
+    final url = imageUrls.first;
+    if (url.startsWith('http')) return url;
+    return '${ApiConfig.baseUrl}$url';
+  }
 }
