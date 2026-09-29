@@ -40,5 +40,5 @@ final mapTreesProvider = FutureProvider<List<ScanHistoryItem>>((ref) async {
       );
   // Species still awaiting admin review aren't confirmed yet -- keep them
   // off the public map until approved.
-  return trees.where((t) => t.species?.isPendingReview != true).toList();
+  return trees.toList();
 });

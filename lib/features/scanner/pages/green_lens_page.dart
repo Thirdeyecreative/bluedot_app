@@ -49,12 +49,26 @@ class _GreenLensPageState extends ConsumerState<GreenLensPage> {
     try {
       Position? position;
       try {
-        await Permission.locationWhenInUse.request();
-        position = await Geolocator.getCurrentPosition(
-          locationSettings: const LocationSettings(accuracy: LocationAccuracy.high, timeLimit: Duration(seconds: 5)),
-        );
+        final status = await Permission.locationWhenInUse.request();
+        if (status.isGranted) {
+          // Check if location services are enabled
+          bool serviceEnabled = await Geolocator.isLocationServiceEnabled();
+          if (serviceEnabled) {
+            try {
+              position = await Geolocator.getCurrentPosition(
+                locationSettings: const LocationSettings(
+                  accuracy: LocationAccuracy.high, 
+                  timeLimit: Duration(seconds: 15),
+                ),
+              );
+            } catch (_) {
+              // If high accuracy times out, try to get last known position
+              position = await Geolocator.getLastKnownPosition();
+            }
+          }
+        }
       } catch (_) {
-        // Use 0,0 as fallback -- backend will still process
+        // Fallback to 0,0 will happen below if position is still null
       }
 
       final result = await ref.read(scanResultProvider.notifier).scan(

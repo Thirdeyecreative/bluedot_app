@@ -11,6 +11,7 @@ import '../../../core/widgets/skeletons.dart';
 import '../../scanner/models/scan_result_model.dart';
 import '../../scanner/providers/scanner_provider.dart';
 import '../../scanner/widgets/scan_history_detail_sheet.dart';
+import '../../auth/providers/auth_provider.dart';
 
 class EcoGardenPage extends ConsumerStatefulWidget {
   const EcoGardenPage({super.key});
@@ -117,6 +118,7 @@ class _EcoGardenPageState extends ConsumerState<EcoGardenPage> {
     }
 
     final mapTrees = ref.watch(mapTreesProvider);
+    final currentUser = ref.watch(currentUserProvider);
     final trees = mapTrees.maybeWhen(
       data: (list) => list,
       orElse: () => const <ScanHistoryItem>[],
@@ -151,6 +153,11 @@ class _EcoGardenPageState extends ConsumerState<EcoGardenPage> {
                     final i = entry.key;
                     final tree = entry.value;
                     final isSelected = _selectedMarkerIndex == i;
+                    final isMine = tree.userId != null && currentUser != null && tree.userId == currentUser.id;
+                    final markerColor = isMine 
+                        ? (tree.status == 1 ? AppColors.forestGreen : AppColors.warningAmber)
+                        : (tree.status == 1 ? AppColors.primaryBlue : AppColors.warningAmber);
+
                     return Marker(
                       point: LatLng(tree.lat!, tree.lng!),
                       width: 36,
@@ -164,24 +171,28 @@ class _EcoGardenPageState extends ConsumerState<EcoGardenPage> {
                               width: isSelected ? 36 : 28,
                               height: isSelected ? 36 : 28,
                               decoration: BoxDecoration(
-                                color: AppColors.primaryBlue,
+                                color: markerColor,
                                 shape: BoxShape.circle,
                                 border: Border.all(color: Colors.white, width: 2),
                                 boxShadow: [
                                   BoxShadow(
-                                    color: AppColors.primaryBlue.withAlpha(100),
+                                    color: markerColor.withAlpha(100),
                                     blurRadius: isSelected ? 12 : 6,
                                   ),
                                 ],
                               ),
-                              child: const Center(
-                                child: Icon(Icons.eco_rounded, color: Colors.white, size: 16),
+                              child: Center(
+                                child: Icon(
+                                  tree.status == 1 ? Icons.eco_rounded : Icons.hourglass_top_rounded,
+                                  color: Colors.white,
+                                  size: 16,
+                                ),
                               ),
                             ),
                             Container(
                               width: 2,
                               height: 8,
-                              color: AppColors.primaryBlue,
+                              color: markerColor,
                             ),
                           ],
                         ),
@@ -294,7 +305,12 @@ class _EcoGardenPageState extends ConsumerState<EcoGardenPage> {
             left: 0,
             right: 0,
             bottom: 0,
-            child: _StatsBar(treeCount: trees.length),
+            child: _StatsBar(
+              treeCount: trees.length,
+              yourTreeCount: currentUser != null 
+                  ? trees.where((t) => t.userId == currentUser.id).length 
+                  : 0,
+            ),
           ),
 
           // ── Tree info card ────────────────────────────────────────────
@@ -371,7 +387,8 @@ class _LayerToggle extends StatelessWidget {
 
 class _StatsBar extends StatelessWidget {
   final int treeCount;
-  const _StatsBar({required this.treeCount});
+  final int yourTreeCount;
+  const _StatsBar({required this.treeCount, required this.yourTreeCount});
 
   @override
   Widget build(BuildContext context) => Container(
@@ -390,12 +407,9 @@ class _StatsBar extends StatelessWidget {
               ),
             ),
             Container(width: 1, height: 36, color: AppColors.borderLight),
-            // TODO: wire to the user's own tagged-tree count once that flow
-            // exists (the map currently only fetches community trees, not
-            // per-user ones) -- placeholder at 0 until then.
-            const Expanded(
+            Expanded(
               child: Center(
-                child: _StatItem(icon: Icons.park_rounded, value: '0', label: 'Your Trees', color: AppColors.primaryYellow),
+                child: _StatItem(icon: Icons.park_rounded, value: '$yourTreeCount', label: 'Your Trees', color: AppColors.forestGreen),
               ),
             ),
           ],

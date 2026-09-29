@@ -114,6 +114,7 @@ class PlantNetData {
 
 class ScanHistoryItem {
   final String id;
+  final String? userId;
   final String? imageUrl;
   final List<String> imageUrls;
   final double? lat;
@@ -126,6 +127,7 @@ class ScanHistoryItem {
 
   const ScanHistoryItem({
     required this.id,
+    this.userId,
     this.imageUrl,
     this.imageUrls = const [],
     this.lat,
@@ -141,6 +143,7 @@ class ScanHistoryItem {
 
   factory ScanHistoryItem.fromJson(Map<String, dynamic> json) => ScanHistoryItem(
         id: json['id'] as String,
+        userId: json['user_id'] as String?,
         imageUrl: json['image_url'] as String?,
         imageUrls: (json['image_urls'] as List<dynamic>?)?.cast<String>() ?? const [],
         lat: (json['lat'] as num?)?.toDouble(),
