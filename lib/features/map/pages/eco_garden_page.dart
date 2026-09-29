@@ -305,11 +305,18 @@ class _EcoGardenPageState extends ConsumerState<EcoGardenPage> {
             left: 0,
             right: 0,
             bottom: 0,
-            child: _StatsBar(
-              treeCount: trees.length,
-              yourTreeCount: currentUser != null 
-                  ? trees.where((t) => t.userId == currentUser.id).length 
-                  : 0,
+            child: Builder(
+              builder: (context) {
+                final yourTreeCount = currentUser != null 
+                    ? trees.where((t) => t.userId == currentUser.id).length 
+                    : 0;
+                final othersTreeCount = trees.length - yourTreeCount;
+                
+                return _StatsBar(
+                  treeCount: othersTreeCount,
+                  yourTreeCount: yourTreeCount,
+                );
+              }
             ),
           ),
 
