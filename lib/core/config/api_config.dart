@@ -65,6 +65,7 @@ class ApiConfig {
   static String get leaderboard => '$_app/leaderboard';
   static String get homeScreenConfig => '$_app/config';
   static String get appBanners => '$_app/banners';
+  static String get directoryData => '$_app/directory';
 
   // Scanner / Tree Tagging
   static String get scan => '$_app/tags/scan';
