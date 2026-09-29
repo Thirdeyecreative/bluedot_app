@@ -45,8 +45,16 @@ class ProfilePage extends ConsumerWidget {
         context.go('/home');
       },
       child: Scaffold(
-        body: CustomScrollView(
-        slivers: [
+        body: RefreshIndicator(
+          onRefresh: () async {
+            ref.invalidate(authStateProvider);
+            ref.invalidate(badgesProvider);
+            ref.invalidate(scanHistoryProvider);
+            await Future.delayed(const Duration(milliseconds: 500));
+          },
+          color: AppColors.primaryBlue,
+          child: CustomScrollView(
+            slivers: [
           SliverAppBar(
             pinned: true,
             title: const Text('My Profile'),
@@ -82,7 +90,7 @@ class ProfilePage extends ConsumerWidget {
           ),
         ],
       ),
-    ));
+    )));
   }
 }
 

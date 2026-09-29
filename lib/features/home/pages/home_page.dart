@@ -35,9 +35,18 @@ class _HomePageState extends ConsumerState<HomePage> {
 
     return Scaffold(
       backgroundColor: Colors.white,
-      body: CustomScrollView(
-        controller: _scroll,
-        slivers: [
+      body: RefreshIndicator(
+        onRefresh: () async {
+          ref.invalidate(blogsProvider);
+          ref.invalidate(bannersProvider);
+          ref.invalidate(campaignsProvider);
+          ref.invalidate(eventsProvider);
+          await Future.delayed(const Duration(milliseconds: 500));
+        },
+        color: AppColors.primaryBlue,
+        child: CustomScrollView(
+          controller: _scroll,
+          slivers: [
           // 1. Compact App Bar Header
           SliverAppBar(
             pinned: false,
@@ -274,7 +283,7 @@ class _HomePageState extends ConsumerState<HomePage> {
           ),
         ],
       ),
-    );
+    ));
   }
 }
 

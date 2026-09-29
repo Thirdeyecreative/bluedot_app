@@ -35,8 +35,14 @@ class _DirectoryPageState extends ConsumerState<DirectoryPage> {
         context.go('/home');
       },
       child: Scaffold(
-        body: CustomScrollView(
-        slivers: [
+        body: RefreshIndicator(
+          onRefresh: () async {
+            ref.invalidate(speciesListProvider);
+            await Future.delayed(const Duration(milliseconds: 500));
+          },
+          color: AppColors.primaryBlue,
+          child: CustomScrollView(
+            slivers: [
           SliverAppBar(
             floating: true,
             snap: true,
@@ -107,7 +113,7 @@ class _DirectoryPageState extends ConsumerState<DirectoryPage> {
           ),
         ],
       ),
-    ));
+    )));
   }
 }
 
