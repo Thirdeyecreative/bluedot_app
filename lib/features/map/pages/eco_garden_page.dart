@@ -77,22 +77,26 @@ class _EcoGardenPageState extends ConsumerState<EcoGardenPage> {
 
   @override
   Widget build(BuildContext context) {
-    if (!_locationResolved) {
+    final mapTrees = ref.watch(mapTreesProvider);
+    final currentUser = ref.watch(currentUserProvider);
+
+    if (!_locationResolved || mapTrees.isLoading) {
       return Scaffold(
         backgroundColor: Colors.white,
         body: AppSkeleton(
           child: Stack(
             children: [
-              const Bone(width: double.infinity, height: double.infinity),
+              // Transparent background to force the Stack to fill the screen
+              Container(width: double.infinity, height: double.infinity, color: Colors.transparent),
               SafeArea(
                 child: Padding(
                   padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
                   child: Row(
                     children: [
-                      Bone(width: 48, height: 48, borderRadius: BorderRadius.circular(24)),
+                      Bone(width: 44, height: 44, borderRadius: BorderRadius.circular(22)),
                       const SizedBox(width: 12),
                       Expanded(
-                        child: Bone(height: 48, borderRadius: BorderRadius.circular(50)),
+                        child: Bone(height: 44, borderRadius: BorderRadius.circular(50)),
                       ),
                     ],
                   ),
@@ -103,13 +107,26 @@ class _EcoGardenPageState extends ConsumerState<EcoGardenPage> {
                 right: 16,
                 child: SafeArea(
                   child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.end,
                     children: [
-                      Bone(width: 48, height: 48, borderRadius: BorderRadius.circular(16)),
+                      Bone(width: 110, height: 36, borderRadius: BorderRadius.circular(20)),
                       const SizedBox(height: 8),
-                      Bone(width: 48, height: 48, borderRadius: BorderRadius.circular(16)),
+                      Bone(width: 44, height: 44, borderRadius: BorderRadius.circular(22)),
+                      const SizedBox(height: 8),
+                      Bone(width: 44, height: 44, borderRadius: BorderRadius.circular(22)),
+                      const SizedBox(height: 8),
+                      Bone(width: 44, height: 44, borderRadius: BorderRadius.circular(22)),
+                      const SizedBox(height: 8),
+                      Bone(width: 44, height: 44, borderRadius: BorderRadius.circular(22)),
                     ],
                   ),
                 ),
+              ),
+              Positioned(
+                left: 16,
+                right: 16,
+                bottom: 24,
+                child: Bone(width: double.infinity, height: 90, borderRadius: BorderRadius.circular(20)),
               ),
             ],
           ),
@@ -117,8 +134,6 @@ class _EcoGardenPageState extends ConsumerState<EcoGardenPage> {
       );
     }
 
-    final mapTrees = ref.watch(mapTreesProvider);
-    final currentUser = ref.watch(currentUserProvider);
     final trees = mapTrees.maybeWhen(
       data: (list) => list,
       orElse: () => const <ScanHistoryItem>[],
@@ -248,7 +263,7 @@ class _EcoGardenPageState extends ConsumerState<EcoGardenPage> {
                     child: Container(
                       padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
                       decoration: BoxDecoration(
-                        color: Colors.white,
+                        color: AppColors.primaryYellow,
                         borderRadius: BorderRadius.circular(50),
                         boxShadow: [BoxShadow(color: Colors.black.withAlpha(20), blurRadius: 8)],
                       ),
@@ -362,7 +377,7 @@ class _MapButton extends StatelessWidget {
           width: 44,
           height: 44,
           decoration: BoxDecoration(
-            color: Colors.white,
+            color: AppColors.primaryYellow,
             shape: BoxShape.circle,
             boxShadow: [BoxShadow(color: Colors.black.withAlpha(20), blurRadius: 8)],
           ),
