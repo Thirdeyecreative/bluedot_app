@@ -282,6 +282,16 @@ class _EcoGardenPageState extends ConsumerState<EcoGardenPage> {
                   ),
                   const SizedBox(height: 8),
                   _MapButton(
+                    icon: Icons.refresh_rounded,
+                    onTap: () {
+                      ref.refresh(mapTreesProvider);
+                      ScaffoldMessenger.of(context).showSnackBar(
+                        const SnackBar(content: Text('Refreshing map...'), duration: Duration(seconds: 1)),
+                      );
+                    },
+                  ),
+                  const SizedBox(height: 8),
+                  _MapButton(
                     icon: Icons.my_location_rounded,
                     onTap: () => _mapController.move(_myLocation ?? _bangaloreCenter, 13),
                   ),

@@ -32,7 +32,12 @@ class _GreenLensPageState extends ConsumerState<GreenLensPage> {
   }
 
   Future<void> _startCapture() async {
-    final photos = await openInAppCamera(context, maxImages: 5, title: 'Scan a Tree');
+    final photos = await openInAppCamera(
+      context, 
+      maxImages: 5, 
+      title: 'Scan a Tree',
+      instructionText: 'Take multiple photos (e.g. leaf, bark, and the whole tree) for a much more accurate AI identification!',
+    );
     if (photos.isEmpty) {
       if (mounted) context.pop();
       return;

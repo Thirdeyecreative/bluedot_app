@@ -12,8 +12,14 @@ import '../constants/app_colors.dart';
 class InAppCameraPage extends StatefulWidget {
   final int maxImages;
   final String title;
+  final String? instructionText;
 
-  const InAppCameraPage({super.key, this.maxImages = 5, this.title = 'Capture Photos'});
+  const InAppCameraPage({
+    super.key, 
+    this.maxImages = 5, 
+    this.title = 'Capture Photos',
+    this.instructionText,
+  });
 
   @override
   State<InAppCameraPage> createState() => _InAppCameraPageState();
@@ -24,11 +30,16 @@ Future<List<File>> openInAppCamera(
   BuildContext context, {
   int maxImages = 5,
   String title = 'Capture Photos',
+  String? instructionText,
 }) async {
   final result = await Navigator.of(context).push<List<File>>(
     MaterialPageRoute(
       fullscreenDialog: true,
-      builder: (_) => InAppCameraPage(maxImages: maxImages, title: title),
+      builder: (_) => InAppCameraPage(
+        maxImages: maxImages, 
+        title: title,
+        instructionText: instructionText,
+      ),
     ),
   );
   return result ?? const <File>[];
@@ -190,6 +201,33 @@ class _InAppCameraPageState extends State<InAppCameraPage> with WidgetsBindingOb
                                   fit: StackFit.expand,
                                   children: [
                                     CameraPreview(_controller!),
+                                    if (widget.instructionText != null && !atMax)
+                                      Positioned(
+                                        top: 16,
+                                        left: 16,
+                                        right: 16,
+                                        child: Container(
+                                          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+                                          decoration: BoxDecoration(
+                                            color: Colors.black.withOpacity(0.65),
+                                            borderRadius: BorderRadius.circular(12),
+                                            border: Border.all(color: AppColors.primaryYellow.withOpacity(0.4)),
+                                          ),
+                                          child: Row(
+                                            crossAxisAlignment: CrossAxisAlignment.start,
+                                            children: [
+                                              const Icon(Icons.tips_and_updates_rounded, color: AppColors.primaryYellow, size: 20),
+                                              const SizedBox(width: 12),
+                                              Expanded(
+                                                child: Text(
+                                                  widget.instructionText!,
+                                                  style: const TextStyle(color: Colors.white, fontSize: 13, height: 1.4),
+                                                ),
+                                              ),
+                                            ],
+                                          ),
+                                        ).animate().fadeIn(duration: 400.ms).slideY(begin: -0.2, end: 0),
+                                      ),
                                     if (atMax)
                                       Container(
                                         color: Colors.black54,
