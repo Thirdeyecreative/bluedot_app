@@ -111,7 +111,11 @@ final routerProvider = Provider<GoRouter>((ref) {
             routes: [
               GoRoute(
                 path: '/action-hub',
-                builder: (__, _) => const ActionHubPage(),
+                builder: (_, state) {
+                  final tabStr = state.uri.queryParameters['tab'];
+                  final tab = int.tryParse(tabStr ?? '0') ?? 0;
+                  return ActionHubPage(initialTab: tab);
+                },
                 routes: [
                   GoRoute(
                     path: 'campaign/:id',

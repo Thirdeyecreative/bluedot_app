@@ -11,7 +11,8 @@ import '../models/event_model.dart';
 import '../providers/action_provider.dart';
 
 class ActionHubPage extends ConsumerStatefulWidget {
-  const ActionHubPage({super.key});
+  final int initialTab;
+  const ActionHubPage({super.key, this.initialTab = 0});
 
   @override
   ConsumerState<ActionHubPage> createState() => _ActionHubPageState();
@@ -24,7 +25,15 @@ class _ActionHubPageState extends ConsumerState<ActionHubPage>
   @override
   void initState() {
     super.initState();
-    _tab = TabController(length: 2, vsync: this);
+    _tab = TabController(initialIndex: widget.initialTab, length: 2, vsync: this);
+  }
+
+  @override
+  void didUpdateWidget(covariant ActionHubPage oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (widget.initialTab != oldWidget.initialTab) {
+      _tab.animateTo(widget.initialTab);
+    }
   }
 
   @override

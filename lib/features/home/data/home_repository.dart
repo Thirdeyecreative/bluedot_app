@@ -5,6 +5,21 @@ import '../../../core/services/api_client.dart';
 import '../models/banner_model.dart';
 import '../models/blog_model.dart';
 import '../models/campaign_model.dart';
+import '../../action_hub/models/event_model.dart';
+
+class HomeFeedData {
+  final String tagline;
+  final List<AppBanner> banners;
+  final List<Campaign> campaigns;
+  final List<PlantationEvent> events;
+
+  HomeFeedData({
+    required this.tagline,
+    required this.banners,
+    required this.campaigns,
+    required this.events,
+  });
+}
 
 final homeRepositoryProvider = Provider<HomeRepository>((ref) {
   return HomeRepository(ref.watch(apiClientProvider));
@@ -16,32 +31,44 @@ class HomeRepository {
 
   Future<void> _demoDelay() => Future<void>.delayed(const Duration(milliseconds: 250));
 
-  static const _defaultScanTagline = 'Every Scan Plants a Story.';
-
-  Future<String> fetchScanTagline() async {
+  Future<HomeFeedData> fetchHomeFeed() async {
     try {
-      final json = await _api.get(ApiConfig.homeScreenConfig) as Map<String, dynamic>;
-      return json['scan_tagline'] as String? ?? _defaultScanTagline;
-    } catch (_) {
-      return _defaultScanTagline;
-    }
-  }
+      final json = await _api.get(ApiConfig.homeFeed, requireAuth: false) as Map<String, dynamic>;
+      
+      // Banners: use DemoData only if no banners exist in DB (visual-only content)
+      final banners = AppBanner.parseList(json['banners'] as List<dynamic>? ?? []);
+      if (banners.isEmpty) {
+        banners.addAll(DemoData.banners);
+        AppBanner.sortInPlace(banners);
+      }
 
-  Future<List<AppBanner>> fetchBanners() async {
-    try {
-      // Public endpoint (no auth) — banners are home-screen content. The
-      // response is a JSON array shaped to AppBanner's fromJson contract.
-      final data = await _api.get(ApiConfig.appBanners, requireAuth: false);
-      final banners = AppBanner.parseList(data as List<dynamic>);
-      // Fall back to demo content if the server has no published banners yet,
-      // so the carousel still has something to show in dev/staging.
-      if (banners.isNotEmpty) return banners;
-    } catch (_) {
-      // Network/parse failure -> fall back to demo data; never break home.
+      // Campaigns: show ONLY real DB data — no demo fallback
+      final campaignsList = json['campaigns'] as List<dynamic>? ?? [];
+      final campaigns = campaignsList.map((c) => Campaign.fromJson(c)).toList();
+
+      // Events: show ONLY real DB data — no demo fallback
+      final eventsList = json['events'] as List<dynamic>? ?? [];
+      final events = eventsList.map((e) => PlantationEvent.fromJson(e)).toList();
+
+      return HomeFeedData(
+        tagline: json['tagline'] as String? ?? 'Every Scan Plants a Story.',
+        banners: banners,
+        campaigns: campaigns,
+        events: events,
+      );
+    } catch (e, stack) {
+      print('Error fetching home feed: $e\n$stack');
+      // On error: show demo banners but empty events/campaigns
+      // so the user never sees stale hardcoded content
+      final demoBanners = List<AppBanner>.of(DemoData.banners);
+      AppBanner.sortInPlace(demoBanners);
+      return HomeFeedData(
+        tagline: 'Every Scan Plants a Story.',
+        banners: demoBanners,
+        campaigns: [],
+        events: [],
+      );
     }
-    final demo = List<AppBanner>.of(DemoData.banners);
-    AppBanner.sortInPlace(demo);
-    return demo;
   }
 
   Future<List<BlogPost>> fetchBlogs({int page = 1, int limit = 10}) async {

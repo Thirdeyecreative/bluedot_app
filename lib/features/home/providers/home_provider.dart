@@ -1,13 +1,12 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../core/demo/demo_data.dart';
 import '../data/home_repository.dart';
-import '../models/banner_model.dart';
 import '../models/blog_model.dart';
 import '../models/campaign_model.dart';
 import '../models/notification_model.dart';
 
-final bannersProvider = FutureProvider<List<AppBanner>>((ref) {
-  return ref.watch(homeRepositoryProvider).fetchBanners();
+final homeFeedProvider = FutureProvider<HomeFeedData>((ref) {
+  return ref.watch(homeRepositoryProvider).fetchHomeFeed();
 });
 
 final blogsProvider = FutureProvider<List<BlogPost>>((ref) {
@@ -16,10 +15,6 @@ final blogsProvider = FutureProvider<List<BlogPost>>((ref) {
 
 final campaignsProvider = FutureProvider<List<Campaign>>((ref) {
   return ref.watch(homeRepositoryProvider).fetchCampaigns();
-});
-
-final scanTaglineProvider = FutureProvider<String>((ref) {
-  return ref.watch(homeRepositoryProvider).fetchScanTagline();
 });
 
 final blogDetailProvider = FutureProvider.family<BlogPost, String>((ref, slug) {

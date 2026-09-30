@@ -59,6 +59,7 @@ class ApiConfig {
   static String get verifyOtp => '$_app/auth/login';
 
   // App Data
+  static String get homeFeed => '$_app/home-feed';
   static String get campaigns => '$_app/campaigns';
   static String get donations => '$_app/donations';
   static String get userProfile => '$_app/profile';

@@ -5,7 +5,6 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import '../../../core/constants/app_colors.dart';
 import '../../../core/widgets/skeletons.dart';
-import '../../action_hub/providers/action_provider.dart';
 import '../../action_hub/models/event_model.dart';
 import '../models/campaign_model.dart';
 import '../models/blog_model.dart';
@@ -32,18 +31,17 @@ class _HomePageState extends ConsumerState<HomePage> {
   @override
   Widget build(BuildContext context) {
     final user = ref.watch(currentUserProvider);
+    final homeFeedAsync = ref.watch(homeFeedProvider);
     final blogs = ref.watch(blogsProvider);
-    final banners = ref.watch(bannersProvider);
 
     return Scaffold(
       backgroundColor: Colors.white,
       body: RefreshIndicator(
         onRefresh: () async {
+          ref.invalidate(homeFeedProvider);
           ref.invalidate(blogsProvider);
-          ref.invalidate(bannersProvider);
-          ref.invalidate(campaignsProvider);
-          ref.invalidate(eventsProvider);
-          await Future.delayed(const Duration(milliseconds: 500));
+          // Wait for the home feed to actually re-fetch before dismissing spinner
+          await ref.read(homeFeedProvider.future);
         },
         color: AppColors.primaryBlue,
         child: CustomScrollView(
@@ -148,12 +146,12 @@ class _HomePageState extends ConsumerState<HomePage> {
 
           // 2. Promo Banners
           SliverToBoxAdapter(
-            child: banners.when(
-              data: (list) => list.isEmpty
+            child: homeFeedAsync.when(
+              data: (feed) => feed.banners.isEmpty
                   ? const SizedBox.shrink()
                   : Padding(
                       padding: const EdgeInsets.fromLTRB(16, 16, 16, 0),
-                      child: PromoBannerCarousel(banners: list)
+                      child: PromoBannerCarousel(banners: feed.banners)
                           .animate()
                           .fadeIn(duration: 400.ms)
                           .slideY(begin: 0.1, end: 0, curve: Curves.easeOut),
@@ -179,7 +177,7 @@ class _HomePageState extends ConsumerState<HomePage> {
                                 ?.copyWith(fontWeight: FontWeight.w700),
                           ),
                           TextButton(
-                            onPressed: () => context.go('/action-hub'),
+                            onPressed: () => context.go('/action-hub?tab=1'),
                             child: const Text('View all'),
                           ),
                         ],
@@ -190,10 +188,8 @@ class _HomePageState extends ConsumerState<HomePage> {
                     .slideY(begin: 0.1, end: 0, curve: Curves.easeOut),
           ),
           SliverToBoxAdapter(
-            child: ref
-                .watch(eventsProvider)
-                .when(
-                  data: (list) => list.isEmpty
+            child: homeFeedAsync.when(
+                  data: (feed) => feed.events.isEmpty
                       ? const Padding(
                           padding: EdgeInsets.symmetric(horizontal: 24),
                           child: Text('No upcoming events.'),
@@ -203,11 +199,9 @@ class _HomePageState extends ConsumerState<HomePage> {
                           child: ListView.builder(
                             scrollDirection: Axis.horizontal,
                             padding: const EdgeInsets.symmetric(horizontal: 16),
-                            itemCount: list.length > 5
-                                ? 5
-                                : list.length, // Show top 5
+                            itemCount: feed.events.length, // Already limited to 3 in backend
                             itemBuilder: (_, i) =>
-                                _HomeEventCard(event: list[i]),
+                                _HomeEventCard(event: feed.events[i]),
                           ),
                         ),
                   loading: () => const SkeletonCardList(
@@ -233,7 +227,7 @@ class _HomePageState extends ConsumerState<HomePage> {
                                 ?.copyWith(fontWeight: FontWeight.w700),
                           ),
                           TextButton(
-                            onPressed: () => context.go('/action-hub'),
+                            onPressed: () => context.go('/action-hub?tab=0'),
                             child: const Text('View all'),
                           ),
                         ],
@@ -244,10 +238,8 @@ class _HomePageState extends ConsumerState<HomePage> {
                     .slideY(begin: 0.1, end: 0, curve: Curves.easeOut),
           ),
           SliverToBoxAdapter(
-            child: ref
-                .watch(campaignsProvider)
-                .when(
-                  data: (list) => list.isEmpty
+            child: homeFeedAsync.when(
+                  data: (feed) => feed.campaigns.isEmpty
                       ? const Padding(
                           padding: EdgeInsets.symmetric(horizontal: 24),
                           child: Text('No active campaigns.'),
@@ -257,11 +249,9 @@ class _HomePageState extends ConsumerState<HomePage> {
                           child: ListView.builder(
                             scrollDirection: Axis.horizontal,
                             padding: const EdgeInsets.symmetric(horizontal: 16),
-                            itemCount: list.length > 5
-                                ? 5
-                                : list.length, // Show top 5
+                            itemCount: feed.campaigns.length,
                             itemBuilder: (_, i) =>
-                                _HomeCampaignCard(campaign: list[i]),
+                                _HomeCampaignCard(campaign: feed.campaigns[i]),
                           ),
                         ),
                   loading: () => const SkeletonCardList(
@@ -475,7 +465,7 @@ class _BlogGrid extends StatelessWidget {
       shrinkWrap: true,
       physics: const NeverScrollableScrollPhysics(),
       padding: const EdgeInsets.symmetric(horizontal: 16),
-      itemCount: blogs.length.clamp(0, 6),
+      itemCount: blogs.length.clamp(0, 3),
       separatorBuilder: (_, _) => const SizedBox(height: 12),
       itemBuilder: (_, i) => _BlogCard(blog: blogs[i])
           .animate()
