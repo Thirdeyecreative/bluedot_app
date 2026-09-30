@@ -133,15 +133,10 @@ maxZoom: 20,
 
 No explicit `interactionOptions` are set, so `flutter_map`'s default interaction flags apply, which include pinch-to-zoom (drag/pinch gestures are enabled by default unless overridden) — confirmed pinch gesture is not disabled anywhere in this file.
 
-Explicit +/- buttons exist (`_MapButton` with `Icons.add_rounded` / `Icons.remove_rounded`, lines 240-253), wired to `_zoomBy(1)` / `_zoomBy(-1)`:
+Explicit +/- buttons exist (`_MapButton` with `Icons.add_rounded` / `Icons.remove_rounded`), wired to `_zoomBy(1)` / `_zoomBy(-1)`.
 
-```dart
-void _zoomBy(double delta) {
-  final camera = _mapController.camera;
-  final nextZoom = (camera.zoom + delta).clamp(4.0, 20.0);
-  _mapController.move(camera.center, nextZoom);
-}
-```
+### Manual Reload Button
+There is a dedicated manual reload button (`Icons.refresh_rounded`) located just below the layer toggle. Clicking it calls `ref.invalidate(mapTreesProvider)` and manually restarts the `flutter_map` UI via a fade animation. During the refresh, a highly precise skeleton loader perfectly mirrors the map buttons and stats bar, so the map UI looks beautifully coherent while loading.
 
 Confirmed the button-driven zoom is clamped to the same `4.0`–`20.0` range as `minZoom`/`maxZoom`.
 
@@ -166,19 +161,8 @@ Confirmed `ScanHistoryDetailSheet` lives at `lib/features/scanner/widgets/scan_h
 
 `_StatsBar` (lines 339-371), fed `treeCount: trees.length` where `trees` is the (already pending-review-filtered) list from `mapTreesProvider`:
 
-- **"Tagged Trees"** — shows `'$treeCount'`, a **real count** derived from the API data (length of the filtered community-trees list).
-- **"Your Trees"** — hardcoded to `'0'`. Confirmed by an explicit TODO directly above it (lines 360-362):
-
-```dart
-// TODO: wire to the user's own tagged-tree count once that flow
-// exists (the map currently only fetches community trees, not
-// per-user ones) -- placeholder at 0 until then.
-const Expanded(
-  child: Center(
-    child: _StatItem(icon: Icons.park_rounded, value: '0', label: 'Your Trees', color: AppColors.primaryYellow),
-  ),
-),
-```
+- **"Tagged Trees"** — shows `'$treeCount'` or `othersTreeCount` (the count of trees not tagged by the current user).
+- **"Your Trees"** — now dynamically calculated! It counts `trees.where((t) => t.userId == currentUser.id).length`. The UI uses `currentUserProvider` to determine which tags belong to the logged-in user. The old hardcoded `0` and TODO have been removed.
 
 ## Riverpod providers used
 
@@ -193,9 +177,7 @@ Registered in `app_router.dart`: `GoRoute(path: '/map', builder: (__, _) => cons
 
 ## Other gaps / TODOs found
 
-A repo-wide search of the map feature folder and the scanner provider/repository/detail-sheet files for "TODO", "demo", "mock", "not yet" found exactly one hit:
-
-- The "Your Trees" hardcoded-0 TODO described above (`eco_garden_page.dart` line 360). No other TODO/demo/mock markers were found in `lib/features/map/`, `scanner/providers/`, or `scan_history_detail_sheet.dart`.
+A repo-wide search of the map feature folder and the scanner provider/repository/detail-sheet files for "TODO", "demo", "mock", "not yet" found no remaining hits! The map is now fully wired up.
 
 ## Layer toggle (incidental finding)
 

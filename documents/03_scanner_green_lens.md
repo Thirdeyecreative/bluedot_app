@@ -21,7 +21,7 @@ Scope: `lib/features/scanner/` and `lib/core/widgets/in_app_camera_page.dart` in
 2. **Trigger scan**: `_runScan(photos)` sets `_analyzing = true`, retrieves the device's current GPS position, then calls `ref.read(scanResultProvider.notifier).scan(images:, lat:, lng:)`.
 3. **Notifier → repository**: `ScanResultNotifier.scan()` clears prior state, then delegates to `ScannerRepository.scanTree(...)`.
 4. **Upload**: `ScannerRepository.scanTree()` does a multipart POST to `ApiConfig.scan` (`{baseUrl}/api/v1/app/tags/scan`) with fields `lat`, `lng` and files under field name `images`, 75-second timeout. Response parsed via `ScanResult.fromJson`.
-5. **Backend identification**: `scan_tree()` in `tags.py` calls `identify_plant(primary_bytes, db)` → `_extract_identification()`, checks the Tree Encyclopedia and a 5-meter proximity duplicate check, uploads images via `MediaService.upload_files`, creates/updates rows, and awards points — **50 points for a brand-new tree, 15 points for a verified/duplicate match**.
+5. **Backend identification**: `scan_tree()` in `tags.py` calls `identify_plant(image_bytes_list, db)` → `_extract_identification()`, parsing **ALL** provided images simultaneously through Vertex AI/PlantNet. It checks the Tree Encyclopedia and a 5-meter proximity duplicate check, uploads images via `MediaService.upload_files`, creates/updates rows, and awards points — **50 points for a brand-new tree, 15 points for a verified/duplicate match**. If the AI confidence score is **>= 70%**, the backend automatically marks the new tag (and its associated tree species if new) as `status: 1` (Approved). Otherwise, it remains `status: 0` (Pending Review).
 6. **Result display**: `_showResultSheet(result)` opens `ScanResultSheet` as a modal bottom sheet (not a routed page).
 7. **"Save" CTA**: this button in `ScanResultSheet` is effectively cosmetic — it just pops the sheet. Actual persistence already happened server-side during step 5's POST. The `onSaved` callback parameter is optional and isn't even passed at the `GreenLensPage` call site.
 8. **History**: scan history is fetched on demand (not auto-refreshed after a scan) via `scanHistoryProvider`, which calls `GET /api/v1/app/tags/history`.
@@ -85,7 +85,7 @@ Confirmed: pinch-to-zoom and a vertical zoom slider both exist.
 - Vertical slider: rendered only if `_maxZoom > _minZoom`, implemented as `_ZoomSlider`, which wraps a standard horizontal `Slider` inside `RotatedBox(quarterTurns: 3, ...)` to present it vertically.
 
 **Shared usage confirmed** — `openInAppCamera()` is called from two distinct flows:
-- `lib/features/scanner/pages/green_lens_page.dart`: `openInAppCamera(context, maxImages: 5, title: 'Scan a Tree')`.
+- `lib/features/scanner/pages/green_lens_page.dart`: `openInAppCamera(context, maxImages: 5, title: 'Scan a Tree', instructionText: 'Take multiple photos...')`. A sleek yellow animated instruction banner now guides the user to take multiple angles of the tree.
 - `lib/features/action_hub/pages/suggest_site_page.dart`: `openInAppCamera(context, maxImages: remaining, title: 'Photograph the Site')`.
 
 So the same camera widget (with the same pinch-to-zoom/slider UX) backs both Green Lens tree scanning and the Action Hub's Suggest Site photo capture — single shared implementation, not duplicated per-feature.

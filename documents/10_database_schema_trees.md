@@ -165,6 +165,8 @@ This ONE species record is NEVER DUPLICATED:
 - `2` (pending_review): Auto-created from AI scan, awaiting admin review/approval
 - `0` (deleted): Species removed (soft delete)
 
+> **High-Confidence Auto-Publish:** If a user scans a brand-new species and the AI identification confidence score is **>= 70%**, the `status` is automatically set to `1` (published) instead of `2` (pending), allowing the new tag and species to go live immediately without human intervention!
+
 ---
 
 ## Complete Data Flow: Tree Scanning Example
@@ -191,7 +193,7 @@ Database changes:
     ├─ co2_offset_factor: 21.77
     ├─ growth_time_years: 15
     ├─ fun_facts: {"facts": ["Used for 5000+ years...", "Natural pesticide..."]}
-    └─ status: 2 (pending_review) ← Admin must approve before going live
+    └─ status: 1 or 2 (Depends on AI confidence >= 70%)
   
   TaggedTree created (NEW):
     ├─ id: tag-neem-001
@@ -221,7 +223,7 @@ Response to app:
       "local_name": "Neem",
       "co2_offset_factor": 21.77,
       "fun_facts": ["Used for 5000+ years...", "Natural pesticide..."],
-      "is_pending_review": true
+      "is_pending_review": false // or true, depending on the 70% threshold
     }
   }
 
