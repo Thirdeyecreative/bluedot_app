@@ -24,9 +24,21 @@ class ApiClient {
       'Accept': 'application/json',
     };
     if (requireAuth) {
-      final session = Supabase.instance.client.auth.currentSession;
+      var session = Supabase.instance.client.auth.currentSession;
       if (session != null) {
-        headers['Authorization'] = 'Bearer ${session.accessToken}';
+        final expiresAt = session.expiresAt;
+        // If expired or expiring within 60 seconds, refresh synchronously
+        if (expiresAt != null && (DateTime.now().millisecondsSinceEpoch ~/ 1000) > (expiresAt - 60)) {
+          try {
+            final res = await Supabase.instance.client.auth.refreshSession();
+            session = res.session;
+          } catch (e) {
+            print('Failed to refresh session: $e');
+          }
+        }
+        if (session != null) {
+          headers['Authorization'] = 'Bearer ${session.accessToken}';
+        }
       }
     }
     return headers;
@@ -89,9 +101,9 @@ class ApiClient {
     Duration? timeout,
   }) async {
     final res = await _guard(() async {
-      final session = requireAuth ? Supabase.instance.client.auth.currentSession : null;
       final request = http.MultipartRequest('POST', Uri.parse(url));
-      if (session != null) request.headers['Authorization'] = 'Bearer ${session.accessToken}';
+      final hdrs = await _headers(requireAuth: requireAuth);
+      request.headers.addAll(hdrs);
       request.fields.addAll(fields);
       // All files are sent under the same repeated field name, which FastAPI
       // collects into a `List[UploadFile]`.
