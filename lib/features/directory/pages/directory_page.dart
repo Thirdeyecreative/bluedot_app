@@ -71,6 +71,21 @@ class _DirectoryPageState extends ConsumerState<DirectoryPage> {
           SliverAppBar(
             floating: true,
             snap: true,
+            leadingWidth: 64,
+            leading: Padding(
+              padding: const EdgeInsets.only(left: 16.0, top: 8.0, bottom: 8.0),
+              child: GestureDetector(
+                onTap: () => context.go('/home'),
+                child: Container(
+                  decoration: BoxDecoration(
+                    color: AppColors.primaryYellow,
+                    shape: BoxShape.circle,
+                    boxShadow: [BoxShadow(color: Colors.black.withAlpha(20), blurRadius: 8)],
+                  ),
+                  child: const Icon(Icons.arrow_back_rounded, color: AppColors.textDark, size: 20),
+                ),
+              ),
+            ),
             title: Text('Botanical Directory', style: Theme.of(context).textTheme.titleLarge?.copyWith(fontWeight: FontWeight.w700)),
             bottom: PreferredSize(
               preferredSize: const Size.fromHeight(60),

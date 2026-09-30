@@ -31,10 +31,7 @@ class DirectoryRepository {
   }
 
   Future<TreeSpecies> fetchSpeciesById(String id) async {
-    final speciesList = await fetchSpecies();
-    return speciesList.firstWhere(
-      (species) => species.id == id,
-      orElse: () => throw Exception('Species not found'),
-    );
+    final response = await _api.get('${ApiConfig.directoryData}/$id', requireAuth: false);
+    return TreeSpecies.fromJson(response);
   }
 }

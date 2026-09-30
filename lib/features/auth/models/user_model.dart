@@ -32,6 +32,14 @@ class AppUser {
     // Normalise to null so the router treats it as "profile incomplete".
     String? _nonEmpty(String? v) => (v == null || v.trim().isEmpty) ? null : v;
 
+    String? _fixUiAvatars(String? url) {
+      if (url == null) return null;
+      if (url.contains('ui-avatars.com') && !url.contains('format=')) {
+        return url.contains('?') ? '$url&format=png' : '$url?format=png';
+      }
+      return url;
+    }
+
     return AppUser(
       id: json['id'] as String,
       phone: json['phone'] as String? ?? '',
@@ -42,7 +50,7 @@ class AppUser {
       level: json['level'] as int? ?? 1,
       totalDonated: (json['total_donated'] as num?)?.toDouble() ?? 0,
       treesTagged: json['trees_tagged'] as int? ?? 0,
-      avatarUrl: json['avatar_url'] as String?,
+      avatarUrl: _fixUiAvatars(json['avatar_url'] as String?),
       panNumber: _nonEmpty(json['pan_number'] as String?),
       preferences: json['preferences'] as Map<String, dynamic>?,
     );

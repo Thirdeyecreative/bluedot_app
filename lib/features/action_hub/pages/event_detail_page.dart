@@ -68,6 +68,21 @@ class _EventDetailPageState extends ConsumerState<EventDetailPage> {
               SliverAppBar(
                 expandedHeight: 240,
                 pinned: true,
+                leadingWidth: 64,
+                leading: Padding(
+                  padding: const EdgeInsets.only(left: 16.0, top: 8.0, bottom: 8.0),
+                  child: GestureDetector(
+                    onTap: () => context.pop(),
+                    child: Container(
+                      decoration: BoxDecoration(
+                        color: AppColors.primaryYellow,
+                        shape: BoxShape.circle,
+                        boxShadow: [BoxShadow(color: Colors.black.withAlpha(20), blurRadius: 8)],
+                      ),
+                      child: const Icon(Icons.arrow_back_rounded, color: AppColors.textDark, size: 20),
+                    ),
+                  ),
+                ),
                 flexibleSpace: FlexibleSpaceBar(
                   background: e.thumbnailUrl != null
                       ? CachedNetworkImage(

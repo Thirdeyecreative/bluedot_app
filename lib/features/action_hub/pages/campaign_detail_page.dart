@@ -1,6 +1,7 @@
 import 'package:cached_network_image/cached_network_image.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:go_router/go_router.dart';
 import '../../../core/constants/app_colors.dart';
 import '../../home/models/campaign_model.dart';
 import '../../home/providers/home_provider.dart';
@@ -35,6 +36,21 @@ class CampaignDetailPage extends ConsumerWidget {
               SliverAppBar(
                 expandedHeight: 280,
                 pinned: true,
+                leadingWidth: 64,
+                leading: Padding(
+                  padding: const EdgeInsets.only(left: 16.0, top: 8.0, bottom: 8.0),
+                  child: GestureDetector(
+                    onTap: () => context.pop(),
+                    child: Container(
+                      decoration: BoxDecoration(
+                        color: AppColors.primaryYellow,
+                        shape: BoxShape.circle,
+                        boxShadow: [BoxShadow(color: Colors.black.withAlpha(20), blurRadius: 8)],
+                      ),
+                      child: const Icon(Icons.arrow_back_rounded, color: AppColors.textDark, size: 20),
+                    ),
+                  ),
+                ),
                 backgroundColor: AppColors.primaryBlue,
                 iconTheme: const IconThemeData(color: Colors.white),
                 flexibleSpace: FlexibleSpaceBar(
