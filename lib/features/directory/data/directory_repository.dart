@@ -12,23 +12,22 @@ class DirectoryRepository {
   final ApiClient _api;
   DirectoryRepository(this._api);
 
-  Future<List<TreeSpecies>> fetchSpecies({String? search}) async {
-    final response = await _api.get(ApiConfig.directoryData, requireAuth: false);
+  Future<List<TreeSpecies>> fetchSpecies({String? search, int limit = 20, int offset = 0}) async {
+    final queryParams = {
+      'limit': limit.toString(),
+      'offset': offset.toString(),
+      if (search != null && search.trim().isNotEmpty) 'search': search.trim(),
+    };
+    
+    // We append the query string to the URL manually or assume the API client handles it.
+    // If _api.get doesn't take query params, we build the string.
+    final queryString = Uri(queryParameters: queryParams).query;
+    final url = '${ApiConfig.directoryData}?$queryString';
+
+    final response = await _api.get(url, requireAuth: false);
     final data = response['data'] as List<dynamic>;
     
-    final speciesList = data.map((json) => TreeSpecies.fromJson(json)).toList();
-
-    final query = search?.trim().toLowerCase() ?? '';
-    if (query.isEmpty) return speciesList;
-
-    return speciesList
-        .where(
-          (species) =>
-              species.localName.toLowerCase().contains(query) ||
-              species.scientificName.toLowerCase().contains(query) ||
-              (species.family?.toLowerCase().contains(query) ?? false),
-        )
-        .toList();
+    return data.map((json) => TreeSpecies.fromJson(json)).toList();
   }
 
   Future<TreeSpecies> fetchSpeciesById(String id) async {

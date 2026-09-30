@@ -173,7 +173,13 @@ class _NavItem extends StatelessWidget {
                     ),
                     clipBehavior: Clip.antiAlias,
                     child: hasAvatar 
-                       ? ClipOval(child: CachedNetworkImage(imageUrl: avatarUrl!, fit: BoxFit.cover))
+                       ? ClipOval(
+                           child: CachedNetworkImage(
+                             imageUrl: avatarUrl!,
+                             fit: BoxFit.cover,
+                             errorWidget: (context, url, error) => Icon(icon, color: AppColors.backgroundCream, size: 22),
+                           ),
+                         )
                        : Icon(icon, color: AppColors.backgroundCream, size: 22),
                   ).animate().scaleXY(begin: 0.6, end: 1, curve: Curves.elasticOut, duration: 500.ms),
                   const SizedBox(height: 4),
@@ -196,7 +202,13 @@ class _NavItem extends StatelessWidget {
                       border: Border.all(color: Colors.white.withAlpha(190), width: 1.5),
                     ),
                     clipBehavior: Clip.antiAlias,
-                    child: ClipOval(child: CachedNetworkImage(imageUrl: avatarUrl!, fit: BoxFit.cover)),
+                    child: ClipOval(
+                      child: CachedNetworkImage(
+                        imageUrl: avatarUrl!,
+                        fit: BoxFit.cover,
+                        errorWidget: (context, url, error) => Icon(icon, color: Colors.white.withAlpha(190), size: 24),
+                      ),
+                    ),
                   )
                 : Icon(icon, color: Colors.white.withAlpha(190), size: 24),
       ),

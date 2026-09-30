@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'package:cached_network_image/cached_network_image.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_animate/flutter_animate.dart';
@@ -17,10 +18,33 @@ class DirectoryPage extends ConsumerStatefulWidget {
 
 class _DirectoryPageState extends ConsumerState<DirectoryPage> {
   final _searchController = TextEditingController();
+  final _scrollController = ScrollController();
+  Timer? _debounce;
+
+  @override
+  void initState() {
+    super.initState();
+    _scrollController.addListener(_onScroll);
+  }
+
+  void _onScroll() {
+    if (_scrollController.position.pixels >= _scrollController.position.maxScrollExtent - 200) {
+      ref.read(speciesListProvider.notifier).loadMore();
+    }
+  }
+
+  void _onSearchChanged(String query) {
+    if (_debounce?.isActive ?? false) _debounce!.cancel();
+    _debounce = Timer(const Duration(milliseconds: 500), () {
+      ref.read(searchQueryProvider.notifier).update(query);
+    });
+  }
 
   @override
   void dispose() {
     _searchController.dispose();
+    _scrollController.dispose();
+    _debounce?.cancel();
     super.dispose();
   }
 
@@ -42,6 +66,7 @@ class _DirectoryPageState extends ConsumerState<DirectoryPage> {
           },
           color: AppColors.primaryBlue,
           child: CustomScrollView(
+            controller: _scrollController,
             slivers: [
           SliverAppBar(
             floating: true,
@@ -53,7 +78,7 @@ class _DirectoryPageState extends ConsumerState<DirectoryPage> {
                 padding: const EdgeInsets.fromLTRB(16, 0, 16, 10),
                 child: TextField(
                   controller: _searchController,
-                  onChanged: (q) => ref.read(searchQueryProvider.notifier).update(q),
+                  onChanged: _onSearchChanged,
                   decoration: InputDecoration(
                     hintText: 'Search plants, e.g. Neem, Banyan...',
                     prefixIcon: const Icon(Icons.search_rounded, color: AppColors.textLight),
@@ -111,6 +136,13 @@ class _DirectoryPageState extends ConsumerState<DirectoryPage> {
               child: Center(child: Text('Error: $e')),
             ),
           ),
+          if (species.isRefreshing && species.hasValue)
+            const SliverToBoxAdapter(
+              child: Padding(
+                padding: EdgeInsets.only(bottom: 120),
+                child: Center(child: CircularProgressIndicator(color: AppColors.primaryBlue)),
+              ),
+            ),
         ],
       ),
     )));

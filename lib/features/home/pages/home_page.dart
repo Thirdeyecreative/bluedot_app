@@ -80,7 +80,13 @@ class _HomePageState extends ConsumerState<HomePage> {
                             border: Border.all(color: AppColors.backgroundCream, width: 1.5),
                           ),
                           clipBehavior: Clip.antiAlias,
-                          child: ClipOval(child: CachedNetworkImage(imageUrl: user!.avatarUrl!, fit: BoxFit.cover)),
+                          child: ClipOval(
+                            child: CachedNetworkImage(
+                              imageUrl: user!.avatarUrl!,
+                              fit: BoxFit.cover,
+                              errorWidget: (context, url, error) => const Icon(Icons.person, color: Colors.white, size: 24),
+                            ),
+                          ),
                         )
                       : Container(
                           width: 36,
