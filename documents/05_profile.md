@@ -37,7 +37,7 @@ A backend `app/api/v1/app/profile.py` route file was searched for under `bluedot
 
 `_ProfileHeader` and `_ImpactStats` in `profile_page.dart` render fields from the `AppUser` object obtained via `ref.watch(currentUserProvider)` (from `auth_provider.dart`):
 
-- Avatar — a static `Icons.person_rounded` glyph inside a `CircularPercentIndicator` showing `user.levelProgress` (no real image/photo upload; edit-profile page also just shows an initials avatar with a "Photo upload coming soon" snackbar).
+- Avatar — Now powered by Bunny CDN! Tapping the avatar uploads the image using `image_picker`, saves it to the CDN, and displays it inside the `CircularPercentIndicator` via `CachedNetworkImage`.
 - Name — `user.fullName ?? user.phone`
 - Level / Level title — `user.levelTitle`, `user.level`
 - XP progress — `user.pointsInCurrentLevel` / `user.pointsForNextLevel`
@@ -304,7 +304,7 @@ The profile page's app bar also has an icon button to `/profile/edit` (edit icon
 | Section | Status |
 |---|---|
 | User identity (name, email, phone, level, XP, trees tagged, donated) | **Demo** — `DemoData.user`, via `AuthRepository` |
-| Avatar/photo | **Demo/placeholder** — initials only, "coming soon" upload |
+| Avatar/photo | **Real API** — Uploads straight to Bunny CDN and updates Postgres `avatar_url` |
 | Badges (profile page + badges page) | **Demo** — `DemoData.badges` via `ProfileRepository.fetchBadges()` |
 | Certificates | **Demo** — `DemoData.certificates` via `ProfileRepository.fetchCertificates()` |
 | Leaderboard (profile quick action target) | **Demo** — local hardcoded `_fullLeaderboard` in `leaderboard_page.dart`, independent of `leaderboardProvider`/`DemoData.leaderboard` |

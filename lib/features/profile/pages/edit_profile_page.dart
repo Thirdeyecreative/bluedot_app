@@ -2,6 +2,10 @@ import 'package:flutter/material.dart';
 import 'package:flutter_animate/flutter_animate.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
+import 'dart:io';
+import 'package:image_picker/image_picker.dart';
+import 'package:image_cropper/image_cropper.dart';
+import 'package:cached_network_image/cached_network_image.dart';
 import '../../../core/constants/app_colors.dart';
 import '../../auth/providers/auth_provider.dart';
 
@@ -34,6 +38,65 @@ class _EditProfilePageState extends ConsumerState<EditProfilePage> {
     _emailCtrl.dispose();
     _cityCtrl.dispose();
     super.dispose();
+  }
+
+  Future<void> _pickAndUploadImage() async {
+    final source = await showModalBottomSheet<ImageSource>(
+      context: context,
+      backgroundColor: Colors.white,
+      shape: const RoundedRectangleBorder(borderRadius: BorderRadius.vertical(top: Radius.circular(20))),
+      builder: (ctx) => SafeArea(
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            ListTile(
+              leading: const Icon(Icons.camera_alt_rounded, color: AppColors.primaryBlue),
+              title: const Text('Take a photo'),
+              onTap: () => Navigator.of(ctx).pop(ImageSource.camera),
+            ),
+            ListTile(
+              leading: const Icon(Icons.photo_library_rounded, color: AppColors.primaryBlue),
+              title: const Text('Choose from gallery'),
+              onTap: () => Navigator.of(ctx).pop(ImageSource.gallery),
+            ),
+            const SizedBox(height: 30),
+          ],
+        ),
+      ),
+    );
+
+    if (source == null) return;
+
+    final picker = ImagePicker();
+    final image = await picker.pickImage(source: source, imageQuality: 70);
+    if (image == null) return;
+
+    final cropped = await ImageCropper().cropImage(
+      sourcePath: image.path,
+      aspectRatio: const CropAspectRatio(ratioX: 1, ratioY: 1),
+      uiSettings: [
+        AndroidUiSettings(
+          toolbarTitle: 'Crop Avatar',
+          toolbarColor: AppColors.primaryBlue,
+          toolbarWidgetColor: Colors.white,
+          initAspectRatio: CropAspectRatioPreset.square,
+          lockAspectRatio: true,
+        ),
+        IOSUiSettings(title: 'Crop Avatar', aspectRatioLockEnabled: true),
+      ],
+    );
+
+    if (cropped == null) return;
+    
+    if (mounted) {
+      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Uploading avatar...')));
+    }
+    
+    await ref.read(authNotifierProvider.notifier).uploadAvatar(File(cropped.path));
+    
+    if (mounted) {
+      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Avatar updated successfully!')));
+    }
   }
 
   Future<void> _save() async {
@@ -98,18 +161,31 @@ class _EditProfilePageState extends ConsumerState<EditProfilePage> {
                             ],
                           ),
                           alignment: Alignment.center,
-                          child: Text(
-                            initial,
-                            style: const TextStyle(color: Colors.white, fontSize: 38, fontWeight: FontWeight.w800),
-                          ),
+                          clipBehavior: Clip.antiAlias,
+                          child: user?.avatarUrl != null
+                              ? ClipOval(
+                                  child: CachedNetworkImage(
+                                    imageUrl: user!.avatarUrl!,
+                                    fit: BoxFit.cover,
+                                    width: 96,
+                                    height: 96,
+                                    placeholder: (context, url) => const CircularProgressIndicator(color: Colors.white),
+                                    errorWidget: (context, url, error) => Text(
+                                      initial,
+                                      style: const TextStyle(color: Colors.white, fontSize: 38, fontWeight: FontWeight.w800),
+                                    ),
+                                  ),
+                                )
+                              : Text(
+                                  initial,
+                                  style: const TextStyle(color: Colors.white, fontSize: 38, fontWeight: FontWeight.w800),
+                                ),
                         ),
                         Positioned(
                           right: 0,
                           bottom: 0,
                           child: GestureDetector(
-                            onTap: () => ScaffoldMessenger.of(context).showSnackBar(
-                              const SnackBar(content: Text('Photo upload coming soon')),
-                            ),
+                            onTap: _pickAndUploadImage,
                             child: Container(
                               padding: const EdgeInsets.all(7),
                               decoration: BoxDecoration(

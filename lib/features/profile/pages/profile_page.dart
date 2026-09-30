@@ -3,6 +3,10 @@ import 'package:flutter_animate/flutter_animate.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:percent_indicator/percent_indicator.dart';
+import 'dart:io';
+import 'package:image_picker/image_picker.dart';
+import 'package:image_cropper/image_cropper.dart';
+import 'package:cached_network_image/cached_network_image.dart';
 import '../../../core/constants/app_colors.dart';
 import '../../../core/widgets/skeletons.dart';
 import '../../auth/models/user_model.dart';
@@ -94,12 +98,72 @@ class ProfilePage extends ConsumerWidget {
   }
 }
 
-class _ProfileHeader extends StatelessWidget {
+class _ProfileHeader extends ConsumerWidget {
   final AppUser user;
   const _ProfileHeader({required this.user});
 
+  Future<void> _pickAndUploadImage(BuildContext context, WidgetRef ref) async {
+    final source = await showModalBottomSheet<ImageSource>(
+      context: context,
+      backgroundColor: Colors.white,
+      shape: const RoundedRectangleBorder(borderRadius: BorderRadius.vertical(top: Radius.circular(20))),
+      builder: (ctx) => SafeArea(
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            ListTile(
+              leading: const Icon(Icons.camera_alt_rounded, color: AppColors.primaryBlue),
+              title: const Text('Take a photo'),
+              onTap: () => Navigator.of(ctx).pop(ImageSource.camera),
+            ),
+            ListTile(
+              leading: const Icon(Icons.photo_library_rounded, color: AppColors.primaryBlue),
+              title: const Text('Choose from gallery'),
+              onTap: () => Navigator.of(ctx).pop(ImageSource.gallery),
+            ),
+            const SizedBox(height: 30),
+          ],
+        ),
+      ),
+    );
+
+    if (source == null) return;
+
+    final picker = ImagePicker();
+    final image = await picker.pickImage(source: source, imageQuality: 70);
+    if (image == null) return;
+
+    final cropped = await ImageCropper().cropImage(
+      sourcePath: image.path,
+      aspectRatio: const CropAspectRatio(ratioX: 1, ratioY: 1),
+      uiSettings: [
+        AndroidUiSettings(
+          toolbarTitle: 'Crop Avatar',
+          toolbarColor: AppColors.primaryBlue,
+          toolbarWidgetColor: Colors.white,
+          initAspectRatio: CropAspectRatioPreset.square,
+          lockAspectRatio: true,
+        ),
+        IOSUiSettings(title: 'Crop Avatar', aspectRatioLockEnabled: true),
+      ],
+    );
+
+    if (cropped == null) return;
+    
+    // Show a snackbar while uploading
+    if (context.mounted) {
+      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Uploading avatar...')));
+    }
+    
+    await ref.read(authNotifierProvider.notifier).uploadAvatar(File(cropped.path));
+    
+    if (context.mounted) {
+      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Avatar updated successfully!')));
+    }
+  }
+
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
     return Container(
       width: double.infinity,
       margin: const EdgeInsets.fromLTRB(16, 8, 16, 0),
@@ -122,24 +186,39 @@ class _ProfileHeader extends StatelessWidget {
       child: Column(
         children: [
           // Avatar with level progress ring
-          CircularPercentIndicator(
-            radius: 50,
-            lineWidth: 5,
-            percent: user.levelProgress.clamp(0.0, 1.0),
-            progressColor: AppColors.primaryYellow,
-            backgroundColor: Colors.white.withAlpha(40),
-            circularStrokeCap: CircularStrokeCap.round,
-            center: Container(
-              width: 80,
-              height: 80,
-              decoration: BoxDecoration(
-                color: Colors.white.withAlpha(20),
-                shape: BoxShape.circle,
-                border: Border.all(color: Colors.white.withAlpha(50), width: 2),
+          GestureDetector(
+            onTap: () => _pickAndUploadImage(context, ref),
+            child: CircularPercentIndicator(
+              radius: 50,
+              lineWidth: 5,
+              percent: user.levelProgress.clamp(0.0, 1.0),
+              progressColor: AppColors.primaryYellow,
+              backgroundColor: Colors.white.withAlpha(40),
+              circularStrokeCap: CircularStrokeCap.round,
+              center: Container(
+                width: 80,
+                height: 80,
+                decoration: BoxDecoration(
+                  color: Colors.white.withAlpha(20),
+                  shape: BoxShape.circle,
+                  border: Border.all(color: Colors.white.withAlpha(50), width: 2),
+                ),
+                clipBehavior: Clip.antiAlias,
+                child: user.avatarUrl != null
+                    ? ClipOval(
+                        child: CachedNetworkImage(
+                          imageUrl: user.avatarUrl!,
+                          fit: BoxFit.cover,
+                          width: 80,
+                          height: 80,
+                          placeholder: (context, url) => const Center(child: CircularProgressIndicator(color: AppColors.primaryYellow)),
+                          errorWidget: (context, url, error) => const Icon(Icons.person_rounded, color: Colors.white, size: 40),
+                        ),
+                      )
+                    : const Icon(Icons.person_rounded, color: Colors.white, size: 40),
               ),
-              child: const Icon(Icons.person_rounded, color: Colors.white, size: 40),
-            ),
-          ).animate().fadeIn().scaleXY(begin: 0.8, end: 1, curve: Curves.elasticOut),
+            ).animate().fadeIn().scaleXY(begin: 0.8, end: 1, curve: Curves.elasticOut),
+          ),
           const SizedBox(height: 14),
           Text(
             user.fullName ?? user.phone,

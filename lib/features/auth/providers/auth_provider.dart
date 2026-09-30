@@ -1,3 +1,4 @@
+import 'dart:io';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:supabase_flutter/supabase_flutter.dart' as supabase;
 import '../data/auth_repository.dart';
@@ -86,6 +87,14 @@ class AuthNotifier extends Notifier<AsyncValue<void>> {
     state = const AsyncValue.loading();
     state = await AsyncValue.guard(() async {
       final user = await _repo.updatePreferences(preferences);
+      ref.read(currentUserProvider.notifier).set(user);
+    });
+  }
+
+  Future<void> uploadAvatar(File file) async {
+    state = const AsyncValue.loading();
+    state = await AsyncValue.guard(() async {
+      final user = await _repo.uploadAvatar(file);
       ref.read(currentUserProvider.notifier).set(user);
     });
   }

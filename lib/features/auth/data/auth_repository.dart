@@ -1,3 +1,4 @@
+import 'dart:io';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../core/services/api_client.dart';
@@ -60,6 +61,17 @@ class AuthRepository {
       data: {
         'preferences': preferences,
       },
+      requireAuth: true,
+    );
+    return await fetchCurrentUser();
+  }
+
+  Future<AppUser> uploadAvatar(File file) async {
+    await _apiClient.multipartPost(
+      '${ApiConfig.userProfile}/avatar',
+      fields: {},
+      files: [file],
+      fileField: 'file',
       requireAuth: true,
     );
     return await fetchCurrentUser();

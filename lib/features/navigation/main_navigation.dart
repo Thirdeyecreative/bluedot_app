@@ -2,8 +2,11 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_animate/flutter_animate.dart';
 import 'package:go_router/go_router.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:cached_network_image/cached_network_image.dart';
 import '../../core/constants/app_colors.dart';
 import '../../core/constants/app_assets.dart';
+import '../auth/providers/auth_provider.dart';
 
 class MainNavigationShell extends StatelessWidget {
   final StatefulNavigationShell navigationShell;
@@ -45,7 +48,7 @@ class MainNavigationShell extends StatelessWidget {
   }
 }
 
-class _BlueDotNavBar extends StatelessWidget {
+class _BlueDotNavBar extends ConsumerWidget {
   final int currentIndex;
   final ValueChanged<int> onTapNav;
 
@@ -62,7 +65,8 @@ class _BlueDotNavBar extends StatelessWidget {
   ];
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
+    final user = ref.watch(currentUserProvider);
     return BottomAppBar(
       color: AppColors.forestGreen,
       shape: const CircularNotchedRectangle(),
@@ -104,6 +108,7 @@ class _BlueDotNavBar extends StatelessWidget {
               label: _items[3].label,
               selected: currentIndex == 3,
               onTap: () => onTapNav(3),
+              avatarUrl: user?.avatarUrl,
             ),
           ),
         ],
@@ -117,16 +122,19 @@ class _NavItem extends StatelessWidget {
   final String label;
   final bool selected;
   final VoidCallback onTap;
+  final String? avatarUrl;
 
   const _NavItem({
     required this.icon,
     required this.label,
     required this.selected,
     required this.onTap,
+    this.avatarUrl,
   });
 
   @override
   Widget build(BuildContext context) {
+    final hasAvatar = avatarUrl != null;
     return GestureDetector(
       onTap: onTap,
       behavior: HitTestBehavior.opaque,
@@ -151,7 +159,10 @@ class _NavItem extends StatelessWidget {
                         ),
                       ],
                     ),
-                    child: Icon(icon, color: AppColors.backgroundCream, size: 22),
+                    clipBehavior: Clip.antiAlias,
+                    child: hasAvatar 
+                       ? ClipOval(child: CachedNetworkImage(imageUrl: avatarUrl!, fit: BoxFit.cover))
+                       : Icon(icon, color: AppColors.backgroundCream, size: 22),
                   ).animate().scaleXY(begin: 0.6, end: 1, curve: Curves.elasticOut, duration: 500.ms),
                   const SizedBox(height: 4),
                   Text(
@@ -164,7 +175,18 @@ class _NavItem extends StatelessWidget {
                   ).animate().fadeIn(delay: 150.ms, duration: 300.ms),
                 ],
               )
-            : Icon(icon, color: Colors.white.withAlpha(190), size: 24),
+            : hasAvatar
+                ? Container(
+                    width: 26,
+                    height: 26,
+                    decoration: BoxDecoration(
+                      shape: BoxShape.circle,
+                      border: Border.all(color: Colors.white.withAlpha(190), width: 1.5),
+                    ),
+                    clipBehavior: Clip.antiAlias,
+                    child: ClipOval(child: CachedNetworkImage(imageUrl: avatarUrl!, fit: BoxFit.cover)),
+                  )
+                : Icon(icon, color: Colors.white.withAlpha(190), size: 24),
       ),
     );
   }

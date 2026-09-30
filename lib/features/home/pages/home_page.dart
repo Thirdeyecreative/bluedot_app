@@ -11,6 +11,7 @@ import '../models/campaign_model.dart';
 import '../models/blog_model.dart';
 import '../providers/home_provider.dart';
 import '../widgets/promo_banner_carousel.dart';
+import '../../auth/providers/auth_provider.dart';
 
 class HomePage extends ConsumerStatefulWidget {
   const HomePage({super.key});
@@ -30,6 +31,7 @@ class _HomePageState extends ConsumerState<HomePage> {
 
   @override
   Widget build(BuildContext context) {
+    final user = ref.watch(currentUserProvider);
     final blogs = ref.watch(blogsProvider);
     final banners = ref.watch(bannersProvider);
 
@@ -67,21 +69,53 @@ class _HomePageState extends ConsumerState<HomePage> {
             ),
             title: Row(
               children: [
-                const Icon(
-                  Icons.eco_rounded,
-                  color: AppColors.primaryYellow,
-                  size: 22,
+                GestureDetector(
+                  onTap: () => context.go('/profile'),
+                  child: user?.avatarUrl != null
+                      ? Container(
+                          width: 36,
+                          height: 36,
+                          decoration: BoxDecoration(
+                            shape: BoxShape.circle,
+                            border: Border.all(color: AppColors.backgroundCream, width: 1.5),
+                          ),
+                          clipBehavior: Clip.antiAlias,
+                          child: ClipOval(child: CachedNetworkImage(imageUrl: user!.avatarUrl!, fit: BoxFit.cover)),
+                        )
+                      : Container(
+                          width: 36,
+                          height: 36,
+                          decoration: BoxDecoration(
+                            color: AppColors.primaryYellow,
+                            shape: BoxShape.circle,
+                            border: Border.all(color: AppColors.backgroundCream, width: 1.5),
+                          ),
+                          alignment: Alignment.center,
+                          child: Text(
+                            (user?.fullName?.isNotEmpty ?? false) ? user!.fullName![0].toUpperCase() : '?',
+                            style: const TextStyle(color: AppColors.textDark, fontWeight: FontWeight.bold, fontSize: 16),
+                          ),
+                        ),
                 ),
-                const SizedBox(width: 8),
-                const Text(
-                  'BlueDot',
-                  style: TextStyle(
-                    color: Colors.white,
-                    fontSize: 18,
-                    fontWeight: FontWeight.w700,
+                const SizedBox(width: 10),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      const Text(
+                        'Welcome back,',
+                        style: TextStyle(color: Colors.white70, fontSize: 11, fontWeight: FontWeight.w600),
+                      ),
+                      Text(
+                        user?.fullName ?? 'Eco Warrior',
+                        style: const TextStyle(color: Colors.white, fontSize: 15, fontWeight: FontWeight.w700),
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                      ),
+                    ],
                   ),
                 ),
-                const Spacer(),
                 IconButton(
                   icon: const Icon(Icons.map_rounded, color: Colors.white),
                   onPressed: () => context.push('/map'),
