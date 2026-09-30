@@ -38,13 +38,25 @@ class MainNavigationShell extends StatelessWidget {
           onTap: () => context.push('/scanner'),
           child: const _PulsingScanFab(),
         ),
-        floatingActionButtonLocation: FloatingActionButtonLocation.centerDocked,
+        floatingActionButtonLocation: const _CustomCenterDockedFabLocation(),
         bottomNavigationBar: _BlueDotNavBar(
           currentIndex: currentIndex,
           onTapNav: _onTapNav,
         ),
       ),
     );
+  }
+}
+
+class _CustomCenterDockedFabLocation extends FloatingActionButtonLocation {
+  const _CustomCenterDockedFabLocation();
+
+  @override
+  Offset getOffset(ScaffoldPrelayoutGeometry scaffoldGeometry) {
+    final double fabX = (scaffoldGeometry.scaffoldSize.width - scaffoldGeometry.floatingActionButtonSize.width) / 2.0;
+    // Push the FAB down by exactly 20 pixels
+    final double fabY = scaffoldGeometry.contentBottom - (scaffoldGeometry.floatingActionButtonSize.height / 2.0) + 20.0;
+    return Offset(fabX, fabY);
   }
 }
 
