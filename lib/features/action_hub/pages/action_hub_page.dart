@@ -168,6 +168,8 @@ class _EventDriveCard extends StatelessWidget {
                   mediaUrls: event.mediaUrls,
                   height: 160,
                   autoPlayVideo: false, // Don't auto-play in list cards
+                  autoAdvance: false,   // Don't auto-swipe in list cards
+                  allowVideoInitialization: false, // Prevents pipeline crashes
                 ),
               )
             else
@@ -385,6 +387,8 @@ class _CampaignFundingCard extends StatelessWidget {
                   mediaUrls: campaign.mediaUrls,
                   height: 160,
                   autoPlayVideo: false, // Don't auto-play in list cards
+                  autoAdvance: false,   // Don't auto-swipe in list cards
+                  allowVideoInitialization: false, // Prevents pipeline crashes
                 ),
               )
             else

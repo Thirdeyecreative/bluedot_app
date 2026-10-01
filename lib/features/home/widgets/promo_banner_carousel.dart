@@ -4,20 +4,28 @@ import 'package:cached_network_image/cached_network_image.dart';
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import 'package:url_launcher/url_launcher.dart';
-import 'package:video_player/video_player.dart';
+import 'package:media_kit/media_kit.dart';
+import 'package:media_kit_video/media_kit_video.dart';
 
 import '../../../core/constants/app_colors.dart';
 import '../../../core/widgets/app_feedback.dart';
 import '../models/banner_model.dart';
 
+class _VideoResource {
+  final Player player;
+  final VideoController controller;
+  bool isReady = false;
+  _VideoResource(this.player, this.controller);
+}
+
 /// Auto-rotating promo carousel (image / GIF / video) for the home screen.
 ///
-/// Design principles (mirrors the PassiTon promo banner):
+/// Design principles:
 ///   * The widget asks the model questions (`isVideo`, `isTappable`, ...);
 ///     it never parses raw fields.
 ///   * Media-aware timing: images/GIFs use a fixed interval, videos advance on
 ///     natural completion, and an admin `durationSeconds` override always wins.
-///   * Respect device decoder limits: at most three live [VideoPlayerController]s
+///   * Respect device decoder limits: at most three live [Player]s
 ///     (a sliding window of the current page and its neighbours).
 ///   * Fail soft: broken media keeps the carousel rotating; a tap error shows a
 ///     snackbar, never a crash.
@@ -35,12 +43,10 @@ class _PromoBannerCarouselState extends State<PromoBannerCarousel> {
   static const _gifFallback = Duration(seconds: 5);
 
   late final PageController _pageController;
-  final Map<int, VideoPlayerController> _videoControllers = {};
+  final Map<int, _VideoResource> _videoResources = {};
   Timer? _rotateTimer;
   int _currentPage = 0;
 
-  /// Gotcha #1: guards every async video-init continuation so a late
-  /// completion after disposal/teardown is a no-op, never a crash.
   bool _isDisposed = false;
 
   bool get _isCarousel => widget.banners.length > 1;
@@ -57,7 +63,6 @@ class _PromoBannerCarouselState extends State<PromoBannerCarousel> {
   @override
   void didUpdateWidget(covariant PromoBannerCarousel oldWidget) {
     super.didUpdateWidget(oldWidget);
-    // A genuinely different banner set (e.g. pull-to-refresh) -> full reset.
     if (!_sameOrder(oldWidget.banners, widget.banners)) {
       _rotateTimer?.cancel();
       _rotateTimer = null;
@@ -89,19 +94,14 @@ class _PromoBannerCarouselState extends State<PromoBannerCarousel> {
   }
 
   void _disposeAllVideos() {
-    for (final c in _videoControllers.values) {
-      c.dispose();
+    for (final res in _videoResources.values) {
+      res.player.dispose();
     }
-    _videoControllers.clear();
+    _videoResources.clear();
   }
 
   // --- Orchestration core -------------------------------------------------
 
-  /// Reconciles all state for the page that just became visible:
-  /// (1) keep video decoders only for {page-1, page, page+1};
-  /// (2) pre-initialize the window's videos;
-  /// (3) play the visible video, pause + rewind neighbours;
-  /// (4) arm the auto-rotate timer (cancelling any in-flight timer first).
   void _syncForPage(int page) {
     if (_isDisposed) return;
     _currentPage = page;
@@ -113,10 +113,9 @@ class _PromoBannerCarouselState extends State<PromoBannerCarousel> {
         window.add(i);
       }
     }
-    final stale =
-        _videoControllers.keys.where((k) => !window.contains(k)).toList();
+    final stale = _videoResources.keys.where((k) => !window.contains(k)).toList();
     for (final k in stale) {
-      _videoControllers.remove(k)?.dispose();
+      _videoResources.remove(k)?.player.dispose();
     }
 
     // (2) Pre-initialize the visible + adjacent videos.
@@ -125,14 +124,14 @@ class _PromoBannerCarouselState extends State<PromoBannerCarousel> {
     }
 
     // (3) Play the visible video; pause + rewind the neighbours.
-    for (final entry in _videoControllers.entries) {
-      final c = entry.value;
-      if (!c.value.isInitialized) continue;
+    for (final entry in _videoResources.entries) {
+      final res = entry.value;
+      if (!res.isReady) continue;
       if (entry.key == page) {
-        c.play();
+        res.player.play();
       } else {
-        c.pause();
-        c.seekTo(Duration.zero);
+        res.player.pause();
+        res.player.seek(Duration.zero);
       }
     }
 
@@ -142,59 +141,53 @@ class _PromoBannerCarouselState extends State<PromoBannerCarousel> {
     if (mounted) setState(() {});
   }
 
-  void _ensureVideo(int index) {
-    if (_videoControllers.containsKey(index)) return;
+  Future<void> _ensureVideo(int index) async {
+    if (_videoResources.containsKey(index)) return;
     final banner = widget.banners[index];
-    final controller = VideoPlayerController.networkUrl(
-      Uri.parse(banner.mediaUrl),
-      videoPlayerOptions: VideoPlayerOptions(mixWithOthers: true),
-    );
-    _videoControllers[index] = controller;
+    
+    final player = Player();
+    final controller = VideoController(player);
+    final res = _VideoResource(player, controller);
+    _videoResources[index] = res;
 
-    controller.initialize().then((_) {
-      // Gotcha #1: the widget may have been disposed, or this controller may
-      // have been superseded (and already disposed) by a fast swipe, while
-      // initialize() was in flight.
+    try {
+      await player.setVolume(0.0);
+      await player.setPlaylistMode(_shouldLoop(banner) ? PlaylistMode.single : PlaylistMode.none);
+
+      player.stream.completed.listen((completed) {
+        if (completed) _onVideoTick(index);
+      });
+
+      await player.open(Media(banner.mediaUrl), play: index == _currentPage);
+
+      if (!mounted || _isDisposed || _videoResources[index] != res) {
+        player.dispose();
+        return;
+      }
+
+      res.isReady = true;
+      if (mounted) setState(() {});
+    } catch (e) {
       if (!mounted || _isDisposed) return;
-      if (_videoControllers[index] != controller) return;
-      controller.setVolume(0); // muted: never steal audio focus
-      controller.setLooping(_shouldLoop(banner));
-      controller.addListener(() => _onVideoTick(index, controller));
-      if (index == _currentPage) controller.play();
-      setState(() {});
-    }).catchError((Object _) {
-      if (!mounted || _isDisposed) return;
-      // Fail soft: drop the broken controller and keep the carousel moving.
-      if (_videoControllers[index] == controller) {
-        _videoControllers.remove(index);
-        controller.dispose();
+      if (_videoResources[index] == res) {
+        _videoResources.remove(index);
+        player.dispose();
       }
       if (index == _currentPage && _isCarousel && _rotateTimer == null) {
         _rotateTimer = Timer(_gifFallback, _advance);
       }
-    });
-  }
-
-  /// Loop only a lone video or an admin-fixed-duration video; in a multi-banner
-  /// carousel a video plays once and then advances.
-  bool _shouldLoop(AppBanner b) => !_isCarousel || b.durationSeconds != null;
-
-  /// Advance a finished video (only when it owns its own timing).
-  void _onVideoTick(int index, VideoPlayerController c) {
-    if (!mounted || _isDisposed || index != _currentPage) return;
-    final banner = widget.banners[index];
-    if (banner.durationSeconds != null) return; // timer owns advancement
-    final v = c.value;
-    if (v.isInitialized &&
-        !v.isLooping &&
-        v.duration > Duration.zero &&
-        v.position >= v.duration) {
-      _advance();
     }
   }
 
-  /// Media-aware advance precedence: admin override > video completion >
-  /// fixed GIF interval > fixed image interval.
+  bool _shouldLoop(AppBanner b) => !_isCarousel || b.durationSeconds != null;
+
+  void _onVideoTick(int index) {
+    if (!mounted || _isDisposed || index != _currentPage) return;
+    final banner = widget.banners[index];
+    if (banner.durationSeconds != null) return; // timer owns advancement
+    _advance();
+  }
+
   void _armTimer(int page) {
     _rotateTimer?.cancel();
     _rotateTimer = null;
@@ -207,7 +200,7 @@ class _PromoBannerCarouselState extends State<PromoBannerCarousel> {
     } else if (banner.isVideo) {
       interval = null; // advances on natural completion (_onVideoTick)
     } else if (banner.isGif) {
-      interval = _gifFallback; // Gotcha #2: fixed, no main-thread frame summing
+      interval = _gifFallback; 
     } else {
       interval = _imageInterval;
     }
@@ -293,19 +286,18 @@ class _PromoBannerCarouselState extends State<PromoBannerCarousel> {
 
   Widget _buildMedia(AppBanner banner, int index) {
     if (banner.isVideo) {
-      final c = _videoControllers[index];
-      final ready = c != null && c.value.isInitialized;
+      final res = _videoResources[index];
+      final ready = res != null && res.isReady;
       return AnimatedSwitcher(
         duration: const Duration(milliseconds: 350),
         child: ready
-            ? FittedBox(
+            ? SizedBox.expand(
                 key: ValueKey('video-$index'),
-                fit: BoxFit.cover,
-                clipBehavior: Clip.hardEdge,
-                child: SizedBox(
-                  width: c.value.size.width,
-                  height: c.value.size.height,
-                  child: VideoPlayer(c),
+                child: Video(
+                  controller: res.controller,
+                  controls: NoVideoControls, // No playback controls on promo banners
+                  fit: BoxFit.cover,
+                  fill: Colors.transparent,
                 ),
               )
             : _placeholder(key: ValueKey('video-ph-$index')),
