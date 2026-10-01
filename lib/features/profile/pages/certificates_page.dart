@@ -215,67 +215,60 @@ class _CertificateSheet extends ConsumerWidget {
     final user = ref.watch(currentUserProvider);
     final name = user?.fullName ?? 'BlueDot Volunteer';
 
-    return DraggableScrollableSheet(
-      initialChildSize: 0.9,
-      minChildSize: 0.5,
-      maxChildSize: 0.95,
-      builder: (_, controller) => Container(
-        decoration: const BoxDecoration(
-          color: AppColors.backgroundCream,
-          borderRadius: BorderRadius.vertical(top: Radius.circular(28)),
-        ),
-        child: Column(
-          children: [
-            Container(
-              width: 40,
-              height: 4,
-              margin: const EdgeInsets.only(top: 12),
-              decoration: BoxDecoration(color: AppColors.borderMedium, borderRadius: BorderRadius.circular(2)),
-            ),
-            Expanded(
-              child: ListView(
-                controller: controller,
-                padding: EdgeInsets.fromLTRB(20, 16, 20, 24 + MediaQuery.of(context).viewPadding.bottom),
+    return Container(
+      decoration: const BoxDecoration(
+        color: AppColors.backgroundCream,
+        borderRadius: BorderRadius.vertical(top: Radius.circular(28)),
+      ),
+      child: SafeArea(
+        child: Padding(
+          padding: const EdgeInsets.fromLTRB(20, 12, 20, 24),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Container(
+                width: 40,
+                height: 4,
+                margin: const EdgeInsets.only(bottom: 24),
+                decoration: BoxDecoration(color: AppColors.borderMedium, borderRadius: BorderRadius.circular(2)),
+              ),
+              _CertificateArtwork(cert: cert, recipientName: name),
+              const SizedBox(height: 20),
+              Row(
                 children: [
-                  _CertificateArtwork(cert: cert, recipientName: name),
-                  const SizedBox(height: 20),
-                  Row(
-                    children: [
-                      Expanded(
-                        child: OutlinedButton.icon(
-                          onPressed: () => ScaffoldMessenger.of(context).showSnackBar(
-                            const SnackBar(content: Text('Certificate shared')),
-                          ),
-                          icon: const Icon(Icons.share_rounded, size: 18),
-                          label: const Text('Share'),
-                          style: OutlinedButton.styleFrom(
-                            minimumSize: const Size(0, 50),
-                            side: const BorderSide(color: AppColors.primaryBlue),
-                            foregroundColor: AppColors.primaryBlue,
-                            shape: const StadiumBorder(),
-                          ),
-                        ),
+                  Expanded(
+                    child: OutlinedButton.icon(
+                      onPressed: () => ScaffoldMessenger.of(context).showSnackBar(
+                        const SnackBar(content: Text('Certificate shared')),
                       ),
-                      const SizedBox(width: 12),
-                      Expanded(
-                        child: ElevatedButton.icon(
-                          onPressed: () => ScaffoldMessenger.of(context).showSnackBar(
-                            const SnackBar(content: Text('Certificate downloaded as PDF'), backgroundColor: AppColors.forestGreen),
-                          ),
-                          icon: const Icon(Icons.download_rounded, size: 18),
-                          label: const Text('Download'),
-                          style: ElevatedButton.styleFrom(
-                            minimumSize: const Size(0, 50),
-                            shape: const StadiumBorder(),
-                          ),
-                        ),
+                      icon: const Icon(Icons.share_rounded, size: 18),
+                      label: const Text('Share'),
+                      style: OutlinedButton.styleFrom(
+                        minimumSize: const Size(0, 50),
+                        side: const BorderSide(color: AppColors.primaryBlue),
+                        foregroundColor: AppColors.primaryBlue,
+                        shape: const StadiumBorder(),
                       ),
-                    ],
+                    ),
+                  ),
+                  const SizedBox(width: 12),
+                  Expanded(
+                    child: ElevatedButton.icon(
+                      onPressed: () => ScaffoldMessenger.of(context).showSnackBar(
+                        const SnackBar(content: Text('Certificate downloaded as PDF'), backgroundColor: AppColors.forestGreen),
+                      ),
+                      icon: const Icon(Icons.download_rounded, size: 18),
+                      label: const Text('Download'),
+                      style: ElevatedButton.styleFrom(
+                        minimumSize: const Size(0, 50),
+                        shape: const StadiumBorder(),
+                      ),
+                    ),
                   ),
                 ],
               ),
-            ),
-          ],
+            ],
+          ),
         ),
       ),
     );
