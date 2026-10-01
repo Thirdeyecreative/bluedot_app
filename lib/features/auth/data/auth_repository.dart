@@ -42,6 +42,7 @@ class AuthRepository {
     required String fullName,
     required String email,
     required String panNumber,
+    required String city,
   }) async {
     await _apiClient.put(
       ApiConfig.userProfile,
@@ -49,6 +50,7 @@ class AuthRepository {
         'full_name': fullName,
         'email': email,
         'pan_number': panNumber,
+        'city': city,
       },
       requireAuth: true,
     );

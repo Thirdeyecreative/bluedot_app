@@ -102,20 +102,29 @@ class _EditProfilePageState extends ConsumerState<EditProfilePage> {
   Future<void> _save() async {
     if (!(_formKey.currentState?.validate() ?? false)) return;
     setState(() => _saving = true);
-    // Demo: persist to local state. (Wire to PATCH /app/profile when the
-    // app-side profile endpoint lands.)
-    await Future<void>.delayed(const Duration(milliseconds: 600));
-    ref.read(currentUserProvider.notifier).update(
-          fullName: _nameCtrl.text.trim(),
-          email: _emailCtrl.text.trim(),
-          city: _cityCtrl.text.trim(),
-        );
-    if (!mounted) return;
-    setState(() => _saving = false);
-    ScaffoldMessenger.of(context).showSnackBar(
-      const SnackBar(content: Text('Profile updated'), backgroundColor: AppColors.forestGreen),
-    );
-    context.pop();
+    
+    try {
+      final panNumber = ref.read(currentUserProvider)?.panNumber ?? '';
+      await ref.read(authNotifierProvider.notifier).updateProfile(
+        fullName: _nameCtrl.text.trim(),
+        email: _emailCtrl.text.trim(),
+        city: _cityCtrl.text.trim(),
+        panNumber: panNumber,
+      );
+      
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Profile updated'), backgroundColor: AppColors.forestGreen),
+      );
+      context.pop();
+    } catch (e) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('Failed to update: $e'), backgroundColor: AppColors.terracotta),
+      );
+    } finally {
+      if (mounted) setState(() => _saving = false);
+    }
   }
 
   @override

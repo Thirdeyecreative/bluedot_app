@@ -170,6 +170,8 @@ class DemoData {
       siteName: 'Eco Park, Gurugram',
       maxParticipants: 80,
       attendeesCount: 46,
+      volunteersRequired: 15,
+      volunteersCount: 8,
       treesTarget: 350,
       treesPlanted: 0,
       mediaUrls: [

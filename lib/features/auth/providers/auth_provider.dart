@@ -71,6 +71,7 @@ class AuthNotifier extends Notifier<AsyncValue<void>> {
     required String fullName,
     required String email,
     required String panNumber,
+    required String city,
   }) async {
     state = const AsyncValue.loading();
     state = await AsyncValue.guard(() async {
@@ -78,6 +79,7 @@ class AuthNotifier extends Notifier<AsyncValue<void>> {
         fullName: fullName,
         email: email,
         panNumber: panNumber,
+        city: city,
       );
       ref.read(currentUserProvider.notifier).set(user);
     });

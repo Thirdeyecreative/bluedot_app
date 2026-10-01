@@ -1,5 +1,7 @@
-﻿import 'dart:io';
+import 'dart:io';
+import 'dart:convert';
 import 'package:flutter/material.dart';
+import 'package:http/http.dart' as http;
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:geolocator/geolocator.dart';
 import 'package:go_router/go_router.dart';
@@ -51,6 +53,19 @@ class _SuggestSitePageState extends ConsumerState<SuggestSitePage> {
       });
     } catch (_) {
       setState(() => _locationFetched = true);
+    }
+  }
+
+  Future<void> _searchLocation() async {
+    final result = await showDialog<Position>(
+      context: context,
+      builder: (_) => const _LocationSearchDialog(),
+    );
+    if (result != null) {
+      setState(() {
+        _position = result;
+        _locationFetched = true;
+      });
     }
   }
 
@@ -270,11 +285,18 @@ class _SuggestSitePageState extends ConsumerState<SuggestSitePage> {
                       ),
                     ),
                     if (!_locationFetched) const SizedBox(width: 16, height: 16, child: CircularProgressIndicator(strokeWidth: 2)),
-                    if (_locationFetched)
+                    if (_locationFetched) ...[
                       IconButton(
-                        icon: const Icon(Icons.refresh_rounded, color: AppColors.primaryBlue, size: 20),
+                        icon: const Icon(Icons.search_rounded, color: AppColors.primaryBlue, size: 20),
+                        tooltip: 'Search for a location manually',
+                        onPressed: _searchLocation,
+                      ),
+                      IconButton(
+                        icon: const Icon(Icons.my_location_rounded, color: AppColors.primaryBlue, size: 20),
+                        tooltip: 'Use current GPS location',
                         onPressed: _getLocation,
                       ),
+                    ],
                   ],
                 ),
               ),
@@ -311,3 +333,118 @@ class _SuggestSitePageState extends ConsumerState<SuggestSitePage> {
     );
   }
 }
+
+class _LocationSearchDialog extends StatefulWidget {
+  const _LocationSearchDialog();
+  @override
+  State<_LocationSearchDialog> createState() => _LocationSearchDialogState();
+}
+
+class _LocationSearchDialogState extends State<_LocationSearchDialog> {
+  final _controller = TextEditingController();
+  List<dynamic> _results = [];
+  bool _searching = false;
+  String? _error;
+
+  Future<void> _search() async {
+    final query = _controller.text.trim();
+    if (query.isEmpty) return;
+
+    setState(() {
+      _searching = true;
+      _error = null;
+    });
+
+    try {
+      final res = await http.get(Uri.parse(
+          'https://nominatim.openstreetmap.org/search?format=json&q=${Uri.encodeComponent(query)}&limit=5'));
+      
+      if (res.statusCode == 200) {
+        if (mounted) setState(() => _results = json.decode(res.body));
+      } else {
+        if (mounted) setState(() => _error = 'Failed to load results.');
+      }
+    } catch (e) {
+      if (mounted) setState(() => _error = 'Network error. Please try again.');
+    } finally {
+      if (mounted) setState(() => _searching = false);
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Dialog(
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+      child: Padding(
+        padding: const EdgeInsets.all(16),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Text('Search Location', style: Theme.of(context).textTheme.titleLarge),
+            const SizedBox(height: 16),
+            TextField(
+              controller: _controller,
+              textInputAction: TextInputAction.search,
+              onSubmitted: (_) => _search(),
+              decoration: InputDecoration(
+                hintText: 'Enter city or landmark...',
+                suffixIcon: IconButton(
+                  icon: const Icon(Icons.search_rounded),
+                  onPressed: _search,
+                ),
+                border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
+              ),
+            ),
+            const SizedBox(height: 16),
+            if (_searching)
+              const CircularProgressIndicator()
+            else if (_error != null)
+              Text(_error!, style: const TextStyle(color: Colors.red))
+            else if (_results.isEmpty)
+              const Text('No results', style: TextStyle(color: Colors.grey))
+            else
+              ConstrainedBox(
+                constraints: const BoxConstraints(maxHeight: 250),
+                child: ListView.separated(
+                  shrinkWrap: true,
+                  itemCount: _results.length,
+                  separatorBuilder: (_, __) => const Divider(),
+                  itemBuilder: (_, i) {
+                    final item = _results[i];
+                    return ListTile(
+                      title: Text(item['display_name'] ?? 'Unknown', maxLines: 2, overflow: TextOverflow.ellipsis),
+                      onTap: () {
+                        final lat = double.tryParse(item['lat'].toString());
+                        final lon = double.tryParse(item['lon'].toString());
+                        if (lat != null && lon != null) {
+                          // Return a dummy Position object with the selected lat/lon
+                          Navigator.of(context).pop(Position(
+                            latitude: lat,
+                            longitude: lon,
+                            timestamp: DateTime.now(),
+                            accuracy: 0,
+                            altitude: 0,
+                            heading: 0,
+                            speed: 0,
+                            speedAccuracy: 0,
+                            altitudeAccuracy: 0,
+                            headingAccuracy: 0,
+                          ));
+                        }
+                      },
+                    );
+                  },
+                ),
+              ),
+            const SizedBox(height: 16),
+            TextButton(
+              onPressed: () => Navigator.of(context).pop(),
+              child: const Text('Cancel'),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+

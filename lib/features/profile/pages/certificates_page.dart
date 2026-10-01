@@ -24,7 +24,8 @@ class CertificatesPage extends ConsumerWidget {
         loading: () => const SkeletonCardList(count: 3, height: 150),
         error: (e, _) => Center(child: Text('Could not load certificates.\n$e', textAlign: TextAlign.center)),
         data: (list) {
-          if (list.isEmpty) return const _EmptyCertificates();
+          final volunteerCerts = list.where((c) => c.role.toLowerCase() != 'attendee').toList();
+          if (volunteerCerts.isEmpty) return const _EmptyCertificates();
           return ListView(
             padding: const EdgeInsets.fromLTRB(16, 12, 16, 130),
             children: [
@@ -48,7 +49,7 @@ class CertificatesPage extends ConsumerWidget {
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
                           Text(
-                            '${list.length} certificate${list.length == 1 ? '' : 's'} earned',
+                            '${volunteerCerts.length} volunteer certificate${volunteerCerts.length == 1 ? '' : 's'} earned',
                             style: const TextStyle(color: Colors.white, fontWeight: FontWeight.w700, fontSize: 16),
                           ),
                           const SizedBox(height: 2),
@@ -64,10 +65,10 @@ class CertificatesPage extends ConsumerWidget {
               ).animate().fadeIn().slideY(begin: 0.08, end: 0),
               const SizedBox(height: 16),
 
-              for (int i = 0; i < list.length; i++)
+              for (int i = 0; i < volunteerCerts.length; i++)
                 Padding(
                   padding: const EdgeInsets.only(bottom: 12),
-                  child: _CertificateListCard(cert: list[i])
+                  child: _CertificateListCard(cert: volunteerCerts[i])
                       .animate()
                       .fadeIn(delay: (80 * i).ms)
                       .slideY(begin: 0.06, end: 0, delay: (80 * i).ms),

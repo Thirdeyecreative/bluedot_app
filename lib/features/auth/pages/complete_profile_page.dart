@@ -39,6 +39,7 @@ class _CompleteProfilePageState extends ConsumerState<CompleteProfilePage> {
         fullName: _nameController.text.trim(),
         email: _emailController.text.trim(),
         panNumber: _panController.text.trim().toUpperCase(),
+        city: '',
       );
 
       final authState = ref.read(authNotifierProvider);

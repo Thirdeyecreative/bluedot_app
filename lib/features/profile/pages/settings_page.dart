@@ -534,6 +534,7 @@ class _PanManagementSheetState extends ConsumerState<_PanManagementSheet> {
                                 fullName: user.fullName ?? '',
                                 email: user.email ?? '',
                                 panNumber: pan,
+                                city: user.city ?? '',
                               );
 
                           if (!mounted) return;

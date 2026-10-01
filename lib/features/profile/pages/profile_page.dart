@@ -471,8 +471,25 @@ class _ScansHistory extends StatelessWidget {
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         Padding(
-          padding: const EdgeInsets.fromLTRB(20, 20, 20, 12),
-          child: Text('Recent Scans', style: Theme.of(context).textTheme.titleMedium?.copyWith(fontWeight: FontWeight.w700)),
+          padding: const EdgeInsets.fromLTRB(20, 20, 16, 12),
+          child: Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
+              Text('Recent Scans', style: Theme.of(context).textTheme.titleMedium?.copyWith(fontWeight: FontWeight.w700)),
+              history.whenOrNull(
+                data: (list) {
+                  final items = list as List;
+                  if (items.length > 5) {
+                    return TextButton(
+                      onPressed: () => _showAllScansSheet(context, items),
+                      child: const Text('See all'),
+                    );
+                  }
+                  return const SizedBox();
+                },
+              ) ?? const SizedBox(),
+            ],
+          ),
         ),
         history.when(
           data: (list) {
@@ -503,86 +520,127 @@ class _ScansHistory extends StatelessWidget {
               padding: const EdgeInsets.symmetric(horizontal: 16),
               itemCount: items.take(5).length,
               separatorBuilder: (_, _) => const SizedBox(height: 8),
-              itemBuilder: (_, i) {
-                final item = items[i];
-                final isPendingReview = item.species?.isPendingReview == true;
-                final scientificName = item.species?.scientificName ?? item.plantnetData?.scientificName;
-                final commonName = item.species?.localName ?? item.plantnetData?.commonName;
-                final primaryLabel = commonName ?? scientificName ?? 'Unidentified plant';
-                final secondaryLabel = [
-                  if (commonName != null && scientificName != null) scientificName,
-                  _formatScanDate(item.taggedAt),
-                ].where((s) => s != null && s.isNotEmpty).join(' · ');
-                return Material(
-                  color: Colors.transparent,
-                  child: InkWell(
-                    borderRadius: BorderRadius.circular(14),
-                    onTap: () => showModalBottomSheet(
-                      context: context,
-                      isScrollControlled: true,
-                      backgroundColor: Colors.transparent,
-                      builder: (_) => ScanHistoryDetailSheet(item: item),
-                    ),
-                    child: Container(
-                      padding: const EdgeInsets.all(14),
-                      decoration: BoxDecoration(
-                        color: AppColors.surfaceCard,
-                        borderRadius: BorderRadius.circular(14),
-                        border: Border.all(color: AppColors.borderLight),
-                      ),
-                      child: Row(
-                        children: [
-                          if (item.imageUrl != null)
-                            ClipRRect(
-                              borderRadius: BorderRadius.circular(10),
-                              child: Image.network(item.imageUrl!, width: 52, height: 52, fit: BoxFit.cover, errorBuilder: (_, _, _) => const SizedBox(width: 52, height: 52)),
-                            )
-                          else
-                            Container(width: 52, height: 52, decoration: BoxDecoration(color: AppColors.forestGreen.withAlpha(20), borderRadius: BorderRadius.circular(10)), child: const Icon(Icons.eco_rounded, color: AppColors.forestGreen)),
-                          const SizedBox(width: 14),
-                          Expanded(
-                            child: Column(
-                              crossAxisAlignment: CrossAxisAlignment.start,
-                              children: [
-                                Text(
-                                  primaryLabel,
-                                  maxLines: 1,
-                                  overflow: TextOverflow.ellipsis,
-                                  style: const TextStyle(fontWeight: FontWeight.w700, fontSize: 14.5),
-                                ),
-                                const SizedBox(height: 2),
-                                Text(
-                                  secondaryLabel,
-                                  maxLines: 1,
-                                  overflow: TextOverflow.ellipsis,
-                                  style: const TextStyle(
-                                    color: AppColors.textLight,
-                                    fontSize: 12,
-                                    fontStyle: FontStyle.italic,
-                                  ),
-                                ),
-                              ],
-                            ),
-                          ),
-                          Icon(
-                            item.status == 2 ? Icons.hourglass_top_rounded : item.status == 1 ? Icons.verified_rounded : Icons.cancel_rounded,
-                            color: item.status == 2 ? AppColors.warningAmber : item.status == 1 ? AppColors.forestGreen : Colors.red,
-                            size: 18,
-                          ),
-                          const SizedBox(width: 4),
-                          const Icon(Icons.chevron_right_rounded, color: AppColors.textLight, size: 18),
-                        ],
-                      ),
-                    ),
-                  ),
-                );
-              },
+              itemBuilder: (_, i) => _ScanHistoryItemTile(item: items[i]),
             );
           },
           loading: () => const SkeletonCardList(count: 3, height: 72),
           error: (_, _) => const SizedBox(),
         ),
       ],
+    );
+  }
+  void _showAllScansSheet(BuildContext context, List items) {
+    showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: AppColors.backgroundCream,
+      useRootNavigator: true,
+      shape: const RoundedRectangleBorder(borderRadius: BorderRadius.vertical(top: Radius.circular(24))),
+      builder: (ctx) => DraggableScrollableSheet(
+        initialChildSize: 0.9,
+        minChildSize: 0.5,
+        maxChildSize: 0.9,
+        expand: false,
+        builder: (_, scrollController) => Column(
+          children: [
+            const SizedBox(height: 12),
+            Container(width: 40, height: 4, decoration: BoxDecoration(color: AppColors.borderMedium, borderRadius: BorderRadius.circular(2))),
+            const SizedBox(height: 16),
+            const Text('All Scans', style: TextStyle(fontSize: 18, fontWeight: FontWeight.w700)),
+            const SizedBox(height: 16),
+            Expanded(
+              child: ListView.separated(
+                controller: scrollController,
+                padding: const EdgeInsets.fromLTRB(16, 0, 16, 40),
+                itemCount: items.length,
+                separatorBuilder: (_, _) => const SizedBox(height: 8),
+                itemBuilder: (_, i) => _ScanHistoryItemTile(item: items[i]),
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+class _ScanHistoryItemTile extends StatelessWidget {
+  final dynamic item;
+  const _ScanHistoryItemTile({required this.item});
+
+  @override
+  Widget build(BuildContext context) {
+    final isPendingReview = item.species?.isPendingReview == true;
+    final scientificName = item.species?.scientificName ?? item.plantnetData?.scientificName;
+    final commonName = item.species?.localName ?? item.plantnetData?.commonName;
+    final primaryLabel = commonName ?? scientificName ?? 'Unidentified plant';
+    final secondaryLabel = [
+      if (commonName != null && scientificName != null) scientificName,
+      _formatScanDate(item.taggedAt),
+    ].where((s) => s != null && s.isNotEmpty).join(' · ');
+
+    return Material(
+      color: Colors.transparent,
+      child: InkWell(
+        borderRadius: BorderRadius.circular(14),
+        onTap: () => showModalBottomSheet(
+          context: context,
+          isScrollControlled: true,
+          backgroundColor: Colors.transparent,
+          builder: (_) => ScanHistoryDetailSheet(item: item),
+        ),
+        child: Container(
+          padding: const EdgeInsets.all(14),
+          decoration: BoxDecoration(
+            color: AppColors.surfaceCard,
+            borderRadius: BorderRadius.circular(14),
+            border: Border.all(color: AppColors.borderLight),
+          ),
+          child: Row(
+            children: [
+              if (item.imageUrl != null)
+                ClipRRect(
+                  borderRadius: BorderRadius.circular(10),
+                  child: Image.network(item.imageUrl!, width: 52, height: 52, fit: BoxFit.cover, errorBuilder: (_, _, _) => const SizedBox(width: 52, height: 52)),
+                )
+              else
+                Container(width: 52, height: 52, decoration: BoxDecoration(color: AppColors.forestGreen.withAlpha(20), borderRadius: BorderRadius.circular(10)), child: const Icon(Icons.eco_rounded, color: AppColors.forestGreen)),
+              const SizedBox(width: 14),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      primaryLabel,
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                      style: const TextStyle(fontWeight: FontWeight.w700, fontSize: 14.5),
+                    ),
+                    const SizedBox(height: 2),
+                    Text(
+                      secondaryLabel,
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                      style: const TextStyle(
+                        color: AppColors.textLight,
+                        fontSize: 12,
+                        fontStyle: FontStyle.italic,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+              Icon(
+                item.status == 2 ? Icons.hourglass_top_rounded : item.status == 1 ? Icons.verified_rounded : Icons.cancel_rounded,
+                color: item.status == 2 ? AppColors.warningAmber : item.status == 1 ? AppColors.forestGreen : Colors.red,
+                size: 18,
+              ),
+              const SizedBox(width: 4),
+              const Icon(Icons.chevron_right_rounded, color: AppColors.textLight, size: 18),
+            ],
+          ),
+        ),
+      ),
     );
   }
 

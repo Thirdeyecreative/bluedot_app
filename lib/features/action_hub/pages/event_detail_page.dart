@@ -154,10 +154,10 @@ class _EventDetailPageState extends ConsumerState<EventDetailPage> {
                       if (e.isPlantationDrive)
                         _DonationTile(eventId: widget.eventId).animate().fadeIn(delay: 200.ms),
 
-                      // ── Scan QR (only when registered and NOT yet checked in) ──
-                      if (isRegistered && !e.isUserCheckedIn) ...[
+                      // ── Scan QR (only when volunteered and NOT yet checked in) ──
+                      if (isVolunteered && !e.isUserCheckedIn) ...[
                         const SizedBox(height: 16),
-                        _ScanQrButton(eventId: widget.eventId, role: isVolunteered ? 'Volunteer' : 'Attendee')
+                        _ScanQrButton(eventId: widget.eventId, role: 'Volunteer')
                             .animate()
                             .fadeIn(delay: 250.ms)
                             .slideY(begin: 0.1, end: 0),
@@ -317,6 +317,8 @@ class _ActionBar extends StatelessWidget {
       );
     }
 
+    final bool needsVolunteers = event.volunteersRequired != null && event.volunteersRequired! > 0;
+
     return Row(
       children: [
         Expanded(
@@ -333,18 +335,21 @@ class _ActionBar extends StatelessWidget {
           ),
         ),
         const SizedBox(width: 90), // Leaves space for the Pulsing Camera
-        Expanded(
-          child: ElevatedButton(
-            onPressed: event.isVolunteerFull || volunteerLoading ? null : onVolunteer,
-            style: ElevatedButton.styleFrom(
-              backgroundColor: AppColors.forestGreen,
-              padding: const EdgeInsets.symmetric(horizontal: 4),
+        if (needsVolunteers)
+          Expanded(
+            child: ElevatedButton(
+              onPressed: event.isVolunteerFull || volunteerLoading ? null : onVolunteer,
+              style: ElevatedButton.styleFrom(
+                backgroundColor: AppColors.forestGreen,
+                padding: const EdgeInsets.symmetric(horizontal: 4),
+              ),
+              child: volunteerLoading
+                  ? const SizedBox(width: 16, height: 16, child: CircularProgressIndicator(color: Colors.white, strokeWidth: 2))
+                  : Text(event.isVolunteerFull ? 'Full' : 'Volunteer', style: const TextStyle(fontSize: 13, fontWeight: FontWeight.w700)),
             ),
-            child: volunteerLoading
-                ? const SizedBox(width: 16, height: 16, child: CircularProgressIndicator(color: Colors.white, strokeWidth: 2))
-                : Text(event.isVolunteerFull ? 'Full' : 'Volunteer', style: const TextStyle(fontSize: 13, fontWeight: FontWeight.w700)),
-          ),
-        ),
+          )
+        else
+          const Expanded(child: SizedBox.shrink()),
       ],
     );
   }

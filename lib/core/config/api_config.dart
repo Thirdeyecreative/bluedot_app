@@ -63,6 +63,7 @@ class ApiConfig {
   static String get campaigns => '$_app/campaigns';
   static String get donations => '$_app/donations';
   static String get userProfile => '$_app/profile';
+  static String get userCertificates => '$_app/profile/certificates';
   static String get leaderboard => '$_app/leaderboard';
   static String get homeScreenConfig => '$_app/config';
   static String get appBanners => '$_app/banners';
