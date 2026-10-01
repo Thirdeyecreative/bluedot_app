@@ -5,6 +5,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import '../../../core/constants/app_colors.dart';
 import '../../../core/widgets/app_feedback.dart';
+import '../../../core/widgets/media_carousel.dart';
 import '../../../core/widgets/skeletons.dart';
 import '../data/action_repository.dart';
 import '../models/event_model.dart';
@@ -84,12 +85,11 @@ class _EventDetailPageState extends ConsumerState<EventDetailPage> {
                   ),
                 ),
                 flexibleSpace: FlexibleSpaceBar(
-                  background: e.thumbnailUrl != null
-                      ? CachedNetworkImage(
-                          imageUrl: e.thumbnailUrl!,
-                          fit: BoxFit.cover,
-                          placeholder: (_, _) => Container(color: AppColors.borderLight),
-                          errorWidget: (_, _, _) => _DefaultEventHeader(),
+                  background: e.mediaUrls.isNotEmpty
+                      ? MediaCarousel(
+                          mediaUrls: e.mediaUrls,
+                          height: 240,
+                          autoPlayVideo: true,
                         )
                       : _DefaultEventHeader(),
                 ),

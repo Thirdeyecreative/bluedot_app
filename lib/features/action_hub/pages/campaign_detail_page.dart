@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import '../../../core/constants/app_colors.dart';
+import '../../../core/widgets/media_carousel.dart';
 import '../../home/models/campaign_model.dart';
 import '../../home/providers/home_provider.dart';
 import 'action_hub_page.dart'; // To reuse _DonationSheet
@@ -57,12 +58,11 @@ class CampaignDetailPage extends ConsumerWidget {
                   background: Stack(
                     fit: StackFit.expand,
                     children: [
-                      if (campaign.thumbnailUrl != null)
-                        CachedNetworkImage(
-                          imageUrl: campaign.thumbnailUrl!,
-                          fit: BoxFit.cover,
-                          placeholder: (_, _) => Container(color: AppColors.primaryBlue),
-                          errorWidget: (_, _, _) => Container(color: AppColors.primaryBlue),
+                      if (campaign.mediaUrls.isNotEmpty)
+                        MediaCarousel(
+                          mediaUrls: campaign.mediaUrls,
+                          height: 280,
+                          autoPlayVideo: true,
                         )
                       else
                         Container(

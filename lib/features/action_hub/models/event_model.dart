@@ -70,7 +70,10 @@ class PlantationEvent {
         volunteerSpotsLeft: json['volunteer_spots_left'] as int?,
         treesTarget: json['trees_target'] as int? ?? 0,
         treesPlanted: json['trees_planted'] as int? ?? 0,
-        mediaUrls: (json['media_urls'] as List<dynamic>?)?.cast<String>() ?? [],
+        mediaUrls: (json['media_urls'] as List<dynamic>?)
+            ?.where((e) => e is String && (e as String).isNotEmpty)
+            .cast<String>()
+            .toList() ?? [],
         isPlantationDrive: json['is_plantation_drive'] as bool? ?? false,
         isUserRsvped: json['is_user_rsvped'] as bool? ?? false,
         isUserVolunteered: json['is_user_volunteered'] as bool? ?? false,

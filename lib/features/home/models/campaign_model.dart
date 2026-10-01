@@ -31,7 +31,10 @@ class Campaign {
       targetAmount: parseDouble(json['target_amount']),
       currentAmountRaised: parseDouble(json['current_amount_raised']),
       description: json['description'] as String?,
-      mediaUrls: (json['media_urls'] as List<dynamic>?)?.cast<String>() ?? [],
+      mediaUrls: (json['media_urls'] as List<dynamic>?)
+          ?.where((e) => e is String && (e as String).isNotEmpty)
+          .cast<String>()
+          .toList() ?? [],
       campaignStatus: json['campaign_status'] as String?,
     );
   }

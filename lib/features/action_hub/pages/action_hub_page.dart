@@ -4,6 +4,7 @@ import 'package:flutter_animate/flutter_animate.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import '../../../core/constants/app_colors.dart';
+import '../../../core/widgets/media_carousel.dart';
 import '../../../core/widgets/skeletons.dart';
 import '../../home/models/campaign_model.dart';
 import '../../home/providers/home_provider.dart';
@@ -158,19 +159,15 @@ class _EventDriveCard extends StatelessWidget {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            if (event.thumbnailUrl != null)
+            if (event.mediaUrls.isNotEmpty)
               ClipRRect(
                 borderRadius: const BorderRadius.vertical(
                   top: Radius.circular(17),
                 ),
-                child: CachedNetworkImage(
-                  imageUrl: event.thumbnailUrl!,
+                child: MediaCarousel(
+                  mediaUrls: event.mediaUrls,
                   height: 160,
-                  width: double.infinity,
-                  fit: BoxFit.cover,
-                  placeholder: (_, _) =>
-                      Container(height: 160, color: AppColors.borderLight),
-                  errorWidget: (_, _, _) => _EventImageFallback(),
+                  autoPlayVideo: false, // Don't auto-play in list cards
                 ),
               )
             else
@@ -378,20 +375,16 @@ class _CampaignFundingCard extends StatelessWidget {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            // Campaign image header
-            if (campaign.thumbnailUrl != null)
+            // Campaign image/video header
+            if (campaign.mediaUrls.isNotEmpty)
               ClipRRect(
                 borderRadius: const BorderRadius.vertical(
                   top: Radius.circular(17),
                 ),
-                child: CachedNetworkImage(
-                  imageUrl: campaign.thumbnailUrl!,
+                child: MediaCarousel(
+                  mediaUrls: campaign.mediaUrls,
                   height: 160,
-                  width: double.infinity,
-                  fit: BoxFit.cover,
-                  placeholder: (_, _) =>
-                      Container(height: 160, color: AppColors.borderLight),
-                  errorWidget: (_, _, _) => _CampaignImageFallback(),
+                  autoPlayVideo: false, // Don't auto-play in list cards
                 ),
               )
             else

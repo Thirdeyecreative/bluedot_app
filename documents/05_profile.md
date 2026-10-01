@@ -299,16 +299,24 @@ The profile page's app bar also has an icon button to `/profile/edit` (edit icon
 - `lib/features/auth/data/auth_repository.dart` — no explicit "demo" comment, but logic unconditionally returns `DemoData.user` for both `verifyOtp` and `getSavedUser`.
 - `lib/features/profile/data/profile_repository.dart` — no explicit comment, but every method is an artificial `_demoDelay()` + `DemoData.*` return with no real HTTP client usage (contrast with `scanner_repository.dart`, which does call `_api.get(...)`).
 
-## Summary of demo/mock vs real-API status
+## 11. Implementation Status & Backlog (Done vs. To-Be-Handled)
 
-| Section | Status |
-|---|---|
-| User identity (name, email, phone, level, XP, trees tagged, donated) | **Demo** — `DemoData.user`, via `AuthRepository` |
-| Avatar/photo | **Real API** — Uploads straight to Bunny CDN and updates Postgres `avatar_url` |
-| Badges (profile page + badges page) | **Demo** — `DemoData.badges` via `ProfileRepository.fetchBadges()` |
-| Certificates | **Demo** — `DemoData.certificates` via `ProfileRepository.fetchCertificates()` |
-| Leaderboard (profile quick action target) | **Demo** — local hardcoded `_fullLeaderboard` in `leaderboard_page.dart`, independent of `leaderboardProvider`/`DemoData.leaderboard` |
-| 80G Tax Vault donations | **Demo** — hardcoded `_donations` list in `settings_page.dart` |
-| Push/Email notification toggles | **Local-only**, no persistence/API |
-| Recent Scans | **Real API** — `GET $_app/tags/history` via `scanner_repository.dart` |
-| Edit profile save | **Local-only** — explicit TODO comment to wire `PATCH /app/profile` |
+From a technical perspective, the profile feature is currently in a **hybrid prototype state**. The UI is fully built out, but the majority of the data layer relies on hardcoded mocks (`DemoData`). 
+
+### ✅ What is Done (Production-Ready)
+- **UI Architecture & Layout:** The widget tree for the profile, badges, certificates, leaderboard, edit profile, and settings screens are fully implemented and styled.
+- **Routing:** Deep linking and sub-routes are successfully configured using `go_router`.
+- **Avatar Uploads:** The avatar upload flow is fully functional and production-ready. It uses `image_picker`, uploads the image to **Bunny CDN**, and displays it using `CachedNetworkImage`.
+- **Recent Scans Integration:** The recent scans history correctly hits a real backend API endpoint (`GET $_app/tags/history`) via `scanner_repository.dart`.
+- **Authentication Handshake (Sign Out):** The "Sign Out" button inside Settings correctly clears the session storage and redirects to the login screen.
+
+### 🚧 What is Yet to be Handled (Technical Debt & Pending API Integrations)
+- **User Identity & Stats Integration:** "Total XP", "Trees Tagged", and "Donated" stats are currently hardcoded. `currentUserProvider` needs to be updated to fetch from a real backend profile endpoint (e.g., `GET /app/profile`).
+- **Edit Profile Persistence:** The "Edit Profile" save button only mutates local state. A backend route (`PATCH /app/profile`) needs to be implemented on the server and wired up in `edit_profile_page.dart`.
+- **Gamification (Badges & Leaderboard):**
+  - Badges are sourced from `DemoData.badges`. We need to wire `ProfileRepository.fetchBadges()` to hit `ApiConfig.badges` (`$_admin/content/gamification/badges`).
+  - The leaderboard is using an inline hardcoded list. We need to fetch this from `ApiConfig.leaderboard` (`$_app/leaderboard`).
+  - Server-side routes for Gamification (including rule fetching) need to be verified/implemented.
+- **Certificates & Tax Vault:** Both the Certificates page and the 80G Tax Vault page use mocked lists. Real API endpoints must be created and integrated to fetch legitimate user contributions and 80G donation receipts.
+- **User Settings & Preferences:** Push notification and email toggles are currently local-only. We need an API endpoint to persist these user preferences.
+- **Account Deletion:** The "Delete Account" button only dismisses the dialog. A real `DELETE /app/profile` (or similar) endpoint needs to be called to securely remove user data.
