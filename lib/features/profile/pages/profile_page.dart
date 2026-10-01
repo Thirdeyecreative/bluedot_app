@@ -224,7 +224,21 @@ class _ProfileHeader extends ConsumerWidget {
             user.fullName ?? user.phone,
             style: const TextStyle(color: Colors.white, fontSize: 20, fontWeight: FontWeight.w700),
           ),
-          const SizedBox(height: 4),
+          if (user.city != null && user.city!.trim().isNotEmpty) ...[
+            const SizedBox(height: 6),
+            Row(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                const Icon(Icons.location_on_rounded, color: AppColors.primaryYellow, size: 14),
+                const SizedBox(width: 4),
+                Text(
+                  user.city!,
+                  style: const TextStyle(color: Colors.white70, fontSize: 13),
+                ),
+              ],
+            ),
+          ],
+          const SizedBox(height: 12),
           Container(
             padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 4),
             decoration: BoxDecoration(
