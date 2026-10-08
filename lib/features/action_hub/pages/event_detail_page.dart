@@ -157,10 +157,61 @@ class _EventDetailPageState extends ConsumerState<EventDetailPage> {
                       // ── Scan QR (only when volunteered and NOT yet checked in) ──
                       if (isVolunteered && !e.isUserCheckedIn) ...[
                         const SizedBox(height: 16),
-                        _ScanQrButton(eventId: widget.eventId, role: 'Volunteer')
-                            .animate()
-                            .fadeIn(delay: 250.ms)
-                            .slideY(begin: 0.1, end: 0),
+                        Builder(
+                          builder: (context) {
+                            final now = DateTime.now().toUtc();
+                            final start = e.eventDate != null ? DateTime.tryParse(e.eventDate!) : null;
+                            final end = e.eventEndTime != null ? DateTime.tryParse(e.eventEndTime!) : null;
+                            
+                            bool isTooEarly = false;
+                            bool isTooLate = false;
+                            
+                            if (start != null) {
+                              final allowedStart = start.subtract(const Duration(minutes: 30));
+                              if (now.isBefore(allowedStart)) isTooEarly = true;
+                            }
+                            if (end != null && now.isAfter(end)) {
+                              isTooLate = true;
+                            }
+
+                            if (isTooLate) {
+                              return Container(
+                                padding: const EdgeInsets.all(12),
+                                decoration: BoxDecoration(
+                                  color: AppColors.errorRed.withAlpha(20),
+                                  borderRadius: BorderRadius.circular(12),
+                                ),
+                                child: const Row(
+                                  children: [
+                                    Icon(Icons.event_busy, color: AppColors.errorRed),
+                                    SizedBox(width: 12),
+                                    Expanded(child: Text('This event has already ended.', style: TextStyle(color: AppColors.errorRed))),
+                                  ],
+                                ),
+                              ).animate().fadeIn(delay: 250.ms);
+                            } else if (isTooEarly) {
+                               return Container(
+                                padding: const EdgeInsets.all(12),
+                                decoration: BoxDecoration(
+                                  color: AppColors.primaryBlue.withAlpha(20),
+                                  borderRadius: BorderRadius.circular(12),
+                                ),
+                                child: const Row(
+                                  children: [
+                                    Icon(Icons.schedule, color: AppColors.primaryBlue),
+                                    SizedBox(width: 12),
+                                    Expanded(child: Text('Check-in opens 30 minutes before the event starts.', style: TextStyle(color: AppColors.primaryBlue))),
+                                  ],
+                                ),
+                              ).animate().fadeIn(delay: 250.ms);
+                            } else {
+                              return _ScanQrButton(eventId: widget.eventId, role: 'Volunteer')
+                                .animate()
+                                .fadeIn(delay: 250.ms)
+                                .slideY(begin: 0.1, end: 0);
+                            }
+                          },
+                        ),
                       ],
 
                       // ── Check-in / checkout status card ────────────────────
@@ -306,7 +357,11 @@ class _ActionBar extends StatelessWidget {
     }
 
     if (event.isUserCheckedIn) {
-      return _CheckOutButton(loading: checkOutLoading, onCheckOut: onCheckOut);
+      final now = DateTime.now().toUtc();
+      final end = event.eventEndTime != null ? DateTime.tryParse(event.eventEndTime!) : null;
+      final hasEnded = end != null && now.isAfter(end);
+
+      return _CheckOutButton(loading: checkOutLoading, onCheckOut: onCheckOut, hasEventEnded: hasEnded);
     }
 
     if (isRsvped || isVolunteered) {
@@ -421,15 +476,16 @@ class _RegisteredBadge extends StatelessWidget {
 class _CheckOutButton extends StatelessWidget {
   final bool loading;
   final VoidCallback onCheckOut;
-  const _CheckOutButton({required this.loading, required this.onCheckOut});
+  final bool hasEventEnded;
+  const _CheckOutButton({required this.loading, required this.onCheckOut, this.hasEventEnded = false});
 
   @override
   Widget build(BuildContext context) => ElevatedButton.icon(
         onPressed: loading ? null : onCheckOut,
         icon: loading
             ? const SizedBox(width: 16, height: 16, child: CircularProgressIndicator(color: Colors.white, strokeWidth: 2))
-            : const Icon(Icons.logout_rounded, size: 18),
-        label: Text(loading ? 'Checking out…' : 'Check Out'),
+            : Icon(hasEventEnded ? Icons.workspace_premium : Icons.logout_rounded, size: 18),
+        label: Text(loading ? 'Checking out…' : (hasEventEnded ? 'Conclude & Claim Certificate' : 'Check Out')),
         style: ElevatedButton.styleFrom(
           backgroundColor: AppColors.terracotta,
           minimumSize: const Size(double.infinity, 52),

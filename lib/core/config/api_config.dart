@@ -34,9 +34,9 @@ class ApiConfig {
     // 127.0.0.1 is used for Windows/Web/iOS simulator.
     // NOTE: If you are using a PHYSICAL Android phone, you must change this to your computer's Wi-Fi IPv4 address (e.g. 'http://192.168.x.x:8000')
     try {
-      if (Platform.isAndroid) return 'http://10.204.70.76:8000'; // Updated to your current hotspot IP
+      if (Platform.isAndroid) return 'http://192.168.1.60:8000'; // Updated to your current Wi-Fi IP
     } catch (_) {}
-    return 'http://10.204.70.76:8000'; // Updated to your current hotspot IP
+    return 'http://192.168.1.60:8000'; // Updated to your current Wi-Fi IP
   }
 
   static const String _stagingUrl =
