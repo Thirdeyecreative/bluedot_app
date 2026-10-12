@@ -1,8 +1,9 @@
-﻿import 'package:cached_network_image/cached_network_image.dart';
+import 'package:cached_network_image/cached_network_image.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_animate/flutter_animate.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../core/constants/app_colors.dart';
+import '../../../core/widgets/app_html_view.dart';
 import '../../../core/widgets/skeletons.dart';
 import '../providers/home_provider.dart';
 
@@ -82,10 +83,7 @@ class BlogDetailPage extends ConsumerWidget {
                     ),
                     const Divider(height: 32),
                     if (post.bodyText != null)
-                      Text(
-                        post.bodyText!.replaceAll(RegExp(r'<[^>]*>'), ''), // strip HTML tags
-                        style: Theme.of(context).textTheme.bodyLarge?.copyWith(height: 1.7, color: AppColors.textDark),
-                      ).animate().fadeIn(delay: 200.ms),
+                      AppHtmlView(html: post.bodyText).animate().fadeIn(delay: 200.ms),
                     const SizedBox(height: 130), // clears the floating nav bar
                   ],
                 ),

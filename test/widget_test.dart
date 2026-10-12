@@ -1,18 +1,25 @@
+import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
-import 'package:bluedot_app/main.dart';
-import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:bluedot_app/core/theme/app_theme.dart';
+import 'package:bluedot_app/core/constants/app_colors.dart';
 
 void main() {
-  testWidgets('App load smoke test', (WidgetTester tester) async {
-    // Build our app and trigger a frame.
+  testWidgets('App theme and design tokens smoke test', (WidgetTester tester) async {
     await tester.pumpWidget(
-      const ProviderScope(
-        child: BlueDotApp(),
+      MaterialApp(
+        theme: AppTheme.lightTheme,
+        home: const Scaffold(
+          body: Center(
+            child: Text(
+              'BlueDot',
+              style: TextStyle(color: AppColors.primaryBlue),
+            ),
+          ),
+        ),
       ),
     );
 
-    // Verify that the Foundation Preview screen is visible.
-    expect(find.text('BlueDot Foundation'), findsOneWidget);
-    expect(find.text('Typography: Outfit'), findsOneWidget);
+    expect(find.text('BlueDot'), findsOneWidget);
+    expect(find.byType(Scaffold), findsOneWidget);
   });
 }

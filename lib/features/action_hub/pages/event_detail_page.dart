@@ -10,6 +10,8 @@ import '../../../core/widgets/skeletons.dart';
 import '../data/action_repository.dart';
 import '../models/event_model.dart';
 import '../providers/action_provider.dart';
+import '../../auth/providers/auth_provider.dart';
+import '../../profile/pages/settings_page.dart';
 
 class EventDetailPage extends ConsumerStatefulWidget {
   final String eventId;
@@ -628,13 +630,19 @@ class _DonationTileState extends State<_DonationTile> {
     setState(() => _loading = true);
     try {
       final repo = ref.read(actionRepositoryProvider);
-      await repo.donateForEvent(widget.eventId, amount);
+      final res = await repo.donateForEvent(widget.eventId, amount);
+      final xp = res['xp_awarded'] ?? (100 + (amount ~/ 10));
+
+      // Refresh user profile and tax vault receipts so changes show immediately
+      await ref.read(authNotifierProvider.notifier).refreshProfile();
+      ref.invalidate(donationsProvider);
+
       if (!context.mounted) return;
       await AppFeedback.showThankYou(
         context,
         title: 'Thank You! 🌳',
         message: 'Your ₹$amount donation will help plant trees at this drive.',
-        xpLabel: 'Impact recorded',
+        xpLabel: '+$xp XP earned!',
       );
     } catch (e) {
       if (!context.mounted) return;

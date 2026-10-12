@@ -225,7 +225,10 @@ class _PromoBannerCarouselState extends State<PromoBannerCarousel> {
   Future<void> _onTap(AppBanner banner) async {
     try {
       if (banner.isRoute) {
-        context.push(banner.actionTarget!);
+        final target = banner.effectiveActionTarget ?? banner.actionTarget;
+        if (target != null && target.isNotEmpty) {
+          context.push(target);
+        }
       } else if (banner.isScan) {
         context.push('/scanner');
       } else if (banner.actionType == 'link' && banner.hasLink) {

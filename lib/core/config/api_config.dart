@@ -30,13 +30,9 @@ class ApiConfig {
 
   // --- Per-environment base URLs ---
   static String get _localUrl {
-    // 10.0.2.2 is the special alias for your host machine's localhost in the Android Emulator.
-    // 127.0.0.1 is used for Windows/Web/iOS simulator.
-    // NOTE: If you are using a PHYSICAL Android phone, you must change this to your computer's Wi-Fi IPv4 address (e.g. 'http://192.168.x.x:8000')
-    try {
-      if (Platform.isAndroid) return 'http://192.168.1.60:8000'; // Updated to your current Wi-Fi IP
-    } catch (_) {}
-    return 'http://192.168.1.60:8000'; // Updated to your current Wi-Fi IP
+    // Over ADB reverse (adb reverse tcp:8000 tcp:8000), Android physical devices
+    // and emulators connect directly to host localhost via 127.0.0.1:8000.
+    return 'http://127.0.0.1:8000';
   }
 
   static const String _stagingUrl =

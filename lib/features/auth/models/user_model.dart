@@ -40,14 +40,17 @@ class AppUser {
       return url;
     }
 
+    final points = json['total_impact_points'] as int? ?? json['total_points'] as int? ?? 0;
+    final fallbackLevel = (points ~/ 500) + 1;
+
     return AppUser(
       id: json['id'] as String,
       phone: json['phone'] as String? ?? '',
       fullName: _nonEmpty(json['full_name'] as String?),
       email: _nonEmpty(json['email'] as String?),
       city: _nonEmpty(json['city'] as String?),
-      totalPoints: json['total_impact_points'] as int? ?? json['total_points'] as int? ?? 0,
-      level: json['level'] as int? ?? 1,
+      totalPoints: points,
+      level: json['level'] as int? ?? fallbackLevel,
       totalDonated: (json['total_donated'] as num?)?.toDouble() ?? 0,
       treesTagged: json['trees_tagged'] as int? ?? 0,
       avatarUrl: _fixUiAvatars(json['avatar_url'] as String?),
@@ -81,6 +84,10 @@ class AppUser {
     String? fullName,
     String? email,
     String? city,
+    int? totalPoints,
+    int? level,
+    double? totalDonated,
+    int? treesTagged,
     String? avatarUrl,
     String? panNumber,
     Map<String, dynamic>? preferences,
@@ -91,10 +98,10 @@ class AppUser {
         fullName: fullName ?? this.fullName,
         email: email ?? this.email,
         city: city ?? this.city,
-        totalPoints: totalPoints,
-        level: level,
-        totalDonated: totalDonated,
-        treesTagged: treesTagged,
+        totalPoints: totalPoints ?? this.totalPoints,
+        level: level ?? this.level,
+        totalDonated: totalDonated ?? this.totalDonated,
+        treesTagged: treesTagged ?? this.treesTagged,
         avatarUrl: avatarUrl ?? this.avatarUrl,
         panNumber: panNumber ?? this.panNumber,
         preferences: preferences ?? this.preferences,

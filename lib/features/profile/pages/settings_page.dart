@@ -644,21 +644,24 @@ class TaxVaultPage extends ConsumerWidget {
             ),
           ),
 
-          // Download all button — raised above the shell's floating nav bar
-          Padding(
-            padding: EdgeInsets.fromLTRB(16, 0, 16, MediaQuery.of(context).padding.bottom + 96),
-            child: SizedBox(
-              width: double.infinity,
-              height: 52,
-              child: ElevatedButton.icon(
-                onPressed: () {
-                  ScaffoldMessenger.of(context).showSnackBar(
-                    const SnackBar(content: Text('All 80G receipts bundled — link sent to your email!'), backgroundColor: AppColors.forestGreen),
-                  );
-                },
-                icon: const Icon(Icons.download_rounded),
-                label: const Text('Download All 80G PDFs'),
-                style: ElevatedButton.styleFrom(shape: const StadiumBorder()),
+          // Download all button — positioned at bottom with safe area
+          SafeArea(
+            top: false,
+            child: Padding(
+              padding: const EdgeInsets.fromLTRB(16, 8, 16, 12),
+              child: SizedBox(
+                width: double.infinity,
+                height: 52,
+                child: ElevatedButton.icon(
+                  onPressed: () {
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      const SnackBar(content: Text('All 80G receipts bundled — link sent to your email!'), backgroundColor: AppColors.forestGreen),
+                    );
+                  },
+                  icon: const Icon(Icons.download_rounded),
+                  label: const Text('Download All 80G PDFs'),
+                  style: ElevatedButton.styleFrom(shape: const StadiumBorder()),
+                ),
               ),
             ),
           ),

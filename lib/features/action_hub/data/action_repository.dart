@@ -58,6 +58,20 @@ class ActionRepository {
     return (data as Map<String, dynamic>?) ?? {};
   }
 
+  Future<Map<String, dynamic>> donateForCampaign(
+    String campaignId,
+    int amount, {
+    String? pan,
+  }) async {
+    final body = <String, dynamic>{
+      'amount': amount,
+      'campaign_id': campaignId,
+    };
+    if (pan != null && pan.isNotEmpty) body['pan_number'] = pan;
+    final data = await _api.post(ApiConfig.donations, body: body, requireAuth: true);
+    return (data as Map<String, dynamic>?) ?? {};
+  }
+
   Future<Map<String, dynamic>> donateForEvent(
     String eventId,
     int amount, {
@@ -65,7 +79,7 @@ class ActionRepository {
   }) async {
     final body = <String, dynamic>{'amount': amount};
     if (pan != null && pan.isNotEmpty) body['pan'] = pan;
-    final data = await _api.post(ApiConfig.appEventDonate(eventId), body: body);
+    final data = await _api.post(ApiConfig.appEventDonate(eventId), body: body, requireAuth: true);
     return (data as Map<String, dynamic>?) ?? {};
   }
 

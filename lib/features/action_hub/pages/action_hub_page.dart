@@ -1,13 +1,16 @@
-import 'package:cached_network_image/cached_network_image.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_animate/flutter_animate.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import '../../../core/constants/app_colors.dart';
+import '../../../core/widgets/app_feedback.dart';
 import '../../../core/widgets/media_carousel.dart';
 import '../../../core/widgets/skeletons.dart';
+import '../../auth/providers/auth_provider.dart';
 import '../../home/models/campaign_model.dart';
 import '../../home/providers/home_provider.dart';
+import '../../profile/pages/settings_page.dart';
+import '../data/action_repository.dart';
 import '../models/event_model.dart';
 import '../providers/action_provider.dart';
 
@@ -397,22 +400,20 @@ class _CampaignFundingCard extends StatelessWidget {
               ),
 
             Padding(
-              padding: const EdgeInsets.all(20),
+              padding: const EdgeInsets.all(16),
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   Row(
-                    crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      Expanded(
-                        child: Text(
-                          campaign.title,
-                          style: const TextStyle(
-                            fontWeight: FontWeight.w700,
-                            fontSize: 16,
-                          ),
-                        ),
+                      _Tag(
+                        label: (campaign.campaignStatus ?? 'Active').toUpperCase(),
+                        color: AppColors.primaryBlue,
                       ),
+                      if (campaign.healthStatus != null && campaign.healthStatus!.isNotEmpty) ...[
+                        const SizedBox(width: 8),
+                        _Tag(label: campaign.healthStatus!, color: AppColors.forestGreen),
+                      ],
                       if (isNearlyFunded) ...[
                         const SizedBox(width: 8),
                         _Tag(
@@ -420,10 +421,61 @@ class _CampaignFundingCard extends StatelessWidget {
                           color: AppColors.terracotta,
                         ),
                       ],
+                      const Spacer(),
+                      const Icon(
+                        Icons.volunteer_activism_rounded,
+                        size: 16,
+                        color: AppColors.primaryBlue,
+                      ),
                     ],
                   ),
-                  if (campaign.description != null) ...[
-                    const SizedBox(height: 6),
+                  const SizedBox(height: 10),
+                  Text(
+                    campaign.title,
+                    style: const TextStyle(
+                      fontWeight: FontWeight.w700,
+                      fontSize: 16,
+                    ),
+                  ),
+                  const SizedBox(height: 8),
+                  Row(
+                    children: [
+                      const Icon(
+                        Icons.calendar_today_rounded,
+                        size: 13,
+                        color: AppColors.textMedium,
+                      ),
+                      const SizedBox(width: 5),
+                      Text(
+                        campaign.formattedTimeline,
+                        style: const TextStyle(
+                          color: AppColors.textMedium,
+                          fontSize: 12,
+                        ),
+                      ),
+                      if (campaign.projectManagerName != null && campaign.projectManagerName!.isNotEmpty) ...[
+                        const SizedBox(width: 14),
+                        const Icon(
+                          Icons.person_outline_rounded,
+                          size: 14,
+                          color: AppColors.textMedium,
+                        ),
+                        const SizedBox(width: 4),
+                        Expanded(
+                          child: Text(
+                            campaign.projectManagerName!,
+                            overflow: TextOverflow.ellipsis,
+                            style: const TextStyle(
+                              color: AppColors.textMedium,
+                              fontSize: 12,
+                            ),
+                          ),
+                        ),
+                      ],
+                    ],
+                  ),
+                  if (campaign.description != null && campaign.description!.isNotEmpty) ...[
+                    const SizedBox(height: 8),
                     Text(
                       _stripHtmlIfNeeded(campaign.description!),
                       maxLines: 2,
@@ -435,14 +487,14 @@ class _CampaignFundingCard extends StatelessWidget {
                       ),
                     ),
                   ],
-                  const SizedBox(height: 18),
+                  const SizedBox(height: 14),
                   ClipRRect(
                     borderRadius: BorderRadius.circular(6),
                     child: LinearProgressIndicator(
                       value: pct.clamp(0, 1),
                       backgroundColor: AppColors.borderLight,
                       color: AppColors.primaryYellow,
-                      minHeight: 10,
+                      minHeight: 8,
                     ),
                   ),
                   const SizedBox(height: 10),
@@ -481,25 +533,49 @@ class _CampaignFundingCard extends StatelessWidget {
                       ),
                     ],
                   ),
-                  const SizedBox(height: 18),
-                  SizedBox(
-                    width: double.infinity,
-                    child: ElevatedButton(
-                      onPressed: () => _showDonation(context),
-                      style: ElevatedButton.styleFrom(
-                        minimumSize: const Size(0, 48),
-                        shape: RoundedRectangleBorder(
-                          borderRadius: BorderRadius.circular(12),
+                  const SizedBox(height: 16),
+                  Row(
+                    children: [
+                      Expanded(
+                        child: OutlinedButton(
+                          onPressed: () => context.push('/action-hub/campaign/${campaign.id}'),
+                          style: OutlinedButton.styleFrom(
+                            minimumSize: const Size(0, 44),
+                            side: const BorderSide(color: AppColors.borderMedium),
+                            shape: RoundedRectangleBorder(
+                              borderRadius: BorderRadius.circular(12),
+                            ),
+                          ),
+                          child: const Text(
+                            'View Details',
+                            style: TextStyle(
+                              fontSize: 13,
+                              fontWeight: FontWeight.w600,
+                              color: AppColors.textDark,
+                            ),
+                          ),
                         ),
                       ),
-                      child: const Text(
-                        'Donate Now',
-                        style: TextStyle(
-                          fontSize: 14,
-                          fontWeight: FontWeight.w700,
+                      const SizedBox(width: 10),
+                      Expanded(
+                        child: ElevatedButton(
+                          onPressed: () => _showDonation(context),
+                          style: ElevatedButton.styleFrom(
+                            minimumSize: const Size(0, 44),
+                            shape: RoundedRectangleBorder(
+                              borderRadius: BorderRadius.circular(12),
+                            ),
+                          ),
+                          child: const Text(
+                            'Donate Now',
+                            style: TextStyle(
+                              fontSize: 13,
+                              fontWeight: FontWeight.w700,
+                            ),
+                          ),
                         ),
                       ),
-                    ),
+                    ],
                   ),
                 ],
               ),
@@ -551,24 +627,89 @@ class _CampaignImageFallback extends StatelessWidget {
 
 // ── Donation Sheet ────────────────────────────────────────────────────────────
 
-class DonationSheet extends StatefulWidget {
+class DonationSheet extends ConsumerStatefulWidget {
   final Campaign campaign;
   const DonationSheet({super.key, required this.campaign});
   @override
-  State<DonationSheet> createState() => _DonationSheetState();
+  ConsumerState<DonationSheet> createState() => _DonationSheetState();
 }
 
-class _DonationSheetState extends State<DonationSheet> {
+class _DonationSheetState extends ConsumerState<DonationSheet> {
   int _selected = 800;
   final _panCtrl = TextEditingController();
   final _customCtrl = TextEditingController();
   bool _showPan = false;
+  bool _isSubmitting = false;
+
+  @override
+  void initState() {
+    super.initState();
+    final user = ref.read(currentUserProvider);
+    if (user?.panNumber != null && user!.panNumber!.trim().isNotEmpty) {
+      _panCtrl.text = user.panNumber!.trim().toUpperCase();
+      _showPan = true;
+    }
+  }
 
   @override
   void dispose() {
     _panCtrl.dispose();
     _customCtrl.dispose();
     super.dispose();
+  }
+
+  Future<void> _handleDonate() async {
+    if (_isSubmitting) return;
+
+    int amount = _selected;
+    if (_selected == -1) {
+      amount = int.tryParse(_customCtrl.text.trim()) ?? 0;
+      if (amount <= 0) {
+        AppFeedback.showError(context, 'Please enter a valid amount');
+        return;
+      }
+    }
+
+    final pan = _panCtrl.text.trim().toUpperCase();
+    if (_showPan && pan.isNotEmpty) {
+      final panRegex = RegExp(r'^[A-Z]{5}[0-9]{4}[A-Z]$');
+      if (!panRegex.hasMatch(pan)) {
+        AppFeedback.showError(context, 'Enter a valid PAN (e.g. ABCDE1234F)');
+        return;
+      }
+    }
+
+    setState(() => _isSubmitting = true);
+    try {
+      final repo = ref.read(actionRepositoryProvider);
+      final res = await repo.donateForCampaign(
+        widget.campaign.id,
+        amount,
+        pan: pan.isNotEmpty ? pan : null,
+      );
+
+      final xpEarned = res['xp_awarded'] ?? (100 + (amount ~/ 10));
+
+      // Invalidate and refresh user profile and donation tax vault
+      await ref.read(authNotifierProvider.notifier).refreshProfile();
+      ref.invalidate(donationsProvider);
+      ref.invalidate(campaignsProvider);
+
+      if (!mounted) return;
+      Navigator.pop(context);
+
+      await AppFeedback.showThankYou(
+        context,
+        title: 'Thank You! 🌿',
+        message: 'Your donation of ₹$amount towards "${widget.campaign.title}" was successful!',
+        xpLabel: '+$xpEarned XP earned!',
+      );
+    } catch (e) {
+      if (!mounted) return;
+      AppFeedback.showError(context, e);
+    } finally {
+      if (mounted) setState(() => _isSubmitting = false);
+    }
   }
 
   @override
@@ -626,7 +767,7 @@ class _DonationSheetState extends State<DonationSheet> {
                       child: Padding(
                         padding: const EdgeInsets.only(right: 8),
                         child: GestureDetector(
-                          onTap: () => setState(() => _selected = a),
+                          onTap: _isSubmitting ? null : () => setState(() => _selected = a),
                           child: AnimatedContainer(
                             duration: 150.ms,
                             height: 44,
@@ -663,6 +804,7 @@ class _DonationSheetState extends State<DonationSheet> {
                 const SizedBox(height: 16),
                 TextField(
                   controller: _customCtrl,
+                  enabled: !_isSubmitting,
                   keyboardType: TextInputType.number,
                   decoration: const InputDecoration(
                     hintText: 'Enter amount',
@@ -686,11 +828,14 @@ class _DonationSheetState extends State<DonationSheet> {
                 const SizedBox(height: 8),
                 TextField(
                   controller: _panCtrl,
+                  enabled: !_isSubmitting,
+                  maxLength: 10,
                   textCapitalization: TextCapitalization.characters,
                   decoration: const InputDecoration(
                     hintText: 'ABCDE1234F',
                     prefixIcon: Icon(Icons.lock_outline_rounded),
                     helperText: 'Required for 80G tax exemption certificate',
+                    counterText: '',
                   ),
                 ),
               ],
@@ -699,52 +844,35 @@ class _DonationSheetState extends State<DonationSheet> {
                 width: double.infinity,
                 height: 52,
                 child: ElevatedButton(
-                  onPressed: () {
-                    int amount = _selected;
-                    if (_selected == -1) {
-                      amount = int.tryParse(_customCtrl.text.trim()) ?? 0;
-                      if (amount <= 0) {
-                        ScaffoldMessenger.of(context).showSnackBar(
-                          const SnackBar(
-                            content: Text('Please enter a valid amount'),
-                            backgroundColor: AppColors.errorRed,
+                  onPressed: _isSubmitting ? null : _handleDonate,
+                  child: _isSubmitting
+                      ? const SizedBox(
+                          width: 22,
+                          height: 22,
+                          child: CircularProgressIndicator(
+                            color: Colors.white,
+                            strokeWidth: 2.5,
                           ),
-                        );
-                        return;
-                      }
-                    }
-
-                    if (!_showPan) {
-                      setState(() => _showPan = true);
-                    } else {
-                      Navigator.pop(context);
-                      ScaffoldMessenger.of(context).showSnackBar(
-                        SnackBar(
-                          content: Text('Donation of ₹$amount initiated!'),
-                          backgroundColor: AppColors.forestGreen,
+                        )
+                      : Builder(
+                          builder: (_) {
+                            String label = 'Donate';
+                            if (_selected != -1) {
+                              label += ' ₹$_selected';
+                            }
+                            return Text(
+                              _showPan
+                                  ? label.replaceAll('Donate', 'Proceed to Pay')
+                                  : label,
+                            );
+                          },
                         ),
-                      );
-                    }
-                  },
-                  child: Builder(
-                    builder: (_) {
-                      String label = 'Donate';
-                      if (_selected != -1) {
-                        label += ' ₹$_selected';
-                      }
-                      return Text(
-                        _showPan
-                            ? label.replaceAll('Donate', 'Proceed to Pay')
-                            : label,
-                      );
-                    },
-                  ),
                 ),
               ),
               if (!_showPan)
                 Center(
                   child: TextButton(
-                    onPressed: () => setState(() => _showPan = true),
+                    onPressed: _isSubmitting ? null : () => setState(() => _showPan = true),
                     child: const Text(
                       'Unlock 80G Tax Benefit →',
                       style: TextStyle(
@@ -783,8 +911,16 @@ class _Tag extends StatelessWidget {
 }
 
 String _stripHtmlIfNeeded(String text) {
-  // A simple regex to remove HTML tags.
   final exp = RegExp(r'<[^>]*>', multiLine: true, caseSensitive: true);
-  // Also strip common markdown asterisks if any.
-  return text.replaceAll(exp, '').replaceAll('**', '').trim();
+  return text
+      .replaceAll(exp, ' ')
+      .replaceAll('&nbsp;', ' ')
+      .replaceAll('&amp;', '&')
+      .replaceAll('&quot;', '"')
+      .replaceAll('&#39;', "'")
+      .replaceAll('&lt;', '<')
+      .replaceAll('&gt;', '>')
+      .replaceAll('**', '')
+      .replaceAll(RegExp(r'\s+'), ' ')
+      .trim();
 }

@@ -101,6 +101,16 @@ class AuthNotifier extends Notifier<AsyncValue<void>> {
     });
   }
 
+  Future<AppUser?> refreshProfile() async {
+    try {
+      final user = await _repo.fetchCurrentUser();
+      ref.read(currentUserProvider.notifier).set(user);
+      return user;
+    } catch (_) {
+      return null;
+    }
+  }
+
   Future<void> signOut() async {
     await _repo.signOut();
   }

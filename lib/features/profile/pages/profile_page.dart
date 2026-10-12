@@ -16,11 +16,24 @@ import '../../scanner/widgets/scan_history_detail_sheet.dart';
 import '../models/badge_model.dart';
 import '../providers/profile_provider.dart';
 
-class ProfilePage extends ConsumerWidget {
+class ProfilePage extends ConsumerStatefulWidget {
   const ProfilePage({super.key});
 
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
+  ConsumerState<ProfilePage> createState() => _ProfilePageState();
+}
+
+class _ProfilePageState extends ConsumerState<ProfilePage> {
+  @override
+  void initState() {
+    super.initState();
+    Future.microtask(() {
+      ref.read(authNotifierProvider.notifier).refreshProfile();
+    });
+  }
+
+  @override
+  Widget build(BuildContext context) {
     final user = ref.watch(currentUserProvider);
     final badges = ref.watch(badgesProvider);
     final history = ref.watch(scanHistoryProvider);
@@ -51,10 +64,9 @@ class ProfilePage extends ConsumerWidget {
       child: Scaffold(
         body: RefreshIndicator(
           onRefresh: () async {
-            ref.invalidate(authStateProvider);
+            await ref.read(authNotifierProvider.notifier).refreshProfile();
             ref.invalidate(badgesProvider);
             ref.invalidate(scanHistoryProvider);
-            await Future.delayed(const Duration(milliseconds: 500));
           },
           color: AppColors.primaryBlue,
           child: CustomScrollView(
@@ -262,6 +274,12 @@ class _ProfileHeader extends ConsumerWidget {
   }
 }
 
+String _formatDonated(double val) {
+  if (val >= 100000) return '₹${(val / 100000).toStringAsFixed(1)}L';
+  if (val >= 1000) return '₹${(val / 1000).toStringAsFixed(1)}k';
+  return '₹${val.toInt()}';
+}
+
 class _ImpactStats extends StatelessWidget {
   final AppUser user;
   const _ImpactStats({required this.user});
@@ -279,14 +297,44 @@ class _ImpactStats extends StatelessWidget {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Text('My Impact', style: Theme.of(context).textTheme.titleMedium?.copyWith(fontWeight: FontWeight.w700)),
+          Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
+              Text('My Impact', style: Theme.of(context).textTheme.titleMedium?.copyWith(fontWeight: FontWeight.w700)),
+              TextButton(
+                onPressed: () => context.push('/profile/settings/tax-vault'),
+                style: TextButton.styleFrom(
+                  padding: EdgeInsets.zero,
+                  minimumSize: const Size(0, 0),
+                  tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                ),
+                child: const Text('80G Vault →', style: TextStyle(color: AppColors.forestGreen, fontSize: 12, fontWeight: FontWeight.w600)),
+              ),
+            ],
+          ),
           const SizedBox(height: 16),
           Row(
             mainAxisAlignment: MainAxisAlignment.spaceAround,
             children: [
-              _ImpactTile(icon: Icons.bolt_rounded, label: 'Total XP', value: '${user.totalPoints}', color: AppColors.primaryYellow),
-              _ImpactTile(icon: Icons.park_rounded, label: 'Trees Tagged', value: '${user.treesTagged}', color: AppColors.forestGreen),
-              _ImpactTile(icon: Icons.favorite_rounded, label: 'Donated', value: '₹${(user.totalDonated / 1000).toStringAsFixed(1)}k', color: AppColors.terracotta),
+              _ImpactTile(
+                icon: Icons.bolt_rounded,
+                label: 'Total XP',
+                value: '${user.totalPoints}',
+                color: AppColors.primaryYellow,
+              ),
+              _ImpactTile(
+                icon: Icons.park_rounded,
+                label: 'Trees Tagged',
+                value: '${user.treesTagged}',
+                color: AppColors.forestGreen,
+              ),
+              _ImpactTile(
+                icon: Icons.favorite_rounded,
+                label: 'Donated',
+                value: _formatDonated(user.totalDonated),
+                color: AppColors.terracotta,
+                onTap: () => context.push('/profile/settings/tax-vault'),
+              ),
             ],
           ),
         ],
@@ -366,21 +414,43 @@ class _ImpactTile extends StatelessWidget {
   final String label;
   final String value;
   final Color color;
-  const _ImpactTile({required this.icon, required this.label, required this.value, required this.color});
+  final VoidCallback? onTap;
+  const _ImpactTile({
+    required this.icon,
+    required this.label,
+    required this.value,
+    required this.color,
+    this.onTap,
+  });
 
   @override
-  Widget build(BuildContext context) => Column(
-        children: [
-          Container(
-            padding: const EdgeInsets.all(10),
-            decoration: BoxDecoration(color: color.withAlpha(20), shape: BoxShape.circle),
-            child: Icon(icon, color: color, size: 22),
-          ),
-          const SizedBox(height: 6),
-          Text(value, style: TextStyle(fontWeight: FontWeight.w700, color: color, fontSize: 16)),
-          Text(label, style: const TextStyle(fontSize: 11, color: AppColors.textMedium)),
-        ],
+  Widget build(BuildContext context) {
+    Widget content = Column(
+      children: [
+        Container(
+          padding: const EdgeInsets.all(10),
+          decoration: BoxDecoration(color: color.withAlpha(20), shape: BoxShape.circle),
+          child: Icon(icon, color: color, size: 22),
+        ),
+        const SizedBox(height: 6),
+        Text(value, style: TextStyle(fontWeight: FontWeight.w700, color: color, fontSize: 16)),
+        Text(label, style: const TextStyle(fontSize: 11, color: AppColors.textMedium)),
+      ],
+    );
+
+    if (onTap != null) {
+      return InkWell(
+        onTap: onTap,
+        borderRadius: BorderRadius.circular(12),
+        child: Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+          child: content,
+        ),
       );
+    }
+
+    return content;
+  }
 }
 
 class _BadgesSection extends StatelessWidget {

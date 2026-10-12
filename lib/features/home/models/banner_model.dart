@@ -28,6 +28,9 @@ class AppBanner {
   /// External URL for [actionType] == `link`.
   final String? linkUrl;
 
+  /// Linked campaign ID for [actionType] == `campaign`.
+  final String? linkedCampaignId;
+
   /// Optional copy kept for semantics / accessibility — not rendered.
   final String? title;
   final String? subtitle;
@@ -41,6 +44,7 @@ class AppBanner {
     this.actionType = 'none',
     this.actionTarget,
     this.linkUrl,
+    this.linkedCampaignId,
     this.title,
     this.subtitle,
   });
@@ -52,9 +56,26 @@ class AppBanner {
   bool get isImage => !isVideo && !isGif;
 
   bool get hasLink => linkUrl != null && linkUrl!.trim().isNotEmpty;
+  bool get isCampaign =>
+      actionType == 'campaign' || (linkedCampaignId != null && linkedCampaignId!.trim().isNotEmpty);
   bool get isRoute =>
-      actionType == 'route' && (actionTarget?.trim().isNotEmpty ?? false);
+      (actionType == 'route' || isCampaign) &&
+      (effectiveActionTarget?.trim().isNotEmpty ?? false);
   bool get isScan => actionType == 'scan';
+
+  /// Returns the resolved route to navigate to.
+  /// If it is a campaign action, resolves to `/action-hub/campaign/$id`.
+  String? get effectiveActionTarget {
+    if (isCampaign) {
+      final cid = (linkedCampaignId != null && linkedCampaignId!.trim().isNotEmpty)
+          ? linkedCampaignId!.trim()
+          : (actionTarget != null ? actionTarget!.replaceFirst('/action-hub/campaign/', '').replaceAll('/', '').trim() : '');
+      if (cid.isNotEmpty) {
+        return '/action-hub/campaign/$cid';
+      }
+    }
+    return actionTarget;
+  }
 
   /// Whether a tap should do anything at all.
   bool get isTappable => isRoute || isScan || (actionType == 'link' && hasLink);
@@ -70,8 +91,20 @@ class AppBanner {
   factory AppBanner.fromJson(Map<String, dynamic> json) {
     final rawDuration = (json['duration_seconds'] as num?)?.toInt();
     final rawTarget = (json['action_target'] as String?)?.trim();
+    final rawCampaignId = (json['linked_campaign_id'] as String?)?.trim();
     final mediaUrl =
         ((json['media_url'] ?? json['image']) as String?)?.trim() ?? '';
+    final actionType = (json['action_type'] as String?)?.trim().toLowerCase() ?? 'none';
+
+    String? resolvedTarget = (rawTarget == null || rawTarget.isEmpty)
+        ? null
+        : (rawTarget.startsWith('/') ? rawTarget : '/$rawTarget');
+    if ((actionType == 'campaign' || (rawCampaignId != null && rawCampaignId.isNotEmpty)) &&
+        (resolvedTarget == null || resolvedTarget.isEmpty)) {
+      if (rawCampaignId != null && rawCampaignId.isNotEmpty) {
+        resolvedTarget = '/action-hub/campaign/$rawCampaignId';
+      }
+    }
 
     return AppBanner(
       id: (json['id'] ?? '').toString(),
@@ -79,11 +112,10 @@ class AppBanner {
       mediaType: (json['media_type'] as String?)?.trim().toLowerCase() ?? 'image',
       priority: (json['priority'] as num?)?.toInt() ?? 0,
       durationSeconds: (rawDuration != null && rawDuration > 0) ? rawDuration : null,
-      actionType: (json['action_type'] as String?)?.trim().toLowerCase() ?? 'none',
-      actionTarget: (rawTarget == null || rawTarget.isEmpty)
-          ? null
-          : (rawTarget.startsWith('/') ? rawTarget : '/$rawTarget'),
+      actionType: actionType,
+      actionTarget: resolvedTarget,
       linkUrl: (json['link_url'] as String?)?.trim(),
+      linkedCampaignId: rawCampaignId,
       title: json['title'] as String?,
       subtitle: json['subtitle'] as String?,
     );
