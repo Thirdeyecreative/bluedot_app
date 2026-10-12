@@ -108,6 +108,18 @@ class _OtpPageState extends ConsumerState<OtpPage> {
   }
 
   void _onChanged(String value, int index) {
+    final digits = value.replaceAll(RegExp(r'[^0-9]'), '');
+    if (digits.length > 1) {
+      // User pasted multiple digits (e.g. from SMS autofill or clipboard)
+      for (int i = 0; i < digits.length && (index + i) < 6; i++) {
+        _controllers[index + i].text = digits[i];
+      }
+      final targetIndex = (index + digits.length - 1).clamp(0, 5);
+      _focusNodes[targetIndex].requestFocus();
+      if (_otp.length == 6) _verify();
+      return;
+    }
+
     if (value.length == 1 && index < 5) {
       _focusNodes[index + 1].requestFocus();
     } else if (value.isEmpty && index > 0) {
@@ -226,7 +238,7 @@ class _OtpBox extends StatelessWidget {
         focusNode: focusNode,
         textAlign: TextAlign.center,
         keyboardType: TextInputType.number,
-        inputFormatters: [FilteringTextInputFormatter.digitsOnly, LengthLimitingTextInputFormatter(1)],
+        inputFormatters: [FilteringTextInputFormatter.digitsOnly, LengthLimitingTextInputFormatter(6)],
         onChanged: onChanged,
         style: Theme.of(context).textTheme.titleLarge?.copyWith(fontWeight: FontWeight.w700),
         decoration: InputDecoration(

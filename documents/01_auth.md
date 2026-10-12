@@ -1,4 +1,4 @@
-# Auth, OTP & Splash Flow — Current State
+# Auth, OTP & Splash Flow — Current State (Passiton MSG91 Integration)
 
 ## 1. User-Facing Flow
 
@@ -13,8 +13,16 @@
    - On success: `context.push('/otp', extra: phone)`.
    - Includes debounce guards to prevent double-sends.
 
-3. **OTP** (`/otp`, `OtpPage` in `lib/features/auth/pages/otp_page.dart`)
-   - 6-box OTP entry; auto-verifies when filled.
+3. **OTP SMS Delivery (Passiton DLT Template via MSG91)**
+   - Supabase Auth invokes the registered Send SMS Hook (`supabase/functions/send-sms-hook/index.ts`).
+   - The hook dispatches the OTP via MSG91 `https://api.msg91.com/api/sendhttp.php` using the approved Passiton DLT template:
+     `" {OTP} is your verification code PASSITON. Please do not share it with anyone. INDIBIZ"`
+   - Uses Sender ID: `PASSIT`, Route: `4` (Transactional), and `DLT_TE_ID`.
+   - Reviewer / Test Bypass: Test number `9999999999` with OTP `558712` is supported without real SMS dispatch.
+
+4. **OTP Screen** (`/otp`, `OtpPage` in `lib/features/auth/pages/otp_page.dart`)
+   - 6-box OTP entry with multi-digit paste support (SMS autofill / clipboard).
+   - Auto-verifies when 6 digits are entered or pasted.
    - Calls `authNotifierProvider.notifier.verifyOtp(phone, otp)`.
    - Supabase verifies the OTP and issues a session token.
    - App calls `GET /api/v1/app/profile` to fetch or auto-create the backend user.
@@ -22,15 +30,15 @@
    - The GoRouter automatically redirects the user to `/complete-profile` (if new ghost user) or `/home` (if returning user).
    - Includes a 30s resend cooldown.
 
-4. **Complete Profile** (`/complete-profile`, `CompleteProfilePage` in `lib/features/auth/pages/complete_profile_page.dart`)
-   - Required for users where `fullName == null` (ghost users).
+5. **Complete Profile** (`/complete-profile`, `CompleteProfilePage` in `lib/features/auth/pages/complete_profile_page.dart`)
+   - Required for users where `fullName == null` or `""` (ghost users).
    - Collects Name, Email, and PAN Number.
    - Calls `PUT /api/v1/app/profile`.
    - On success, updates `currentUserProvider` and GoRouter auto-redirects to `/home`.
 
 ## 2. API Endpoints
 
-The auth flow natively uses **Supabase Auth** for token generation. The backend only handles user profiles.
+The auth flow natively uses **Supabase Auth** for token generation. The backend handles user profiles:
 
 `lib/core/config/api_config.dart` configures:
 - `userProfile` (`GET / PUT /api/v1/app/profile`)
@@ -38,6 +46,9 @@ The auth flow natively uses **Supabase Auth** for token generation. The backend 
 Backend (`bluedot_apis/app/api/v1/app/profile.py`):
 - `GET /api/v1/app/profile`: Uses `get_current_user` dependency to parse the Supabase JWT. Auto-creates a Postgres `AppUser` with `full_name=""` if it's their first login.
 - `PUT /api/v1/app/profile`: Updates `full_name`, `email`, and `pan_number`.
+
+Backend SMS Service (`bluedot_apis/app/services/sms_service.py`):
+- Reusable async helper `send_otp_via_sms91()` implementing Passiton's MSG91 DLT template for any backend-initiated SMS needs.
 
 ## 3. Riverpod Providers & State
 
@@ -52,8 +63,8 @@ Defined in `lib/features/auth/providers/auth_provider.dart`:
 From `lib/core/router/app_router.dart`:
 
 - `isLoggedIn` is strictly defined as `currentUser != null`. A Supabase session is not enough; the backend profile must have loaded successfully to enter the app.
-- If `currentUser != null` but `currentUser.fullName == null`, `needsProfileCompletion` is true. The router intercepts all navigation and forces the user to `/complete-profile`.
+- If `currentUser != null` but `currentUser.fullName == null` or `""`, `needsProfileCompletion` is true. The router intercepts all navigation and forces the user to `/complete-profile`.
 - If `isLoggedIn` and the profile is complete, the user is not allowed to visit `/login`, `/otp`, or `/complete-profile` and is routed to `/home`.
 
 ## 5. Status
-The Mobile OTP Auth flow is **100% complete and fully wired to the backend and Supabase.** Mock data has been entirely removed from the auth pathway.
+The Mobile OTP Auth flow is **100% complete, fully wired to Passiton's MSG91 DLT template, and integrated across Flutter and Supabase.**
