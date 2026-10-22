@@ -94,11 +94,16 @@ class _ScanResultSheetState extends State<ScanResultSheet> {
                     child: Container(
                       padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 10),
                       decoration: BoxDecoration(
-                        color: result.isNewTag ? AppColors.primaryBlue : AppColors.forestGreen,
+                        color: result.pointsAwarded > 0
+                            ? (result.isNewTag ? AppColors.primaryBlue : AppColors.forestGreen)
+                            : AppColors.slateBlue,
                         borderRadius: BorderRadius.circular(50),
                         boxShadow: [
                           BoxShadow(
-                            color: (result.isNewTag ? AppColors.primaryBlue : AppColors.forestGreen).withAlpha(60),
+                            color: (result.pointsAwarded > 0
+                                    ? (result.isNewTag ? AppColors.primaryBlue : AppColors.forestGreen)
+                                    : AppColors.slateBlue)
+                                .withAlpha(60),
                             blurRadius: 16,
                             offset: const Offset(0, 4),
                           ),
@@ -107,10 +112,16 @@ class _ScanResultSheetState extends State<ScanResultSheet> {
                       child: Row(
                         mainAxisSize: MainAxisSize.min,
                         children: [
-                          const Icon(Icons.bolt_rounded, color: AppColors.primaryYellow, size: 20),
+                          Icon(
+                            result.pointsAwarded > 0 ? Icons.bolt_rounded : Icons.check_circle_rounded,
+                            color: result.pointsAwarded > 0 ? AppColors.primaryYellow : Colors.white,
+                            size: 20,
+                          ),
                           const SizedBox(width: 6),
                           Text(
-                            '+${result.pointsAwarded} Impact Points',
+                            result.pointsAwarded > 0
+                                ? '+${result.pointsAwarded} Impact Points'
+                                : 'Already Scanned',
                             style: const TextStyle(
                               color: Colors.white,
                               fontWeight: FontWeight.w700,
@@ -238,7 +249,7 @@ class _ScanResultSheetState extends State<ScanResultSheet> {
                     child: Text(
                       result.isNewTag
                           ? '📍 New Tree Pinned on the Map!'
-                          : '✅ Already Mapped Nearby — No New Pin Added',
+                          : '🌱 Already Scanned',
                       textAlign: TextAlign.center,
                       style: Theme.of(context).textTheme.titleMedium?.copyWith(fontWeight: FontWeight.w700),
                     ),
@@ -246,9 +257,7 @@ class _ScanResultSheetState extends State<ScanResultSheet> {
                   const SizedBox(height: 4),
                   Center(
                     child: Text(
-                      result.isNewTag
-                          ? result.message
-                          : '${result.message} This tree was tagged here before, so we verified your visit instead of creating a duplicate map pin.',
+                      result.message,
                       textAlign: TextAlign.center,
                       style: const TextStyle(color: AppColors.textMedium, fontSize: 13),
                     ),
@@ -265,8 +274,13 @@ class _ScanResultSheetState extends State<ScanResultSheet> {
                         onSaved?.call();
                         Navigator.pop(context);
                       },
-                      icon: const Icon(Icons.add_location_alt_rounded, size: 20),
-                      label: const Text('Save to My Collection & Geotag'),
+                      icon: Icon(
+                        result.isNewTag ? Icons.add_location_alt_rounded : Icons.check_rounded,
+                        size: 20,
+                      ),
+                      label: Text(
+                        result.isNewTag ? 'Save to My Collection & Geotag' : 'Done',
+                      ),
                       style: ElevatedButton.styleFrom(
                         shape: const StadiumBorder(),
                         backgroundColor: AppColors.primaryBlue,
