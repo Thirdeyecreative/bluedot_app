@@ -12,12 +12,14 @@ class HomeFeedData {
   final List<AppBanner> banners;
   final List<Campaign> campaigns;
   final List<PlantationEvent> events;
+  final List<BlogPost> blogs;
 
   HomeFeedData({
     required this.tagline,
     required this.banners,
     required this.campaigns,
     required this.events,
+    this.blogs = const [],
   });
 }
 
@@ -28,8 +30,6 @@ final homeRepositoryProvider = Provider<HomeRepository>((ref) {
 class HomeRepository {
   final ApiClient _api;
   HomeRepository(this._api);
-
-  Future<void> _demoDelay() => Future<void>.delayed(const Duration(milliseconds: 250));
 
   Future<HomeFeedData> fetchHomeFeed() async {
     try {
@@ -50,15 +50,20 @@ class HomeRepository {
       final eventsList = json['events'] as List<dynamic>? ?? [];
       final events = eventsList.map((e) => PlantationEvent.fromJson(e)).toList();
 
+      // Blogs: show ONLY real DB data
+      final blogsList = json['blogs'] as List<dynamic>? ?? [];
+      final blogs = blogsList.map((b) => BlogPost.fromJson(b as Map<String, dynamic>)).toList();
+
       return HomeFeedData(
         tagline: json['tagline'] as String? ?? 'Every Scan Plants a Story.',
         banners: banners,
         campaigns: campaigns,
         events: events,
+        blogs: blogs,
       );
     } catch (e, stack) {
       print('Error fetching home feed: $e\n$stack');
-      // On error: show demo banners but empty events/campaigns
+      // On error: show demo banners but empty events/campaigns/blogs
       // so the user never sees stale hardcoded content
       final demoBanners = List<AppBanner>.of(DemoData.banners);
       AppBanner.sortInPlace(demoBanners);
@@ -67,21 +72,62 @@ class HomeRepository {
         banners: demoBanners,
         campaigns: [],
         events: [],
+        blogs: [],
       );
     }
   }
 
-  Future<List<BlogPost>> fetchBlogs({int page = 1, int limit = 10}) async {
-    await _demoDelay();
-    return DemoData.blogs;
+  Future<List<BlogPost>> fetchBlogs({int page = 1, int limit = 10, String? search}) async {
+    try {
+      final queryParams = <String, String>{
+        'page': page.toString(),
+        'limit': limit.toString(),
+      };
+      if (search != null && search.trim().isNotEmpty) {
+        queryParams['search'] = search.trim();
+      }
+
+      final data = await _api.get(
+        ApiConfig.appBlogs,
+        requireAuth: false,
+        query: queryParams,
+      );
+
+      if (data is List) {
+        return data.map((j) => BlogPost.fromJson(j as Map<String, dynamic>)).toList();
+      } else if (data is Map<String, dynamic>) {
+        final items = data['items'] as List<dynamic>? ?? data['blogs'] as List<dynamic>? ?? [];
+        return items.map((j) => BlogPost.fromJson(j as Map<String, dynamic>)).toList();
+      }
+    } catch (e, stack) {
+      print('Error fetching blogs: $e\n$stack');
+      // On local/dev fallback when backend is unreachable
+      if (!ApiConfig.isProduction) {
+        return DemoData.blogs;
+      }
+    }
+    return [];
   }
 
   Future<BlogPost> fetchBlogBySlug(String slug) async {
-    await _demoDelay();
-    return DemoData.blogs.firstWhere(
-      (blog) => blog.slug == slug,
-      orElse: () => DemoData.blogs.first,
-    );
+    try {
+      final data = await _api.get(
+        ApiConfig.appBlogDetail(slug),
+        requireAuth: false,
+      );
+      if (data is Map<String, dynamic>) {
+        return BlogPost.fromJson(data);
+      }
+    } catch (e, stack) {
+      print('Error fetching blog ($slug): $e\n$stack');
+      // If offline/demo fallback is available in non-prod
+      if (!ApiConfig.isProduction) {
+        final match = DemoData.blogs.where((b) => b.slug == slug || b.id == slug);
+        if (match.isNotEmpty) return match.first;
+      }
+      rethrow;
+    }
+    throw Exception('Blog not found');
   }
 
   Future<List<Campaign>> fetchCampaigns() async {

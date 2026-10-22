@@ -12,7 +12,7 @@ class DirectoryRepository {
   final ApiClient _api;
   DirectoryRepository(this._api);
 
-  Future<List<TreeSpecies>> fetchSpecies({String? search, int limit = 20, int offset = 0}) async {
+  Future<List<TreeSpecies>> fetchSpecies({String? search, int limit = 30, int offset = 0}) async {
     final queryParams = {
       'limit': limit.toString(),
       'offset': offset.toString(),

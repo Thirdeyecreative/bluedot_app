@@ -10,46 +10,76 @@ class SearchQueryNotifier extends Notifier<String> {
   void update(String q) => state = q;
 }
 
+final isFetchingMoreProvider = NotifierProvider<IsFetchingMoreNotifier, bool>(IsFetchingMoreNotifier.new);
+
+class IsFetchingMoreNotifier extends Notifier<bool> {
+  @override
+  bool build() => false;
+  void update(bool val) => state = val;
+}
+
 final speciesListProvider = AsyncNotifierProvider<SpeciesListNotifier, List<TreeSpecies>>(SpeciesListNotifier.new);
 
 class SpeciesListNotifier extends AsyncNotifier<List<TreeSpecies>> {
   bool _hasMore = true;
   bool _isLoadingMore = false;
-  static const int _limit = 20;
+  static const int _limit = 30;
 
   bool get hasMore => _hasMore;
+  bool get isLoadingMore => _isLoadingMore;
 
   @override
   Future<List<TreeSpecies>> build() async {
-    final query = ref.watch(searchQueryProvider);
+    final query = ref.watch(searchQueryProvider).trim();
+    final isSearching = query.isNotEmpty;
+
+    // When searching, fetch all matching results in a single unpaginated API call
+    if (isSearching) {
+      _hasMore = false;
+      final list = await ref.watch(directoryRepositoryProvider).fetchSpecies(
+        search: query,
+        limit: 500,
+        offset: 0,
+      );
+      return list;
+    }
+
+    // When browsing the encyclopedia, paginate smoothly with limit = 30
     _hasMore = true;
-    final list = await ref.watch(directoryRepositoryProvider).fetchSpecies(search: query, limit: _limit, offset: 0);
+    final list = await ref.watch(directoryRepositoryProvider).fetchSpecies(
+      search: null,
+      limit: _limit,
+      offset: 0,
+    );
     if (list.length < _limit) _hasMore = false;
     return list;
   }
 
   Future<void> loadMore() async {
-    if (!_hasMore || _isLoadingMore) return;
+    final query = ref.read(searchQueryProvider).trim();
+    if (query.isNotEmpty || !_hasMore || _isLoadingMore) return;
     
     final currentData = state.value;
     if (currentData == null) return;
 
     _isLoadingMore = true;
+    ref.read(isFetchingMoreProvider.notifier).update(true);
+
     try {
-      final query = ref.read(searchQueryProvider);
       final offset = currentData.length;
       final newList = await ref.read(directoryRepositoryProvider).fetchSpecies(
-        search: query,
+        search: null,
         limit: _limit,
         offset: offset,
       );
 
       if (newList.length < _limit) _hasMore = false;
       state = AsyncData([...currentData, ...newList]);
-    } catch (e, st) {
-      state = AsyncError(e, st);
+    } catch (_) {
+      // Do not replace loaded data with AsyncError on pagination hitch
     } finally {
       _isLoadingMore = false;
+      ref.read(isFetchingMoreProvider.notifier).update(false);
     }
   }
 }

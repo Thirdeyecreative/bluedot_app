@@ -24,16 +24,19 @@ class BlogPost {
   });
 
   factory BlogPost.fromJson(Map<String, dynamic> json) => BlogPost(
-        id: json['id'] as String,
-        slug: json['slug'] as String? ?? json['id'] as String,
-        title: json['title'] as String,
+        id: json['id']?.toString() ?? '',
+        slug: json['slug']?.toString() ?? json['id']?.toString() ?? '',
+        title: json['title'] as String? ?? 'Untitled',
         excerpt: json['excerpt'] as String?,
         bodyText: json['body_text'] as String?,
-        mediaUrls: (json['media_urls'] as List<dynamic>?)?.cast<String>() ?? [],
+        mediaUrls: (json['media_urls'] as List<dynamic>?)
+                ?.whereType<String>()
+                .toList() ??
+            const [],
         author: json['author'] as String?,
         publishedAt: json['published_at'] as String?,
         linkedCampaignName: json['linked_campaign_name'] as String?,
-        views: json['views'] as int? ?? 0,
+        views: (json['views'] as num?)?.toInt() ?? 0,
       );
 
   String? get thumbnailUrl => mediaUrls.isNotEmpty ? mediaUrls.first : null;

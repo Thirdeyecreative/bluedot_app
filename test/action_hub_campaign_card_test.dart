@@ -75,9 +75,9 @@ void main() {
       // Verify Title
       expect(find.text('Western Ghats Corridor Revival'), findsOneWidget);
 
-      // Verify Status Badge & Health Tag
+      // Verify Status Badge (Health Tag removed per requirements)
       expect(find.text('ACTIVE'), findsOneWidget);
-      expect(find.text('On Track'), findsOneWidget);
+      expect(find.text('On Track'), findsNothing);
       expect(find.text('Nearly Funded'), findsOneWidget); // 80% >= 75%
 
       // Verify Timeline and Manager

@@ -410,10 +410,6 @@ class _CampaignFundingCard extends StatelessWidget {
                         label: (campaign.campaignStatus ?? 'Active').toUpperCase(),
                         color: AppColors.primaryBlue,
                       ),
-                      if (campaign.healthStatus != null && campaign.healthStatus!.isNotEmpty) ...[
-                        const SizedBox(width: 8),
-                        _Tag(label: campaign.healthStatus!, color: AppColors.forestGreen),
-                      ],
                       if (isNearlyFunded) ...[
                         const SizedBox(width: 8),
                         _Tag(

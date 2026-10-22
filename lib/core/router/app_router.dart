@@ -10,6 +10,7 @@ import '../../features/auth/pages/splash_page.dart';
 import '../../features/navigation/main_navigation.dart';
 import '../../features/home/pages/home_page.dart';
 import '../../features/home/pages/blog_detail_page.dart';
+import '../../features/home/pages/all_blogs_page.dart';
 import '../../features/home/pages/notifications_page.dart';
 import '../../features/action_hub/pages/action_hub_page.dart';
 import '../../features/action_hub/pages/event_detail_page.dart';
@@ -99,6 +100,10 @@ final routerProvider = Provider<GoRouter>((ref) {
                 path: '/home',
                 builder: (__, _) => const HomePage(),
                 routes: [
+                  GoRoute(
+                    path: 'blogs',
+                    builder: (__, _) => const AllBlogsPage(),
+                  ),
                   GoRoute(
                     path: 'blog/:slug',
                     builder: (_, state) => BlogDetailPage(slug: state.pathParameters['slug']!),

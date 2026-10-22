@@ -40,8 +40,11 @@ class _HomePageState extends ConsumerState<HomePage> {
         onRefresh: () async {
           ref.invalidate(homeFeedProvider);
           ref.invalidate(blogsProvider);
-          // Wait for the home feed to actually re-fetch before dismissing spinner
-          await ref.read(homeFeedProvider.future);
+          // Wait for both to actually re-fetch before dismissing spinner
+          await Future.wait([
+            ref.read(homeFeedProvider.future),
+            ref.read(blogsProvider.future),
+          ]);
         },
         color: AppColors.primaryBlue,
         child: CustomScrollView(
@@ -119,6 +122,13 @@ class _HomePageState extends ConsumerState<HomePage> {
                       ),
                     ],
                   ),
+                ),
+                IconButton(
+                  icon: const Icon(Icons.qr_code_scanner_rounded, color: Colors.white),
+                  onPressed: () => context.push('/scanner'),
+                  tooltip: 'Green Lens Scanner',
+                  constraints: const BoxConstraints(),
+                  padding: const EdgeInsets.symmetric(horizontal: 4),
                 ),
                 IconButton(
                   icon: const Icon(Icons.map_rounded, color: Colors.white),
@@ -277,7 +287,7 @@ class _HomePageState extends ConsumerState<HomePage> {
                                 ?.copyWith(fontWeight: FontWeight.w700),
                           ),
                           TextButton(
-                            onPressed: () {},
+                            onPressed: () => context.push('/home/blogs'),
                             child: const Text('See all'),
                           ),
                         ],
@@ -291,12 +301,20 @@ class _HomePageState extends ConsumerState<HomePage> {
           // 5. Blog Grid
           SliverToBoxAdapter(
             child: blogs.when(
-              data: (list) => Padding(
-                padding: const EdgeInsets.only(
-                  bottom: 120,
-                ), // Padding for bottom nav & FAB
-                child: _BlogGrid(blogs: list),
-              ),
+              data: (list) => list.isEmpty
+                  ? const Padding(
+                      padding: EdgeInsets.fromLTRB(24, 0, 24, 120),
+                      child: Text(
+                        'No stories published yet.',
+                        style: TextStyle(color: AppColors.textMedium, fontSize: 13),
+                      ),
+                    )
+                  : Padding(
+                      padding: const EdgeInsets.only(
+                        bottom: 120,
+                      ), // Padding for bottom nav & FAB
+                      child: _BlogGrid(blogs: list),
+                    ),
               loading: () => const SkeletonCardList(
                 count: 3,
                 height: 100,
@@ -502,43 +520,70 @@ class _BlogCard extends StatelessWidget {
         ),
         child: Row(
           children: [
-            if (blog.thumbnailUrl != null)
-              ClipRRect(
-                borderRadius: const BorderRadius.horizontal(
-                  left: Radius.circular(15),
-                ),
-                child: CachedNetworkImage(
-                  imageUrl: blog.thumbnailUrl!,
-                  width: 100,
-                  height: 100,
-                  fit: BoxFit.cover,
-                  placeholder: (_, _) =>
-                      Container(color: AppColors.borderLight),
-                  errorWidget: (_, _, _) => Container(
-                    color: AppColors.primaryBlue.withAlpha(20),
+            Stack(
+              children: [
+                if (blog.thumbnailUrl != null)
+                  ClipRRect(
+                    borderRadius: const BorderRadius.horizontal(
+                      left: Radius.circular(15),
+                    ),
+                    child: CachedNetworkImage(
+                      imageUrl: blog.thumbnailUrl!,
+                      width: 100,
+                      height: 100,
+                      fit: BoxFit.cover,
+                      placeholder: (_, _) =>
+                          Container(color: AppColors.borderLight),
+                      errorWidget: (_, _, _) => Container(
+                        color: AppColors.primaryBlue.withAlpha(20),
+                        child: const Icon(
+                          Icons.article_rounded,
+                          color: AppColors.slateBlue,
+                        ),
+                      ),
+                    ),
+                  )
+                else
+                  Container(
+                    width: 100,
+                    height: 100,
+                    decoration: const BoxDecoration(
+                      color: Color(0xFFECF0FF),
+                      borderRadius: BorderRadius.horizontal(
+                        left: Radius.circular(15),
+                      ),
+                    ),
                     child: const Icon(
                       Icons.article_rounded,
-                      color: AppColors.slateBlue,
+                      color: AppColors.primaryBlue,
+                      size: 32,
                     ),
                   ),
-                ),
-              )
-            else
-              Container(
-                width: 100,
-                height: 100,
-                decoration: const BoxDecoration(
-                  color: Color(0xFFECF0FF),
-                  borderRadius: BorderRadius.horizontal(
-                    left: Radius.circular(15),
+                if (blog.mediaUrls.length > 1)
+                  Positioned(
+                    bottom: 6,
+                    left: 6,
+                    child: Container(
+                      padding: const EdgeInsets.symmetric(horizontal: 5, vertical: 2),
+                      decoration: BoxDecoration(
+                        color: Colors.black.withAlpha(160),
+                        borderRadius: BorderRadius.circular(6),
+                      ),
+                      child: Row(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          const Icon(Icons.photo_library_rounded, size: 10, color: Colors.white),
+                          const SizedBox(width: 3),
+                          Text(
+                            '${blog.mediaUrls.length}',
+                            style: const TextStyle(color: Colors.white, fontSize: 10, fontWeight: FontWeight.bold),
+                          ),
+                        ],
+                      ),
+                    ),
                   ),
-                ),
-                child: const Icon(
-                  Icons.article_rounded,
-                  color: AppColors.primaryBlue,
-                  size: 32,
-                ),
-              ),
+              ],
+            ),
             Expanded(
               child: Padding(
                 padding: const EdgeInsets.all(14),
@@ -575,27 +620,25 @@ class _BlogCard extends StatelessWidget {
                           color: AppColors.textLight,
                         ),
                         const SizedBox(width: 4),
-                        Text(
-                          blog.author ?? 'BlueDot',
-                          style: const TextStyle(
-                            fontSize: 11,
-                            color: AppColors.textLight,
+                        Expanded(
+                          child: Text(
+                            blog.author ?? 'BlueDot',
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
+                            style: const TextStyle(
+                              fontSize: 11,
+                              color: AppColors.textLight,
+                            ),
                           ),
                         ),
-                        const Spacer(),
-                        const Icon(
-                          Icons.remove_red_eye_outlined,
-                          size: 12,
-                          color: AppColors.textLight,
-                        ),
-                        const SizedBox(width: 4),
-                        Text(
-                          '${blog.views}',
-                          style: const TextStyle(
-                            fontSize: 11,
-                            color: AppColors.textLight,
+                        if (blog.publishedAt != null)
+                          Text(
+                            _formatDateShort(blog.publishedAt!),
+                            style: const TextStyle(
+                              fontSize: 11,
+                              color: AppColors.textLight,
+                            ),
                           ),
-                        ),
                       ],
                     ),
                   ],
@@ -606,6 +649,16 @@ class _BlogCard extends StatelessWidget {
         ),
       ),
     );
+  }
+}
+
+String _formatDateShort(String iso) {
+  try {
+    final dt = DateTime.parse(iso);
+    const months = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+    return '${dt.day} ${months[dt.month - 1]}';
+  } catch (_) {
+    return '';
   }
 }
 

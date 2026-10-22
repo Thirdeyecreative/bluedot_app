@@ -28,15 +28,20 @@ class _DirectoryPageState extends ConsumerState<DirectoryPage> {
   }
 
   void _onScroll() {
-    if (_scrollController.position.pixels >= _scrollController.position.maxScrollExtent - 200) {
+    // Lookahead of 600px so next page preloads seamlessly before reaching the bottom
+    if (_scrollController.hasClients &&
+        _scrollController.position.pixels >= _scrollController.position.maxScrollExtent - 600) {
       ref.read(speciesListProvider.notifier).loadMore();
     }
   }
 
   void _onSearchChanged(String query) {
     if (_debounce?.isActive ?? false) _debounce!.cancel();
-    _debounce = Timer(const Duration(milliseconds: 500), () {
-      ref.read(searchQueryProvider.notifier).update(query);
+    // 300ms debounce feels immediate and snappy
+    _debounce = Timer(const Duration(milliseconds: 300), () {
+      if (mounted) {
+        ref.read(searchQueryProvider.notifier).update(query);
+      }
     });
   }
 
@@ -50,7 +55,12 @@ class _DirectoryPageState extends ConsumerState<DirectoryPage> {
 
   @override
   Widget build(BuildContext context) {
-    final species = ref.watch(speciesListProvider);
+    final speciesAsync = ref.watch(speciesListProvider);
+    final isFetchingMore = ref.watch(isFetchingMoreProvider);
+    final searchQuery = ref.watch(searchQueryProvider).trim();
+    final list = speciesAsync.value;
+    final isInitialLoading = speciesAsync.isLoading && list == null;
+    final isSearchingBackground = speciesAsync.isLoading && list != null;
 
     return PopScope(
       canPop: false,
@@ -62,105 +72,182 @@ class _DirectoryPageState extends ConsumerState<DirectoryPage> {
         body: RefreshIndicator(
           onRefresh: () async {
             ref.invalidate(speciesListProvider);
-            await Future.delayed(const Duration(milliseconds: 500));
+            await Future.delayed(const Duration(milliseconds: 400));
           },
           color: AppColors.primaryBlue,
           child: CustomScrollView(
             controller: _scrollController,
+            physics: const AlwaysScrollableScrollPhysics(parent: BouncingScrollPhysics()),
             slivers: [
-          SliverAppBar(
-            floating: true,
-            snap: true,
-            leadingWidth: 64,
-            leading: Padding(
-              padding: const EdgeInsets.only(left: 16.0, top: 8.0, bottom: 8.0),
-              child: GestureDetector(
-                onTap: () => context.go('/home'),
-                child: Container(
-                  decoration: BoxDecoration(
-                    color: AppColors.primaryYellow,
-                    shape: BoxShape.circle,
-                    boxShadow: [BoxShadow(color: Colors.black.withAlpha(20), blurRadius: 8)],
-                  ),
-                  child: const Icon(Icons.arrow_back_rounded, color: AppColors.textDark, size: 20),
-                ),
-              ),
-            ),
-            title: Text('Botanical Directory', style: Theme.of(context).textTheme.titleLarge?.copyWith(fontWeight: FontWeight.w700)),
-            bottom: PreferredSize(
-              preferredSize: const Size.fromHeight(60),
-              child: Padding(
-                padding: const EdgeInsets.fromLTRB(16, 0, 16, 10),
-                child: TextField(
-                  controller: _searchController,
-                  onChanged: _onSearchChanged,
-                  decoration: InputDecoration(
-                    hintText: 'Search plants, e.g. Neem, Banyan...',
-                    prefixIcon: const Icon(Icons.search_rounded, color: AppColors.textLight),
-                    suffixIcon: _searchController.text.isNotEmpty
-                        ? IconButton(
-                            icon: const Icon(Icons.close_rounded, size: 18),
-                            onPressed: () {
-                              _searchController.clear();
-                              ref.read(searchQueryProvider.notifier).update('');
-                            },
-                          )
-                        : null,
-                    contentPadding: const EdgeInsets.symmetric(vertical: 12),
+              SliverAppBar(
+                floating: true,
+                snap: true,
+                leadingWidth: 64,
+                leading: Padding(
+                  padding: const EdgeInsets.only(left: 16.0, top: 8.0, bottom: 8.0),
+                  child: GestureDetector(
+                    onTap: () => context.go('/home'),
+                    child: Container(
+                      decoration: BoxDecoration(
+                        color: AppColors.primaryYellow,
+                        shape: BoxShape.circle,
+                        boxShadow: [BoxShadow(color: Colors.black.withAlpha(20), blurRadius: 8)],
+                      ),
+                      child: const Icon(Icons.arrow_back_rounded, color: AppColors.textDark, size: 20),
+                    ),
                   ),
                 ),
+                title: Text(
+                  'Botanical Directory',
+                  style: Theme.of(context).textTheme.titleLarge?.copyWith(fontWeight: FontWeight.w700),
+                ),
+                bottom: PreferredSize(
+                  preferredSize: const Size.fromHeight(66),
+                  child: Column(
+                    children: [
+                      Padding(
+                        padding: const EdgeInsets.fromLTRB(16, 0, 16, 8),
+                        child: TextField(
+                          controller: _searchController,
+                          onChanged: _onSearchChanged,
+                          decoration: InputDecoration(
+                            hintText: 'Search 1,000+ plants (e.g. Pine, Oak, Rose, Ficus...)',
+                            prefixIcon: const Icon(Icons.search_rounded, color: AppColors.textLight),
+                            suffixIcon: _searchController.text.isNotEmpty
+                                ? IconButton(
+                                    icon: const Icon(Icons.close_rounded, size: 18),
+                                    onPressed: () {
+                                      _searchController.clear();
+                                      ref.read(searchQueryProvider.notifier).update('');
+                                    },
+                                  )
+                                : null,
+                            contentPadding: const EdgeInsets.symmetric(vertical: 12),
+                          ),
+                        ),
+                      ),
+                      if (isSearchingBackground)
+                        const LinearProgressIndicator(
+                          minHeight: 2,
+                          backgroundColor: Colors.transparent,
+                          color: AppColors.primaryBlue,
+                        )
+                      else
+                        const SizedBox(height: 2),
+                    ],
+                  ),
+                ),
               ),
-            ),
-          ),
-          species.when(
-            data: (list) => list.isEmpty
-                ? SliverFillRemaining(
-                    child: Column(
-                      mainAxisAlignment: MainAxisAlignment.center,
+
+              // Active search results info banner
+              if (searchQuery.isNotEmpty && list != null)
+                SliverToBoxAdapter(
+                  child: Padding(
+                    padding: const EdgeInsets.fromLTRB(16, 8, 16, 4),
+                    child: Row(
                       children: [
-                        const Icon(Icons.search_off_rounded, size: 56, color: AppColors.sageGreen),
-                        const SizedBox(height: 16),
-                        const Text('No species found', style: TextStyle(fontWeight: FontWeight.w600, color: AppColors.textMedium)),
+                        Container(
+                          padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                          decoration: BoxDecoration(
+                            color: AppColors.primaryBlue.withAlpha(20),
+                            borderRadius: BorderRadius.circular(12),
+                          ),
+                          child: Text(
+                            '${list.length} species found for "$searchQuery"',
+                            style: const TextStyle(
+                              fontSize: 12,
+                              fontWeight: FontWeight.w600,
+                              color: AppColors.primaryBlue,
+                            ),
+                          ),
+                        ),
+                        const Spacer(),
+                        TextButton(
+                          onPressed: () {
+                            _searchController.clear();
+                            ref.read(searchQueryProvider.notifier).update('');
+                          },
+                          child: const Text('Clear', style: TextStyle(fontSize: 12)),
+                        ),
                       ],
                     ),
-                  )
-                : SliverPadding(
-                    padding: const EdgeInsets.fromLTRB(16, 8, 16, 120),
-                    sliver: SliverGrid(
-                      // Extent-based so tablets get more columns instead of
-                      // oversized cards.
-                      gridDelegate: const SliverGridDelegateWithMaxCrossAxisExtent(
-                        maxCrossAxisExtent: 220,
-                        mainAxisSpacing: 12,
-                        crossAxisSpacing: 12,
-                        childAspectRatio: 0.78,
+                  ),
+                ),
+
+              // Main Species Content Grid
+              if (isInitialLoading)
+                const SliverFillRemaining(
+                  child: SkeletonGrid(count: 8, childAspectRatio: 0.78),
+                )
+              else if (list == null || list.isEmpty)
+                SliverFillRemaining(
+                  child: Column(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: [
+                      const Icon(Icons.search_off_rounded, size: 56, color: AppColors.sageGreen),
+                      const SizedBox(height: 16),
+                      Text(
+                        searchQuery.isNotEmpty
+                            ? 'No species found matching "$searchQuery"'
+                            : 'No species found',
+                        style: const TextStyle(fontWeight: FontWeight.w600, color: AppColors.textMedium),
                       ),
-                      delegate: SliverChildBuilderDelegate(
-                        (_, i) => _SpeciesCard(species: list[i])
-                            .animate()
-                            .fadeIn(delay: (50 * i).ms)
-                            .scaleXY(begin: 0.95, end: 1, delay: (50 * i).ms),
-                        childCount: list.length,
+                    ],
+                  ),
+                )
+              else
+                SliverPadding(
+                  padding: const EdgeInsets.fromLTRB(16, 8, 16, 16),
+                  sliver: SliverGrid(
+                    gridDelegate: const SliverGridDelegateWithMaxCrossAxisExtent(
+                      maxCrossAxisExtent: 220,
+                      mainAxisSpacing: 12,
+                      crossAxisSpacing: 12,
+                      childAspectRatio: 0.78,
+                    ),
+                    delegate: SliverChildBuilderDelegate(
+                      (_, i) {
+                        final card = _SpeciesCard(species: list[i]);
+                        // Instant, lag-free rendering: only apply subtle stagger for the first fold (first 8)
+                        // All scrolled items render instantly with 0ms artificial delay
+                        if (i < 8) {
+                          return card
+                              .animate()
+                              .fadeIn(duration: 200.ms, delay: (20 * i).ms)
+                              .scaleXY(begin: 0.98, end: 1.0, duration: 200.ms, delay: (20 * i).ms);
+                        }
+                        return card;
+                      },
+                      childCount: list.length,
+                      addAutomaticKeepAlives: true,
+                      addRepaintBoundaries: true,
+                    ),
+                  ),
+                ),
+
+              // Bottom Loader for infinite pagination
+              if (isFetchingMore)
+                const SliverToBoxAdapter(
+                  child: Padding(
+                    padding: EdgeInsets.only(top: 8, bottom: 120),
+                    child: Center(
+                      child: SizedBox(
+                        width: 24,
+                        height: 24,
+                        child: CircularProgressIndicator(strokeWidth: 2.5, color: AppColors.primaryBlue),
                       ),
                     ),
                   ),
-            loading: () => const SliverFillRemaining(
-              child: SkeletonGrid(count: 8, childAspectRatio: 0.78),
-            ),
-            error: (e, _) => SliverFillRemaining(
-              child: Center(child: Text('Error: $e')),
-            ),
+                )
+              else
+                const SliverToBoxAdapter(
+                  child: SizedBox(height: 120),
+                ),
+            ],
           ),
-          if (species.isRefreshing && species.hasValue)
-            const SliverToBoxAdapter(
-              child: Padding(
-                padding: EdgeInsets.only(bottom: 120),
-                child: Center(child: CircularProgressIndicator(color: AppColors.primaryBlue)),
-              ),
-            ),
-        ],
+        ),
       ),
-    )));
+    );
   }
 }
 
@@ -181,7 +268,7 @@ class _SpeciesCard extends StatelessWidget {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            // Image
+            // Image with optimized raster memory cache
             Expanded(
               flex: 3,
               child: ClipRRect(
@@ -191,7 +278,11 @@ class _SpeciesCard extends StatelessWidget {
                         imageUrl: species.thumbnailUrl!,
                         width: double.infinity,
                         fit: BoxFit.cover,
-                        placeholder: (_, _) => Container(color: AppColors.borderLight),
+                        memCacheWidth: 350,
+                        maxWidthDiskCache: 500,
+                        fadeInDuration: const Duration(milliseconds: 150),
+                        fadeOutDuration: const Duration(milliseconds: 80),
+                        placeholder: (_, _) => Container(color: AppColors.primaryBlue.withAlpha(10)),
                         errorWidget: (_, _, _) => _PlaceholderImage(),
                       )
                     : _PlaceholderImage(),
@@ -223,9 +314,13 @@ class _SpeciesCard extends StatelessWidget {
                       children: [
                         const Icon(Icons.cloud_done_rounded, size: 12, color: AppColors.forestGreen),
                         const SizedBox(width: 4),
-                        Text(
-                          '${species.co2OffsetFactor.toStringAsFixed(1)} kg CO₂/yr',
-                          style: const TextStyle(fontSize: 10, color: AppColors.forestGreen, fontWeight: FontWeight.w500),
+                        Expanded(
+                          child: Text(
+                            '${species.co2OffsetFactor.toStringAsFixed(1)} kg CO₂/yr',
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
+                            style: const TextStyle(fontSize: 10, color: AppColors.forestGreen, fontWeight: FontWeight.w500),
+                          ),
                         ),
                       ],
                     ),
@@ -247,3 +342,4 @@ class _PlaceholderImage extends StatelessWidget {
         child: const Center(child: Icon(Icons.eco_rounded, color: AppColors.primaryBlue, size: 40)),
       );
 }
+

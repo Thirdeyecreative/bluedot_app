@@ -1,5 +1,3 @@
-import 'dart:io';
-
 /// Backend environment selection.
 ///
 /// The active environment is chosen at BUILD time, not in source, so a release
@@ -28,11 +26,21 @@ class ApiConfig {
   /// Reads exactly like the mental model: true only on a production build.
   static bool get isProduction => env == AppEnv.production;
 
+  // Compile-time optional overrides
+  static const String _overrideBaseUrl = String.fromEnvironment('BASE_URL');
+  // Default to machine's local Wi-Fi IP (192.168.1.60) so physical devices on Wi-Fi connect out-of-the-box.
+  // Can be overridden via --dart-define=API_HOST=... or --dart-define=BASE_URL=...
+  // Over USB with 'adb reverse tcp:8000 tcp:8000', use --dart-define=API_HOST=127.0.0.1
+  static const String _apiHost = String.fromEnvironment('API_HOST', defaultValue: '192.168.1.60');
+  static const String _apiPort = String.fromEnvironment('API_PORT', defaultValue: '8000');
+
   // --- Per-environment base URLs ---
   static String get _localUrl {
-    // Over ADB reverse (adb reverse tcp:8000 tcp:8000), Android physical devices
-    // and emulators connect directly to host localhost via 127.0.0.1:8000.
-    return 'http://127.0.0.1:8000';
+    if (_overrideBaseUrl.isNotEmpty) return _overrideBaseUrl;
+    // Over Wi-Fi LAN: connects directly to http://192.168.1.60:8000
+    // Over ADB reverse: pass --dart-define=API_HOST=127.0.0.1
+    // Over Android Emulator: pass --dart-define=API_HOST=10.0.2.2
+    return 'http://$_apiHost:$_apiPort';
   }
 
   static const String _stagingUrl =
@@ -40,11 +48,14 @@ class ApiConfig {
   static const String _productionUrl =
       'https://bluedot-backend-426166329141.asia-south1.run.app';
 
-  static String get baseUrl => switch (env) {
-    AppEnv.production => _productionUrl,
-    AppEnv.staging => _stagingUrl,
-    AppEnv.local => _localUrl,
-  };
+  static String get baseUrl {
+    if (_overrideBaseUrl.isNotEmpty) return _overrideBaseUrl;
+    return switch (env) {
+      AppEnv.production => _productionUrl,
+      AppEnv.staging => _stagingUrl,
+      AppEnv.local => _localUrl,
+    };
+  }
 
   static const String _v1 = '/api/v1';
   static String get _app => '$baseUrl$_v1/app';
@@ -64,6 +75,8 @@ class ApiConfig {
   static String get homeScreenConfig => '$_app/config';
   static String get appBanners => '$_app/banners';
   static String get directoryData => '$_app/directory';
+  static String get appBlogs => '$_app/blogs';
+  static String appBlogDetail(String slugOrId) => '$_app/blogs/$slugOrId';
 
   // Scanner / Tree Tagging
   static String get scan => '$_app/tags/scan';
