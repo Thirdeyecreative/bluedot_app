@@ -7,9 +7,6 @@ final badgesProvider = FutureProvider<List<Badge>>((ref) {
   return ref.watch(profileRepositoryProvider).fetchBadges();
 });
 
-final leaderboardProvider = FutureProvider<List<Map<String, dynamic>>>((ref) {
-  return ref.watch(profileRepositoryProvider).fetchLeaderboard();
-});
 
 final certificatesProvider = FutureProvider<List<VolunteerCertificate>>((ref) {
   return ref.watch(profileRepositoryProvider).fetchCertificates();

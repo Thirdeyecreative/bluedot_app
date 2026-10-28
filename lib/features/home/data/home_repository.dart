@@ -1,3 +1,6 @@
+import 'dart:async';
+import 'dart:io';
+import 'package:flutter/foundation.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../core/config/api_config.dart';
 import '../../../core/demo/demo_data.dart';
@@ -62,9 +65,12 @@ class HomeRepository {
         blogs: blogs,
       );
     } catch (e, stack) {
-      print('Error fetching home feed: $e\n$stack');
-      // On error: show demo banners but empty events/campaigns/blogs
-      // so the user never sees stale hardcoded content
+      debugPrint('Error fetching home feed: $e\n$stack');
+      // If network failure or backend API failure, rethrow so retry flow doesn't falsely proceed
+      if (e is ApiException || e is SocketException || e is TimeoutException) {
+        rethrow;
+      }
+      // On non-network format error: show demo banners but empty events/campaigns/blogs
       final demoBanners = List<AppBanner>.of(DemoData.banners);
       AppBanner.sortInPlace(demoBanners);
       return HomeFeedData(
@@ -100,7 +106,10 @@ class HomeRepository {
         return items.map((j) => BlogPost.fromJson(j as Map<String, dynamic>)).toList();
       }
     } catch (e, stack) {
-      print('Error fetching blogs: $e\n$stack');
+      debugPrint('Error fetching blogs: $e\n$stack');
+      if (e is ApiException || e is SocketException || e is TimeoutException) {
+        rethrow;
+      }
       // On local/dev fallback when backend is unreachable
       if (!ApiConfig.isProduction) {
         return DemoData.blogs;
@@ -119,7 +128,7 @@ class HomeRepository {
         return BlogPost.fromJson(data);
       }
     } catch (e, stack) {
-      print('Error fetching blog ($slug): $e\n$stack');
+      debugPrint('Error fetching blog ($slug): $e\n$stack');
       // If offline/demo fallback is available in non-prod
       if (!ApiConfig.isProduction) {
         final match = DemoData.blogs.where((b) => b.slug == slug || b.id == slug);
@@ -137,7 +146,7 @@ class HomeRepository {
         return data.map((json) => Campaign.fromJson(json)).toList();
       }
     } catch (e, stackTrace) {
-      print('Error fetching campaigns: $e\n$stackTrace');
+      debugPrint('Error fetching campaigns: $e\n$stackTrace');
       // Fallback to demo data on error
     }
     return DemoData.campaigns;

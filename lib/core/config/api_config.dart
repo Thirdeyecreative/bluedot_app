@@ -28,16 +28,16 @@ class ApiConfig {
 
   // Compile-time optional overrides
   static const String _overrideBaseUrl = String.fromEnvironment('BASE_URL');
-  // Default to machine's local Wi-Fi IP (192.168.1.60) so physical devices on Wi-Fi connect out-of-the-box.
+  // Default to machine's local Wi-Fi IP (192.168.1.33) so physical devices on Wi-Fi connect out-of-the-box.
   // Can be overridden via --dart-define=API_HOST=... or --dart-define=BASE_URL=...
   // Over USB with 'adb reverse tcp:8000 tcp:8000', use --dart-define=API_HOST=127.0.0.1
-  static const String _apiHost = String.fromEnvironment('API_HOST', defaultValue: '192.168.1.60');
+  static const String _apiHost = String.fromEnvironment('API_HOST', defaultValue: '192.168.1.33');
   static const String _apiPort = String.fromEnvironment('API_PORT', defaultValue: '8000');
 
   // --- Per-environment base URLs ---
   static String get _localUrl {
     if (_overrideBaseUrl.isNotEmpty) return _overrideBaseUrl;
-    // Over Wi-Fi LAN: connects directly to http://192.168.1.60:8000
+    // Over Wi-Fi LAN: connects directly to http://192.168.1.33:8000
     // Over ADB reverse: pass --dart-define=API_HOST=127.0.0.1
     // Over Android Emulator: pass --dart-define=API_HOST=10.0.2.2
     return 'http://$_apiHost:$_apiPort';

@@ -29,6 +29,7 @@ import '../../features/profile/pages/legal_page.dart';
 import '../../features/profile/pages/certificates_page.dart';
 import '../../features/auth/pages/complete_profile_page.dart';
 import '../../features/scanner/pages/green_lens_page.dart';
+import '../widgets/no_internet_page.dart';
 
 final _rootNavigatorKey = GlobalKey<NavigatorState>();
 
@@ -46,8 +47,9 @@ final routerProvider = Provider<GoRouter>((ref) {
       final isAuth = state.matchedLocation.startsWith('/login') ||
           state.matchedLocation.startsWith('/otp');
       final isCompleteProfile = state.matchedLocation == '/complete-profile';
+      final isNoInternet = state.matchedLocation == '/no-internet';
 
-      if (isSplash) return null;
+      if (isSplash || isNoInternet) return null;
       
       if (!isLoggedIn) {
         return isAuth ? null : '/login';
@@ -71,6 +73,10 @@ final routerProvider = Provider<GoRouter>((ref) {
       GoRoute(
         path: '/splash',
         builder: (context, state) => const SplashPage(),
+      ),
+      GoRoute(
+        path: '/no-internet',
+        builder: (context, state) => const NoInternetPage(isOverlay: false),
       ),
       GoRoute(
         path: '/login',

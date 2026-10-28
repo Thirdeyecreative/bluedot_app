@@ -7,14 +7,21 @@ import 'package:http_parser/http_parser.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import 'storage_service.dart';
 
+import 'connectivity_service.dart';
+
 final apiClientProvider = Provider<ApiClient>((ref) {
-  return ApiClient(ref.watch(storageServiceProvider));
+  return ApiClient(
+    ref.watch(storageServiceProvider),
+    onNetworkFailure: () => ref.read(connectivityProvider.notifier).reportNetworkFailure(),
+  );
 });
 
 class ApiClient {
   final StorageService _storage;
+  final void Function()? _onNetworkFailure;
 
-  ApiClient(this._storage);
+  ApiClient(this._storage, {void Function()? onNetworkFailure})
+      : _onNetworkFailure = onNetworkFailure;
 
   static const Duration _timeout = Duration(seconds: 30);
 
@@ -128,16 +135,19 @@ class ApiClient {
     try {
       return await run().timeout(timeout ?? _timeout);
     } on SocketException {
+      _onNetworkFailure?.call();
       throw const ApiException(
         message: 'No internet connection. Please check your network and try again.',
         statusCode: 0,
       );
     } on TimeoutException {
+      _onNetworkFailure?.call();
       throw const ApiException(
         message: 'The request timed out. Please try again.',
         statusCode: 0,
       );
     } on http.ClientException {
+      _onNetworkFailure?.call();
       throw const ApiException(
         message: 'Could not reach the server. Please try again in a moment.',
         statusCode: 0,
