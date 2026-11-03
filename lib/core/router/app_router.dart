@@ -46,11 +46,13 @@ final routerProvider = Provider<GoRouter>((ref) {
       final isSplash = state.matchedLocation == '/splash';
       final isAuth = state.matchedLocation.startsWith('/login') ||
           state.matchedLocation.startsWith('/otp');
+      final isLegal = state.matchedLocation == '/terms' ||
+          state.matchedLocation == '/privacy';
       final isCompleteProfile = state.matchedLocation == '/complete-profile';
       final isNoInternet = state.matchedLocation == '/no-internet';
 
-      if (isSplash || isNoInternet) return null;
-      
+      if (isSplash || isNoInternet || isLegal) return null;
+
       if (!isLoggedIn) {
         return isAuth ? null : '/login';
       }
@@ -77,6 +79,14 @@ final routerProvider = Provider<GoRouter>((ref) {
       GoRoute(
         path: '/no-internet',
         builder: (context, state) => const NoInternetPage(isOverlay: false),
+      ),
+      GoRoute(
+        path: '/terms',
+        builder: (context, state) => const TermsPage(),
+      ),
+      GoRoute(
+        path: '/privacy',
+        builder: (context, state) => const PrivacyPage(),
       ),
       GoRoute(
         path: '/login',

@@ -105,4 +105,10 @@ class ApiConfig {
   // Gamification
   static String get badges => '$_admin/content/gamification/badges';
   static String get gamificationRules => '$_admin/content/gamification/rules';
+
+  // Legal & Privacy Compliance
+  static String legalDocument(String slug) => '$_app/legal/documents/$slug';
+  static String get consentStatus => '$_app/legal/consent-status';
+  static String get recordConsent => '$_app/legal/consent';
+  static String get privacyRequest => '$_app/legal/privacy-request';
 }

@@ -5,6 +5,7 @@ import 'package:flutter_animate/flutter_animate.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../core/constants/app_colors.dart';
 import '../providers/auth_provider.dart';
+import '../../legal/services/legal_service.dart';
 
 class OtpPage extends ConsumerStatefulWidget {
   final String phone;
@@ -95,6 +96,10 @@ class _OtpPageState extends ConsumerState<OtpPage> {
           ),
         );
       } else if (user != null) {
+        // Record affirmative consent for active terms & privacy policy upon first claim/login
+        ref.read(legalServiceProvider).recordConsent('terms', '1.0');
+        ref.read(legalServiceProvider).recordConsent('privacy', '1.0');
+
         // Invalidate auth state so the router re-evaluates.
         // GoRouter's redirect will decide where to send us:
         //   - /complete-profile  (if fullName is null or empty)

@@ -11,6 +11,8 @@ import '../models/blog_model.dart';
 import '../providers/home_provider.dart';
 import '../widgets/promo_banner_carousel.dart';
 import '../../auth/providers/auth_provider.dart';
+import '../../legal/services/legal_service.dart';
+import '../../legal/widgets/policy_update_sheet.dart';
 
 class HomePage extends ConsumerStatefulWidget {
   const HomePage({super.key});
@@ -21,6 +23,21 @@ class HomePage extends ConsumerStatefulWidget {
 
 class _HomePageState extends ConsumerState<HomePage> {
   final _scroll = ScrollController();
+
+  @override
+  void initState() {
+    super.initState();
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      _checkPolicyConsent();
+    });
+  }
+
+  Future<void> _checkPolicyConsent() async {
+    final status = await ref.read(legalServiceProvider).checkConsentStatus();
+    if (status.requiresConsent && mounted) {
+      PolicyUpdateSheet.show(context, status.pendingDocuments);
+    }
+  }
 
   @override
   void dispose() {

@@ -8,6 +8,7 @@ import '../../../core/services/api_client.dart';
 import '../../../core/config/api_config.dart';
 import '../../auth/providers/auth_provider.dart';
 import '../../auth/data/auth_repository.dart';
+import '../../legal/services/legal_service.dart';
 
 import 'package:permission_handler/permission_handler.dart';
 
@@ -295,6 +296,12 @@ class SettingsPage extends ConsumerWidget {
             trailing: const Icon(Icons.open_in_new_rounded, size: 16, color: AppColors.textLight),
             onTap: () => _openUrl('https://bluedot.org/80g'),
           ),
+          _SettingsTile(
+            icon: Icons.download_outlined,
+            label: 'Export My Data (DPDP Act)',
+            trailing: const Icon(Icons.chevron_right_rounded, color: AppColors.textLight),
+            onTap: () => _handleExportData(context, ref),
+          ),
 
           // ── About ─────────────────────────────────────────────────────
           _SectionHeader('About'),
@@ -370,6 +377,51 @@ class SettingsPage extends ConsumerWidget {
               if (context.mounted) context.go('/login');
             },
             child: const Text('Sign Out', style: TextStyle(color: AppColors.errorRed)),
+          ),
+        ],
+      ),
+    );
+  }
+
+  void _handleExportData(BuildContext context, WidgetRef ref) {
+    showDialog(
+      context: context,
+      builder: (_) => AlertDialog(
+        title: const Text('Export My Data (DPDP Act)', style: TextStyle(fontWeight: FontWeight.w700, color: AppColors.primaryBlue)),
+        content: const Text(
+          'Under the Digital Personal Data Protection Act 2023, you have the right to obtain a copy of all personal data held by BlueDot, including your profile, donations history, 80G tax receipt links, and tree planting contributions.\n\nWould you like to initiate this export?',
+        ),
+        actions: [
+          TextButton(onPressed: () => Navigator.pop(context), child: const Text('Cancel')),
+          ElevatedButton(
+            onPressed: () async {
+              Navigator.pop(context);
+              if (!context.mounted) return;
+              ScaffoldMessenger.of(context).showSnackBar(
+                const SnackBar(content: Text('Submitting export request...'), duration: Duration(seconds: 1)),
+              );
+
+              final success = await ref.read(legalServiceProvider).requestDataExport();
+              if (context.mounted) {
+                if (success) {
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    const SnackBar(
+                      content: Text('Data export request submitted! Your records are being compiled.'),
+                      backgroundColor: AppColors.successGreen,
+                    ),
+                  );
+                } else {
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    const SnackBar(
+                      content: Text('Failed to initiate export. Please try again later.'),
+                      backgroundColor: AppColors.errorRed,
+                    ),
+                  );
+                }
+              }
+            },
+            style: ElevatedButton.styleFrom(backgroundColor: AppColors.primaryBlue),
+            child: const Text('Export Data'),
           ),
         ],
       ),

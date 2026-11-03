@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_animate/flutter_animate.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../core/constants/app_colors.dart';
+import '../../legal/services/legal_service.dart';
 
 /// A single titled block of legal copy.
 class LegalSection {
@@ -9,30 +11,148 @@ class LegalSection {
   const LegalSection(this.heading, this.body);
 }
 
-/// Reusable in-app legal document page (Terms, Privacy, etc.).
-class LegalPage extends StatelessWidget {
+/// Dynamic, Stale-While-Revalidate in-app legal document page.
+class LegalPage extends ConsumerStatefulWidget {
+  final String slug;
   final String title;
   final IconData icon;
   final String intro;
   final String lastUpdated;
+  final String initialVersion;
   final List<LegalSection> sections;
 
   const LegalPage({
     super.key,
+    required this.slug,
     required this.title,
     required this.icon,
     required this.intro,
     required this.lastUpdated,
+    this.initialVersion = '1.0',
     required this.sections,
   });
+
+  @override
+  ConsumerState<LegalPage> createState() => _LegalPageState();
+}
+
+class _LegalPageState extends ConsumerState<LegalPage> {
+  late String _title;
+  late String _version;
+  late String _lastUpdated;
+  late String _intro;
+  late List<LegalSection> _sections;
+  bool _isLoading = true;
+
+  @override
+  void initState() {
+    super.initState();
+    _title = widget.title;
+    _version = widget.initialVersion;
+    _lastUpdated = widget.lastUpdated;
+    _intro = widget.intro;
+    _sections = widget.sections;
+
+    _loadDocument();
+  }
+
+  Future<void> _loadDocument() async {
+    final service = ref.read(legalServiceProvider);
+    final doc = await service.getDocument(
+      widget.slug,
+      onUpdated: (freshDoc) {
+        if (mounted) _applyDocument(freshDoc);
+      },
+    );
+
+    if (doc != null && mounted) {
+      _applyDocument(doc);
+    } else if (mounted) {
+      setState(() => _isLoading = false);
+    }
+  }
+
+  void _applyDocument(LegalDocumentModel doc) {
+    final parsed = _parseMarkdown(doc.contentMarkdown);
+    setState(() {
+      _title = doc.title.isNotEmpty ? doc.title : widget.title;
+      _version = doc.version;
+      _lastUpdated = doc.effectiveDate.isNotEmpty ? doc.effectiveDate : widget.lastUpdated;
+      if (parsed.intro.isNotEmpty) _intro = parsed.intro;
+      if (parsed.sections.isNotEmpty) _sections = parsed.sections;
+      _isLoading = false;
+    });
+  }
+
+  ({String intro, List<LegalSection> sections}) _parseMarkdown(String markdown) {
+    if (markdown.trim().isEmpty) {
+      return (intro: widget.intro, sections: widget.sections);
+    }
+
+    final lines = markdown.split('\n');
+    final sections = <LegalSection>[];
+    final introBuffer = StringBuffer();
+    String? currentHeading;
+    final currentBody = StringBuffer();
+
+    for (final line in lines) {
+      final trimmed = line.trim();
+      // Skip top-level # Title, Effective Date, Entity lines
+      if (trimmed.startsWith('# ') || trimmed.startsWith('**Effective Date:**') || trimmed.startsWith('**Version:**') || trimmed.startsWith('**Entity:**') || trimmed.startsWith('**Compliance')) {
+        continue;
+      }
+      if (trimmed == '---') continue;
+
+      if (trimmed.startsWith('## ') || trimmed.startsWith('### ')) {
+        if (currentHeading != null) {
+          sections.add(LegalSection(currentHeading, currentBody.toString().trim()));
+          currentBody.clear();
+        }
+        currentHeading = trimmed.replaceFirst(RegExp(r'^#{2,3}\s+'), '');
+      } else if (currentHeading == null) {
+        if (trimmed.isNotEmpty) {
+          introBuffer.writeln(trimmed);
+        }
+      } else {
+        currentBody.writeln(line);
+      }
+    }
+
+    if (currentHeading != null && currentBody.isNotEmpty) {
+      sections.add(LegalSection(currentHeading, currentBody.toString().trim()));
+    }
+
+    return (
+      intro: introBuffer.toString().trim().isNotEmpty ? introBuffer.toString().trim() : widget.intro,
+      sections: sections.isNotEmpty ? sections : widget.sections,
+    );
+  }
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
       backgroundColor: AppColors.backgroundCream,
       appBar: AppBar(
-        title: Text(title),
+        title: Text(_title),
         leading: const BackButton(),
+        actions: [
+          Container(
+            margin: const EdgeInsets.only(right: 16),
+            padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+            decoration: BoxDecoration(
+              color: AppColors.primaryBlue.withAlpha(20),
+              borderRadius: BorderRadius.circular(12),
+            ),
+            child: Text(
+              'v$_version',
+              style: const TextStyle(
+                color: AppColors.primaryBlue,
+                fontWeight: FontWeight.w700,
+                fontSize: 12,
+              ),
+            ),
+          ),
+        ],
       ),
       body: Align(
         alignment: Alignment.topCenter,
@@ -60,16 +180,16 @@ class LegalPage extends StatelessWidget {
                         color: Colors.white.withAlpha(30),
                         borderRadius: BorderRadius.circular(14),
                       ),
-                      child: Icon(icon, color: Colors.white, size: 26),
+                      child: Icon(widget.icon, color: Colors.white, size: 26),
                     ),
                     const SizedBox(width: 16),
                     Expanded(
                       child: Column(
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
-                          Text(title, style: const TextStyle(color: Colors.white, fontSize: 18, fontWeight: FontWeight.w700)),
+                          Text(_title, style: const TextStyle(color: Colors.white, fontSize: 18, fontWeight: FontWeight.w700)),
                           const SizedBox(height: 4),
-                          Text('Last updated: $lastUpdated', style: TextStyle(color: Colors.white.withAlpha(170), fontSize: 12)),
+                          Text('Version $_version · Effective: $_lastUpdated', style: TextStyle(color: Colors.white.withAlpha(170), fontSize: 12)),
                         ],
                       ),
                     ),
@@ -79,12 +199,12 @@ class LegalPage extends StatelessWidget {
               const SizedBox(height: 20),
 
               Text(
-                intro,
+                _intro,
                 style: const TextStyle(color: AppColors.textMedium, fontSize: 14, height: 1.6),
               ),
               const SizedBox(height: 12),
 
-              for (int i = 0; i < sections.length; i++)
+              for (int i = 0; i < _sections.length; i++)
                 Padding(
                   padding: const EdgeInsets.only(top: 16),
                   child: Column(
@@ -107,7 +227,7 @@ class LegalPage extends StatelessWidget {
                           const SizedBox(width: 10),
                           Expanded(
                             child: Text(
-                              sections[i].heading,
+                              _sections[i].heading,
                               style: const TextStyle(fontWeight: FontWeight.w700, fontSize: 15, color: AppColors.textDark),
                             ),
                           ),
@@ -117,13 +237,13 @@ class LegalPage extends StatelessWidget {
                       Padding(
                         padding: const EdgeInsets.only(left: 34),
                         child: Text(
-                          sections[i].body,
+                          _sections[i].body,
                           style: const TextStyle(color: AppColors.textMedium, fontSize: 13.5, height: 1.6),
                         ),
                       ),
                     ],
                   ),
-                ).animate().fadeIn(delay: (40 * i).ms),
+                ).animate().fadeIn(delay: (30 * i).ms),
 
               const SizedBox(height: 28),
               Center(
@@ -147,9 +267,11 @@ class TermsPage extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) => const LegalPage(
+        slug: 'terms',
         title: 'Terms & Conditions',
         icon: Icons.description_outlined,
-        lastUpdated: '12 June 2026',
+        lastUpdated: '01 June 2026',
+        initialVersion: '1.0',
         intro:
             'Welcome to BlueDot. By creating an account and using our app, you agree to these Terms & '
             'Conditions. Please read them carefully — they govern your participation in tree-tagging, '
@@ -197,7 +319,7 @@ class TermsPage extends StatelessWidget {
           ),
           LegalSection(
             'Contact',
-            'Questions about these Terms? Reach us at support@bluedot.org.',
+            'Questions about these Terms? Reach us at legal@bluedot.eco.',
           ),
         ],
       );
@@ -208,12 +330,14 @@ class PrivacyPage extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) => const LegalPage(
+        slug: 'privacy',
         title: 'Privacy Policy',
         icon: Icons.privacy_tip_outlined,
-        lastUpdated: '12 June 2026',
+        lastUpdated: '01 June 2026',
+        initialVersion: '1.0',
         intro:
             'Your privacy matters to us. This policy explains what information BlueDot collects, how we '
-            'use it, and the choices you have. We collect only what we need to run the climate-action '
+            'use it, and the choices you have under India\'s DPDP Act 2023. We collect only what we need to run the climate-action '
             'experience.',
         sections: [
           LegalSection(
@@ -243,9 +367,8 @@ class PrivacyPage extends StatelessWidget {
           ),
           LegalSection(
             'Your Rights',
-            'You can view and edit your profile, request a copy of your data, or delete your account from '
-                'Settings. Deleting your account removes your personal data, subject to legal retention of '
-                'donation and tax records.',
+            'Under the DPDP Act 2023, you can view and edit your profile, request a full data export via Settings, or delete your account. '
+                'Deleting your account permanently removes your personal data, subject to statutory retention of 80G donation records.',
           ),
           LegalSection(
             'Notifications',
@@ -254,7 +377,7 @@ class PrivacyPage extends StatelessWidget {
           ),
           LegalSection(
             'Contact',
-            'For privacy questions or data requests, contact privacy@bluedot.org.',
+            'For privacy questions or data requests, contact privacy@bluedot.eco.',
           ),
         ],
       );

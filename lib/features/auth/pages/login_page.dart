@@ -1,3 +1,4 @@
+import 'package:flutter/gestures.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_animate/flutter_animate.dart';
@@ -16,9 +17,22 @@ class LoginPage extends ConsumerStatefulWidget {
 class _LoginPageState extends ConsumerState<LoginPage> {
   final _phoneController = TextEditingController();
   final _formKey = GlobalKey<FormState>();
+  late final TapGestureRecognizer _termsRecognizer;
+  late final TapGestureRecognizer _privacyRecognizer;
+
+  @override
+  void initState() {
+    super.initState();
+    _termsRecognizer = TapGestureRecognizer()
+      ..onTap = () => context.push('/terms');
+    _privacyRecognizer = TapGestureRecognizer()
+      ..onTap = () => context.push('/privacy');
+  }
 
   @override
   void dispose() {
+    _termsRecognizer.dispose();
+    _privacyRecognizer.dispose();
     _phoneController.dispose();
     super.dispose();
   }
@@ -134,10 +148,34 @@ class _LoginPageState extends ConsumerState<LoginPage> {
                 ).animate().fadeIn(delay: 400.ms),
                 const SizedBox(height: 24),
                 Center(
-                  child: Text(
-                    'By continuing, you agree to our Terms & Privacy Policy.',
+                  child: Text.rich(
+                    TextSpan(
+                      text: 'By continuing, you agree to our ',
+                      style: Theme.of(context).textTheme.bodySmall?.copyWith(color: AppColors.textLight),
+                      children: [
+                        TextSpan(
+                          text: 'Terms',
+                          recognizer: _termsRecognizer,
+                          style: const TextStyle(
+                            color: AppColors.primaryBlue,
+                            fontWeight: FontWeight.w600,
+                            decoration: TextDecoration.underline,
+                          ),
+                        ),
+                        const TextSpan(text: ' & '),
+                        TextSpan(
+                          text: 'Privacy Policy',
+                          recognizer: _privacyRecognizer,
+                          style: const TextStyle(
+                            color: AppColors.primaryBlue,
+                            fontWeight: FontWeight.w600,
+                            decoration: TextDecoration.underline,
+                          ),
+                        ),
+                        const TextSpan(text: '.'),
+                      ],
+                    ),
                     textAlign: TextAlign.center,
-                    style: Theme.of(context).textTheme.bodySmall?.copyWith(color: AppColors.textLight),
                   ),
                 ),
               ],
