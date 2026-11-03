@@ -72,9 +72,12 @@ class ConnectivityNotifier extends Notifier<bool> {
     if (state != online) state = online;
   }
 
-  /// Immediately marks the connection as offline when a network socket error occurs
+  /// Called when an HTTP or socket failure occurs.
+  /// Verifies true internet reachability before toggling the global offline barrier,
+  /// preventing backend-specific timeouts or local server outages from falsely locking
+  /// the app into a full-screen "No Internet" screen.
   void reportNetworkFailure() {
-    if (state != false) state = false;
+    checkConnection();
   }
 }
 

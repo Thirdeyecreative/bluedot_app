@@ -4,8 +4,10 @@ import 'package:flutter_animate/flutter_animate.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:go_router/go_router.dart';
+import '../config/api_config.dart';
 import '../constants/app_colors.dart';
 import '../services/connectivity_service.dart';
+import 'server_settings_modal.dart';
 
 import '../../features/auth/providers/auth_provider.dart';
 import '../../features/home/data/home_repository.dart';
@@ -126,19 +128,19 @@ class _NoInternetPageState extends ConsumerState<NoInternetPage> {
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
-          content: const Row(
+          content: Row(
             children: [
-              Icon(Icons.error_outline_rounded, color: Colors.white, size: 20),
-              SizedBox(width: 10),
+              const Icon(Icons.error_outline_rounded, color: Colors.white, size: 20),
+              const SizedBox(width: 10),
               Expanded(
-                child: Text('Connected to network, but failed to load content. Please try again.'),
+                child: Text('Device has internet, but cannot reach backend at ${ApiConfig.baseUrl}. Tap Server Settings below.'),
               ),
             ],
           ),
           backgroundColor: AppColors.errorRed,
           behavior: SnackBarBehavior.floating,
           shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-          duration: const Duration(seconds: 3),
+          duration: const Duration(seconds: 4),
         ),
       );
     } finally {
@@ -264,6 +266,37 @@ class _NoInternetPageState extends ConsumerState<NoInternetPage> {
                 )
                     .animate()
                     .fadeIn(duration: 400.ms, delay: 450.ms)
+                    .slideY(begin: 0.1, end: 0),
+
+                const SizedBox(height: 12),
+
+                // ── Server Settings CTA Button ───────────────────────────────
+                SizedBox(
+                  width: double.infinity,
+                  height: 48,
+                  child: OutlinedButton.icon(
+                    onPressed: () => ServerSettingsModal.show(context),
+                    icon: const Icon(Icons.dns_rounded, size: 18),
+                    label: Text(
+                      'Server Settings (${ApiConfig.baseUrl})',
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                      style: const TextStyle(
+                        fontSize: 13,
+                        fontWeight: FontWeight.w600,
+                      ),
+                    ),
+                    style: OutlinedButton.styleFrom(
+                      foregroundColor: AppColors.primaryBlue,
+                      side: const BorderSide(color: AppColors.borderLight),
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(16),
+                      ),
+                    ),
+                  ),
+                )
+                    .animate()
+                    .fadeIn(duration: 400.ms, delay: 500.ms)
                     .slideY(begin: 0.1, end: 0),
 
                 // Optional Back button if routed as a subpage

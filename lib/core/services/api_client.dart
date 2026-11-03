@@ -5,6 +5,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:http/http.dart' as http;
 import 'package:http_parser/http_parser.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
+import '../config/api_config.dart';
 import 'storage_service.dart';
 
 import 'connectivity_service.dart';
@@ -136,20 +137,20 @@ class ApiClient {
       return await run().timeout(timeout ?? _timeout);
     } on SocketException {
       _onNetworkFailure?.call();
-      throw const ApiException(
-        message: 'No internet connection. Please check your network and try again.',
+      throw ApiException(
+        message: 'Cannot reach server at ${ApiConfig.baseUrl}. Please ensure the backend is running.',
         statusCode: 0,
       );
     } on TimeoutException {
       _onNetworkFailure?.call();
-      throw const ApiException(
-        message: 'The request timed out. Please try again.',
+      throw ApiException(
+        message: 'Request to ${ApiConfig.baseUrl} timed out. Please check your connection.',
         statusCode: 0,
       );
     } on http.ClientException {
       _onNetworkFailure?.call();
-      throw const ApiException(
-        message: 'Could not reach the server. Please try again in a moment.',
+      throw ApiException(
+        message: 'Could not connect to server at ${ApiConfig.baseUrl}. Please verify the host/port.',
         statusCode: 0,
       );
     } on HandshakeException {

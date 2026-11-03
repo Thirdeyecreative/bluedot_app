@@ -1,12 +1,31 @@
+import 'dart:convert';
+import 'package:flutter/foundation.dart';
+import 'package:http/http.dart' as http;
+import 'package:shared_preferences/shared_preferences.dart';
+
 /// Backend environment selection.
 ///
-/// The active environment is chosen at BUILD time, not in source, so a release
-/// can never accidentally ship pointing at the wrong server:
+/// The active environment is chosen at BUILD time or RUNTIME via app settings:
 ///
-///   flutter run                                    -> production (default)
+///   flutter run                                    -> local / auto-detected
 ///   flutter run --dart-define=ENV=local            -> local backend
-///   flutter build apk --dart-define=ENV=staging    -> staging
+///   flutter run --dart-define=ENV=staging          -> staging
+///   flutter run --dart-define=API_HOST=192.168.1.7 -> explicit LAN IP
 enum AppEnv { local, staging, production }
+
+class ServerHealthResult {
+  final bool isHealthy;
+  final int statusCode;
+  final int latencyMs;
+  final String message;
+
+  const ServerHealthResult({
+    required this.isHealthy,
+    required this.statusCode,
+    required this.latencyMs,
+    required this.message,
+  });
+}
 
 class ApiConfig {
   ApiConfig._();
@@ -17,30 +36,104 @@ class ApiConfig {
     defaultValue: 'local',
   );
 
-  static AppEnv get env => switch (_envName) {
-    'production' => AppEnv.production,
-    'staging' => AppEnv.staging,
-    _ => AppEnv.local,
-  };
+  static const String _prefCustomBaseUrlKey = 'bluedot_custom_base_url';
+  static const String _prefEnvKey = 'bluedot_selected_env';
+
+  static String? _runtimeBaseUrl;
+  static AppEnv? _runtimeEnv;
+
+  /// Initializes runtime overrides stored in SharedPreferences.
+  /// Must be called during app bootstrap (e.g. in main.dart).
+  static Future<void> init() async {
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      _runtimeBaseUrl = prefs.getString(_prefCustomBaseUrlKey);
+      final savedEnv = prefs.getString(_prefEnvKey);
+      if (savedEnv != null) {
+        _runtimeEnv = switch (savedEnv) {
+          'production' => AppEnv.production,
+          'staging' => AppEnv.staging,
+          'local' => AppEnv.local,
+          _ => null,
+        };
+      }
+    } catch (e) {
+      debugPrint('[ApiConfig] Error loading persisted settings: $e');
+    }
+  }
+
+  /// Sets or clears a custom runtime base URL (persisted across app restarts).
+  static Future<void> setRuntimeBaseUrl(String? url) async {
+    _runtimeBaseUrl = (url != null && url.trim().isNotEmpty) ? url.trim() : null;
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      if (_runtimeBaseUrl != null) {
+        await prefs.setString(_prefCustomBaseUrlKey, _runtimeBaseUrl!);
+      } else {
+        await prefs.remove(_prefCustomBaseUrlKey);
+      }
+    } catch (e) {
+      debugPrint('[ApiConfig] Error saving custom base URL: $e');
+    }
+  }
+
+  /// Sets or clears a runtime environment override (persisted across app restarts).
+  static Future<void> setRuntimeEnv(AppEnv? newEnv) async {
+    _runtimeEnv = newEnv;
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      if (newEnv != null) {
+        await prefs.setString(_prefEnvKey, newEnv.name);
+      } else {
+        await prefs.remove(_prefEnvKey);
+      }
+    } catch (e) {
+      debugPrint('[ApiConfig] Error saving runtime env: $e');
+    }
+  }
+
+  static AppEnv get env {
+    if (_runtimeEnv != null) return _runtimeEnv!;
+    return switch (_envName) {
+      'production' => AppEnv.production,
+      'staging' => AppEnv.staging,
+      _ => AppEnv.local,
+    };
+  }
 
   /// Reads exactly like the mental model: true only on a production build.
   static bool get isProduction => env == AppEnv.production;
 
   // Compile-time optional overrides
   static const String _overrideBaseUrl = String.fromEnvironment('BASE_URL');
-  // Default to machine's local Wi-Fi IP (192.168.1.33) so physical devices on Wi-Fi connect out-of-the-box.
-  // Can be overridden via --dart-define=API_HOST=... or --dart-define=BASE_URL=...
-  // Over USB with 'adb reverse tcp:8000 tcp:8000', use --dart-define=API_HOST=127.0.0.1
-  static const String _apiHost = String.fromEnvironment('API_HOST', defaultValue: '192.168.1.33');
+  static const String _apiHost = String.fromEnvironment('API_HOST');
   static const String _apiPort = String.fromEnvironment('API_PORT', defaultValue: '8000');
+
+  /// Developer machine Wi-Fi IPv4 address on the local network.
+  /// Updated to match current DHCP lease (192.168.1.7).
+  static const String currentLanIp = '192.168.1.7';
+
+  /// Resolves the smartest local host for the current runtime platform:
+  /// - Web / Desktop (Windows, macOS, Linux): 127.0.0.1
+  /// - Mobile / Physical Device on Wi-Fi: 192.168.1.7
+  static String get resolvedLocalHost {
+    if (_apiHost.isNotEmpty) return _apiHost;
+    if (kIsWeb) return '127.0.0.1';
+    switch (defaultTargetPlatform) {
+      case TargetPlatform.windows:
+      case TargetPlatform.macOS:
+      case TargetPlatform.linux:
+        return '127.0.0.1';
+      case TargetPlatform.android:
+      case TargetPlatform.iOS:
+      default:
+        return currentLanIp;
+    }
+  }
 
   // --- Per-environment base URLs ---
   static String get _localUrl {
-    if (_overrideBaseUrl.isNotEmpty) return _overrideBaseUrl;
-    // Over Wi-Fi LAN: connects directly to http://192.168.1.33:8000
-    // Over ADB reverse: pass --dart-define=API_HOST=127.0.0.1
-    // Over Android Emulator: pass --dart-define=API_HOST=10.0.2.2
-    return 'http://$_apiHost:$_apiPort';
+    return 'http://$resolvedLocalHost:$_apiPort';
   }
 
   static const String _stagingUrl =
@@ -48,13 +141,54 @@ class ApiConfig {
   static const String _productionUrl =
       'https://bluedot-backend-426166329141.asia-south1.run.app';
 
+  static String get stagingUrl => _stagingUrl;
+  static String get productionUrl => _productionUrl;
+
   static String get baseUrl {
+    if (_runtimeBaseUrl != null && _runtimeBaseUrl!.isNotEmpty) {
+      return _runtimeBaseUrl!;
+    }
     if (_overrideBaseUrl.isNotEmpty) return _overrideBaseUrl;
     return switch (env) {
       AppEnv.production => _productionUrl,
       AppEnv.staging => _stagingUrl,
       AppEnv.local => _localUrl,
     };
+  }
+
+  /// Actively checks server connectivity to the /health endpoint.
+  static Future<ServerHealthResult> checkServerHealth([String? targetUrl]) async {
+    final base = (targetUrl != null && targetUrl.trim().isNotEmpty) ? targetUrl.trim() : baseUrl;
+    final cleanBase = base.endsWith('/') ? base.substring(0, base.length - 1) : base;
+    final uri = Uri.parse('$cleanBase/health');
+    final sw = Stopwatch()..start();
+    try {
+      final response = await http.get(uri).timeout(const Duration(seconds: 4));
+      sw.stop();
+      if (response.statusCode >= 200 && response.statusCode < 300) {
+        return ServerHealthResult(
+          isHealthy: true,
+          statusCode: response.statusCode,
+          latencyMs: sw.elapsedMilliseconds,
+          message: 'Connected successfully (${sw.elapsedMilliseconds} ms)',
+        );
+      } else {
+        return ServerHealthResult(
+          isHealthy: false,
+          statusCode: response.statusCode,
+          latencyMs: sw.elapsedMilliseconds,
+          message: 'Server responded with HTTP ${response.statusCode}',
+        );
+      }
+    } catch (e) {
+      sw.stop();
+      return ServerHealthResult(
+        isHealthy: false,
+        statusCode: 0,
+        latencyMs: sw.elapsedMilliseconds,
+        message: 'Could not reach server: $e',
+      );
+    }
   }
 
   static const String _v1 = '/api/v1';
