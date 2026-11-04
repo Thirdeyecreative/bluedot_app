@@ -52,7 +52,7 @@ All user data displayed across the profile header and impact stats is **100% REA
 - Tapping "Certificates" opens `CertificatesPage`.
 - Powered by `certificatesProvider` calling `GET /api/v1/app/profile/certificates`.
 - Displays official volunteer certificates for completed plantation drives with hours volunteered, trees planted, and verification ID.
-- Supports sharing and downloading official PDF certificates.
+- Fully integrated vector PDF generation and native download & share via `CertificatePdfService` (`Printing.layoutPdf` and `Printing.sharePdf`). Users can save directly to device storage or share to WhatsApp, LinkedIn, or Instagram.
 
 ### 3. Badges Showcase (`/profile/badges`)
 - The profile screen displays the top 4 unlocked badges.

@@ -6,6 +6,7 @@ import '../../../core/widgets/skeletons.dart';
 import '../../auth/providers/auth_provider.dart';
 import '../models/certificate_model.dart';
 import '../providers/profile_provider.dart';
+import '../services/certificate_pdf_service.dart';
 
 class CertificatesPage extends ConsumerWidget {
   const CertificatesPage({super.key});
@@ -206,12 +207,64 @@ class _MiniStat extends StatelessWidget {
 
 // ── Certificate preview sheet ─────────────────────────────────────────────────
 
-class _CertificateSheet extends ConsumerWidget {
+class _CertificateSheet extends ConsumerStatefulWidget {
   final VolunteerCertificate cert;
   const _CertificateSheet({required this.cert});
 
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
+  ConsumerState<_CertificateSheet> createState() => _CertificateSheetState();
+}
+
+class _CertificateSheetState extends ConsumerState<_CertificateSheet> {
+  bool _isDownloading = false;
+  bool _isSharing = false;
+
+  Future<void> _handleDownload(String recipientName) async {
+    if (_isDownloading || _isSharing) return;
+    setState(() => _isDownloading = true);
+    try {
+      await CertificatePdfService.downloadCertificate(
+        cert: widget.cert,
+        recipientName: recipientName,
+      );
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Could not open print/download: $e'),
+            backgroundColor: AppColors.errorRed,
+          ),
+        );
+      }
+    } finally {
+      if (mounted) setState(() => _isDownloading = false);
+    }
+  }
+
+  Future<void> _handleShare(String recipientName) async {
+    if (_isDownloading || _isSharing) return;
+    setState(() => _isSharing = true);
+    try {
+      await CertificatePdfService.shareCertificate(
+        cert: widget.cert,
+        recipientName: recipientName,
+      );
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Could not share certificate: $e'),
+            backgroundColor: AppColors.errorRed,
+          ),
+        );
+      }
+    } finally {
+      if (mounted) setState(() => _isSharing = false);
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
     final user = ref.watch(currentUserProvider);
     final name = user?.fullName ?? 'BlueDot Volunteer';
 
@@ -232,17 +285,21 @@ class _CertificateSheet extends ConsumerWidget {
                 margin: const EdgeInsets.only(bottom: 24),
                 decoration: BoxDecoration(color: AppColors.borderMedium, borderRadius: BorderRadius.circular(2)),
               ),
-              _CertificateArtwork(cert: cert, recipientName: name),
+              _CertificateArtwork(cert: widget.cert, recipientName: name),
               const SizedBox(height: 20),
               Row(
                 children: [
                   Expanded(
                     child: OutlinedButton.icon(
-                      onPressed: () => ScaffoldMessenger.of(context).showSnackBar(
-                        const SnackBar(content: Text('Certificate shared')),
-                      ),
-                      icon: const Icon(Icons.share_rounded, size: 18),
-                      label: const Text('Share'),
+                      onPressed: (_isDownloading || _isSharing) ? null : () => _handleShare(name),
+                      icon: _isSharing
+                          ? const SizedBox(
+                              width: 18,
+                              height: 18,
+                              child: CircularProgressIndicator(strokeWidth: 2, color: AppColors.primaryBlue),
+                            )
+                          : const Icon(Icons.share_rounded, size: 18),
+                      label: Text(_isSharing ? 'Sharing...' : 'Share'),
                       style: OutlinedButton.styleFrom(
                         minimumSize: const Size(0, 50),
                         side: const BorderSide(color: AppColors.primaryBlue),
@@ -254,13 +311,19 @@ class _CertificateSheet extends ConsumerWidget {
                   const SizedBox(width: 12),
                   Expanded(
                     child: ElevatedButton.icon(
-                      onPressed: () => ScaffoldMessenger.of(context).showSnackBar(
-                        const SnackBar(content: Text('Certificate downloaded as PDF'), backgroundColor: AppColors.forestGreen),
-                      ),
-                      icon: const Icon(Icons.download_rounded, size: 18),
-                      label: const Text('Download'),
+                      onPressed: (_isDownloading || _isSharing) ? null : () => _handleDownload(name),
+                      icon: _isDownloading
+                          ? const SizedBox(
+                              width: 18,
+                              height: 18,
+                              child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white),
+                            )
+                          : const Icon(Icons.download_rounded, size: 18),
+                      label: Text(_isDownloading ? 'Generating...' : 'Download'),
                       style: ElevatedButton.styleFrom(
                         minimumSize: const Size(0, 50),
+                        backgroundColor: AppColors.primaryBlue,
+                        foregroundColor: Colors.white,
                         shape: const StadiumBorder(),
                       ),
                     ),
