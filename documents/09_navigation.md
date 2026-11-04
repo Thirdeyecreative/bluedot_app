@@ -3,7 +3,7 @@
 **Status:** 100% Complete & Fully Integrated  
 **Last Updated:** 2026-11-04  
 **Router:** `GoRouter` with `StatefulShellRoute.indexedStack`  
-**Shell UI:** Custom `CurvedNavBar` with Animated Hump & Floating Icon Bubble  
+**Shell UI:** Floating `CapsuleNavBar` with Expanding Pill Indicator & Haptic Feedback  
 
 ---
 
@@ -14,7 +14,7 @@ The BlueDot application uses declarative routing powered by `go_router` and `Sta
 ### Source Files
 - `lib/core/router/app_router.dart` — Router definitions, state listeners, and auth redirect guards.
 - `lib/features/navigation/main_navigation.dart` — `MainNavigationShell` and bottom bar wrapper with Android `PopScope`.
-- `lib/features/navigation/curved_nav_bar.dart` — High-polish animated curved navigation bar with bezier hump, floating bubble, and avatar rendering.
+- `lib/features/navigation/capsule_nav_bar.dart` — High-polish floating expanding-capsule navigation bar with animated pill expansion and avatar rendering.
 
 ---
 
@@ -22,17 +22,22 @@ The BlueDot application uses declarative routing powered by `go_router` and `Sta
 
 The bottom navigation bar features 4 primary branches corresponding to the core app pillars:
 
-| Branch | Tab Label | Icon | Route Path | Root Page |
-|---|---|---|---|---|
-| `0` | **Home** | `Icons.home_rounded` | `/home` | `HomePage` |
-| `1` | **Action Hub** | `Icons.explore_rounded` | `/action-hub` | `ActionHubPage` |
-| `2` | **Directory** | `Icons.park_rounded` | `/directory` | `DirectoryPage` |
-| `3` | **Profile** | `Icons.person_rounded` | `/profile` | `ProfilePage` |
+| Branch | Tab Label | Inactive Icon | Active Icon | Route Path | Root Page |
+|---|---|---|---|---|---|
+| `0` | **Home** | `Icons.home_outlined` | `Icons.home_rounded` | `/home` | `HomePage` |
+| `1` | **Action Hub** | `Icons.explore_outlined` | `Icons.explore_rounded` | `/action-hub` | `ActionHubPage` |
+| `2` | **Directory** | `Icons.park_outlined` | `Icons.park_rounded` | `/directory` | `DirectoryPage` |
+| `3` | **Profile** | `Icons.person_outline_rounded` | `Icons.person_rounded` | `/profile` | `ProfilePage` |
 
-### Custom `CurvedNavBar` UI:
-- **Curved Canvas:** Draws a smooth bezier dip and hump that moves along with tab transitions.
-- **Floating Active Bubble:** An elevated circular pill floats above the active tab with the highlighted icon.
-- **Profile Avatar Integration:** If the user has a profile picture (`user.avatarUrl`), the Profile tab renders the circular avatar image with network caching.
+### Custom `CapsuleNavBar` UI:
+- **Floating Elevated Dock:** Soft Blush Terracotta container (`#E1BCB4`) with 36px rounded corners, dual ambient shadow, and frosted highlight border.
+- **Minimalist Inactive State:** Inactive tabs display clean, warm earthen charcoal outline icons (`#5A3D36`).
+- **Compositor-Driven Capsule Animation:** Pure RenderBox compositor animation using `AnimatedBuilder` and `Align(widthFactor: t)` with `Color.lerp`, expanding into a crisp white pill (`#FFFFFF`) with deep terracotta typography (`#8E4533`).
+- **Direction-Aware Page Transitions:** `MainNavigationShell` animates tab switching using an `AnimatedSwitcher` + `SlideTransition` + `FadeTransition` (`Curves.easeOutCubic`), sliding pages smoothly in the direction of navigation travel.
+- **App-Wide Cupertino Transitions:** Standardized `CupertinoPageTransitionsBuilder` across both platforms for fluid, swipe-friendly page navigations.
+- **Haptic Feedback:** Fires `HapticFeedback.selectionClick()` on every selection.
+- **Haptic Feedback:** Fires `HapticFeedback.selectionClick()` on every selection.
+- **Profile Avatar Integration:** If the user has a profile picture (`user.avatarUrl`), renders a circular avatar image with network caching and `ClipOval`.
 - **Android Back-Button Handling (`PopScope`):**
   - When the user presses the physical back button on Android while on tabs 1, 2, or 3, the app switches back to Tab 0 (`/home`) instead of exiting.
   - Pressing back on Tab 0 exits the app as expected.

@@ -11,7 +11,7 @@
 The Home screen serves as the core discovery hub for BlueDot. It delivers personalized impact greetings, promotional banners, upcoming plantation drives, active funding campaigns, and ecological educational blogs.
 
 ### Source Files (`lib/features/home/`)
-- `pages/home_page.dart` — Main dashboard: Compact App Bar, Promo Banners Carousel, Upcoming Drives carousel, Active Campaigns carousel, and Blogs grid.
+- `pages/home_page.dart` — Main dashboard: Compact App Bar with dynamic time-based greeting, Hero Green Lens AI Tree Scanner Card, 4-Pillar Quick Action Hub, Promo Banners Carousel, Upcoming Drives carousel, Active Campaigns carousel, and Blogs grid.
 - `pages/all_blogs_page.dart` — Full-page scrollable list of all published blogs with search and category filtering.
 - `pages/blog_detail_page.dart` — Detail reading view for articles by slug (`/home/blog/:slug`).
 - `pages/notifications_page.dart` — In-app notification center with read/unread tracking.
@@ -28,13 +28,14 @@ The Home screen serves as the core discovery hub for BlueDot. It delivers person
 
 | Section | Source | Detail |
 |---|---|---|
-| **Compact App Bar** | `currentUserProvider` | Shows user profile avatar (tappable to `/profile`), level greeting, points pill, and notification bell with unread badge. |
+| **Compact App Bar** | `currentUserProvider` | Shows user profile avatar (tappable to `/profile`), dynamic time greeting (`Good morning / afternoon / evening, {name}`), and notification bell with unread badge. |
 | **Legal Consent Check** | `legalServiceProvider` | On initial mount, verifies `checkConsentStatus()`. If legal documents were updated, opens `PolicyUpdateSheet`. |
-| **Promo Banners Carousel** | **REAL** (`homeFeedProvider`) | Banners returned from `GET /api/v1/app/home-feed`. If the database returns 0 banners, `DemoData.banners` is used as visual placeholder. |
-| **Upcoming Events** | **REAL** (`homeFeedProvider`) | Displays upcoming plantation events. Tapping a card routes to `/action-hub/event/:id`. |
-| **Active Campaigns** | **REAL** (`homeFeedProvider`) | Displays crowdfunding campaigns with live funding progress bars. Tapping routes to `/action-hub/campaign/:id`. |
-| **Stories & Updates (Blogs)** | **REAL** (`blogsProvider` / `homeFeedProvider`) | Displays latest published articles. "View All" navigates to `/home/blogs` (`AllBlogsPage`), card tap navigates to `/home/blog/:slug`. |
-| **Scan Tagline** | **REAL** (`homeFeedProvider`) | Dynamic tagline from server config (defaults to `"Every Scan Plants a Story."`). |
+| **Green Lens Scanner Card** | **REAL** (`homeFeedProvider.tagline`) | Clean, grounded ecological action card with the official circular lens badge, server-driven tagline (`"Every Scan Plants a Story."`), and a dedicated 1-tap "Scan" trigger (`/scanner`). |
+| **4-Pillar Quick Action Hub** | Navigation / Routes | Tactile 1-tap squircle shortcuts: Eco Garden (`/map`), Rankings (`/profile/leaderboard`), Suggest Site (`/action-hub/suggest-site`), Directory (`/directory`). |
+| **Promo Banners Carousel** | **REAL** (`homeFeedProvider`) | Banners returned from `GET /api/v1/app/home-feed`. If no banners are present, the section gracefully collapses with zero layout artifacts, transitioning seamlessly into Upcoming Drives. |
+| **Upcoming Events** | **REAL** (`homeFeedProvider`) | Displays upcoming plantation events with floating date badge, drive/upcoming status tag, spots left indicator, and duration. Tapping routes to `/action-hub/event/:id`. |
+| **Active Campaigns** | **REAL** (`homeFeedProvider`) | Displays crowdfunding campaigns with live funding progress bars, goal pill, and raised amount. Tapping routes to `/action-hub/campaign/:id`. |
+| **Stories & Updates (Blogs)** | **REAL** (`blogsProvider` / `homeFeedProvider`) | Displays latest published articles with multi-media count indicator, formatted dates, and authors. "See all" navigates to `/home/blogs` (`AllBlogsPage`), card tap navigates to `/home/blog/:slug`. |
 | **Notifications** | Memory / State | `notificationsProvider` maintains read/unread status across the session. |
 
 ---

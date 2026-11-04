@@ -20,8 +20,8 @@ class AiAnalyzingOverlay extends StatefulWidget {
 class _AiAnalyzingOverlayState extends State<AiAnalyzingOverlay> with TickerProviderStateMixin {
   static const _phrases = [
     'Scanning leaf structure…',
+    'Analyzing botanical traits…',
     'Matching species database…',
-    'Cross-checking PlantNet & AI…',
     'Almost there…',
   ];
 
@@ -145,7 +145,7 @@ class _AiAnalyzingOverlayState extends State<AiAnalyzingOverlay> with TickerProv
                 ),
                 const SizedBox(height: 6),
                 Text(
-                  'Identifying your tree with AI',
+                  'Matching botanical species records',
                   style: TextStyle(color: Colors.white.withAlpha(150), fontSize: 12.5),
                 ),
               ],

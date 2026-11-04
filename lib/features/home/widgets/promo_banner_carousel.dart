@@ -313,20 +313,72 @@ class _PromoBannerCarouselState extends State<PromoBannerCarousel> {
       width: double.infinity,
       height: double.infinity,
       placeholder: (_, _) => _placeholder(),
-      errorWidget: (_, _, _) => _errorTile(),
+      errorWidget: (_, _, _) => _errorTile(banner),
     );
   }
 
   Widget _placeholder({Key? key}) =>
       Container(key: key, color: AppColors.borderLight);
 
-  Widget _errorTile() => Container(
-        color: AppColors.primaryBlue.withAlpha(30),
-        child: Center(
-          child: Icon(
-            Icons.image_not_supported_outlined,
-            color: AppColors.primaryBlue.withAlpha(120),
+  Widget _errorTile(AppBanner banner) => Container(
+        decoration: BoxDecoration(
+          borderRadius: BorderRadius.circular(18),
+          gradient: const LinearGradient(
+            colors: [AppColors.primaryBlue, Color(0xFF28367F)],
+            begin: Alignment.topLeft,
+            end: Alignment.bottomRight,
           ),
+        ),
+        padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 16),
+        child: Row(
+          children: [
+            Container(
+              width: 44,
+              height: 44,
+              decoration: BoxDecoration(
+                color: Colors.white.withOpacity(0.12),
+                shape: BoxShape.circle,
+              ),
+              child: const Icon(
+                Icons.park_rounded,
+                color: AppColors.primaryYellow,
+                size: 24,
+              ),
+            ),
+            const SizedBox(width: 14),
+            Expanded(
+              child: Column(
+                mainAxisAlignment: MainAxisAlignment.center,
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    (banner.title != null && banner.title!.trim().isNotEmpty)
+                        ? banner.title!.trim()
+                        : 'BlueDot Environmental Initiative',
+                    style: const TextStyle(
+                      color: Colors.white,
+                      fontSize: 14,
+                      fontWeight: FontWeight.w700,
+                    ),
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                  ),
+                  if (banner.subtitle != null && banner.subtitle!.trim().isNotEmpty) ...[
+                    const SizedBox(height: 3),
+                    Text(
+                      banner.subtitle!.trim(),
+                      style: TextStyle(
+                        color: Colors.white.withOpacity(0.8),
+                        fontSize: 11,
+                      ),
+                      maxLines: 2,
+                      overflow: TextOverflow.ellipsis,
+                    ),
+                  ],
+                ],
+              ),
+            ),
+          ],
         ),
       );
 
