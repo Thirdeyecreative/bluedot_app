@@ -1,7 +1,7 @@
 # Database Schema: Tree Tagging, Allocations & Species Encyclopedia
 
 **Status:** All features implemented with real backend APIs  
-**Last updated:** 2026-06-19  
+**Last updated:** 2026-11-04  
 **Database:** PostgreSQL with PostGIS (geospatial queries), JSONB columns
 
 ---
@@ -21,7 +21,11 @@
 │ email                │
 │ phone                │
 │ city                 │
+│ avatar_url           │
+│ pan_number           │
+│ preferences (JSONB)  │◄─── {"push_enabled": bool, "email_enabled": bool, ...}
 │ total_impact_points  │◄─── Incremented by +50 (new tag) or +15 (verified)
+│ total_donated        │◄─── Incremented by financial donations (INR)
 │ tags (JSONB)         │
 │ streak_count         │
 │ created_at           │

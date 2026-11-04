@@ -1,12 +1,14 @@
 # 11 — App Architecture & Directory Structure
 
+**Status:** 100% Up to Date  
+**Last Updated:** 2026-11-04  
+**Framework:** Flutter (Dart) + Riverpod 2.x + GoRouter 14.x  
+
+---
+
 ## 1. Overview
 
-The BlueDot Flutter app follows a strictly modular **feature-first architecture** with Riverpod for state management and GoRouter for declarative routing.
-
-The `lib/` directory is split into two primary domains:
-- `core/`: Application-wide utilities, configuration, theme, networking, and shared widgets.
-- `features/`: Isolated, self-contained business domains (Auth, Home, Scanner, Profile, etc.).
+The BlueDot Flutter application follows a strictly modular **feature-first architecture**. Each domain is isolated into its own cohesive module under `lib/features/`, while shared concerns (networking, theme, configuration, and app-wide UI components) reside in `lib/core/`.
 
 ---
 
@@ -14,51 +16,74 @@ The `lib/` directory is split into two primary domains:
 
 ```text
 lib/
-├── main.dart                       // Entry point (WidgetsBinding, Supabase, MediaKit init)
+├── main.dart                       // Entry point: Supabase init, MediaKit engine, ApiConfig.init()
 ├── core/                           // Shared application infrastructure
-│   ├── config/                     // Environment and API endpoints (api_config.dart)
-│   ├── constants/                  // Assets, colors, typography (app_colors.dart)
-│   ├── demo/                       // Hardcoded mock data (demo_data.dart)
-│   ├── router/                     // GoRouter configuration (app_router.dart)
-│   ├── services/                   // Core networking (api_client.dart) & storage
-│   ├── theme/                      // Flutter ThemeData definitions (app_theme.dart)
-│   └── widgets/                    // Shared UI (media_carousel.dart, buttons, skeletons)
+│   ├── config/                     // Environment config, health checks, endpoints (api_config.dart)
+│   ├── constants/                  // Colors (app_colors.dart), assets, typography
+│   ├── demo/                       // Fallback visual mocks (demo_data.dart)
+│   ├── router/                     // GoRouter configuration, redirect guards (app_router.dart)
+│   ├── services/                   // ApiClient, StorageService, Connectivity monitoring
+│   ├── theme/                      // Custom ThemeData & color schemes (app_theme.dart)
+│   └── widgets/                    // Shared UI (media_carousel.dart, in_app_camera_page.dart,
+│                                   //  no_internet_page.dart, server_settings_modal.dart, skeletons.dart)
 └── features/                       // Feature modules
-    ├── action_hub/                 // Events, Drives, Campaigns, and Check-ins
-    ├── auth/                       // Login, OTP verification, and Profile setup
-    ├── directory/                  // Botanical Encyclopedia and species search
-    ├── home/                       // Dashboard, Stats, Blogs, Promo Banners
-    ├── map/                        // Eco-Garden map and location clustering
-    ├── navigation/                 // Global bottom navigation scaffold (main_navigation.dart)
-    ├── profile/                    // User settings, Leaderboard, Badges, Certificates, Tax Vault
-    └── scanner/                    // Green Lens (AI camera, real-time ML, scan results)
+    ├── action_hub/                 // Drives, Campaigns, RSVPs, Volunteering, QR Check-ins, Site Suggestions
+    ├── auth/                       // Native Supabase OTP, Profile Completion, User model & Notifiers
+    ├── directory/                  // Botanical Encyclopedia, multi-field search, species details
+    ├── home/                       // Dashboard, Compact App Bar, Promo Banners, Feed Aggregation, Blogs
+    ├── legal/                      // Legal document versioning, affirmative consent tracking, Policy sheets
+    ├── map/                        // Eco-Garden map (flutter_map), Bangalore bbox, GPS Blue Dot
+    ├── navigation/                 // Curved bottom navigation shell (curved_nav_bar.dart, main_navigation.dart)
+    ├── profile/                    // User account, Leaderboard, Badges, Certificates, 80G Tax Vault, Settings
+    └── scanner/                    // Green Lens: Multi-photo capture, Vertex AI plant ID, PostGIS 5m dedupe
 ```
 
 ---
 
-## 3. Feature-First Structure
+## 3. Modular Feature Structure
 
-Each folder inside `features/` follows a uniform internal structure to maintain separation of concerns:
+Every folder inside `features/` adheres to a strict separation of concerns:
 
-- `models/`: Immutable Dart data classes (often with `fromJson`).
-- `data/`: Repositories handling HTTP requests (via `ApiClient`) or mock data access.
-- `providers/`: Riverpod providers (`FutureProvider`, `NotifierProvider`) bridging UI and repositories.
-- `pages/`: Full-screen Flutter `Widget`s that map to GoRouter routes.
-- `widgets/`: Feature-specific UI components (e.g., `promo_banner_carousel.dart` in `home/`).
+- `models/`: Immutable Dart data classes with explicit `.fromJson()` / `.toJson()` serialization.
+- `data/`: Repositories responsible for executing network calls via `ApiClient` and mapping responses.
+- `providers/`: Riverpod providers (`FutureProvider`, `NotifierProvider`, `AsyncNotifierProvider`) bridging business logic with reactive UI.
+- `pages/`: Full-screen widgets bound to GoRouter routes.
+- `widgets/`: Local UI components specific to that feature (e.g., `promo_banner_carousel.dart` in `home/`, `scan_result_sheet.dart` in `scanner/`).
 
 ---
 
-## 4. Key Architectural Patterns
+## 4. Architectural Patterns & Core Infrastructure
 
-### State Management (Riverpod)
-The app uses modern Riverpod (`flutter_riverpod`). State is largely driven by `FutureProvider`s for asynchronous data fetching and `NotifierProvider`s for complex mutable state (e.g., `authNotifierProvider`).
-UI widgets use `ConsumerWidget` or `ConsumerStatefulWidget` and rely on `.when()` blocks to handle `data`, `loading`, and `error` states efficiently.
+### 1. State Management (Riverpod 2.x)
+- **Declarative & Reactive:** Eliminates mutable global state. Providers automatically dispose of resources when unneeded.
+- **AsyncValue Pattern:** UI widgets handle `.when(data:, loading:, error:)` cleanly without raw `setState` cascades.
+- **Optimistic UI:** Preference toggles (e.g. email notification toggles) update the UI immediately and roll back only upon server failure.
 
-### Routing (GoRouter)
-Defined in `core/router/app_router.dart`. The app uses nested routing via `ShellRoute` for the main bottom navigation bar (`MainNavigation`), allowing tabs to persist state while sub-pages (e.g., `/profile/settings`) are pushed on top.
+### 2. Navigation & Routing (GoRouter)
+- **`StatefulShellRoute.indexedStack`:** Hosts the primary tabs (`/home`, `/action-hub`, `/directory`, `/profile`). Tabs preserve scroll positions and form states across transitions.
+- **Smart Redirect Guard:** Intercepts route transitions:
+  - Unauthenticated users $\to$ `/login`
+  - Authenticated "ghost" users without names $\to$ `/complete-profile`
+  - Fully authenticated users $\to$ `/home` (preventing access back to auth routes)
+  - Public exemptions for `/splash`, `/terms`, `/privacy`, and `/no-internet`.
 
-### Video & Media
-Video playback is centralized through `media_kit` (using the native `libmpv` C++ engine to avoid Android SurfaceTexture slanting bugs). This logic is fully encapsulated within `core/widgets/media_carousel.dart` and `home/widgets/promo_banner_carousel.dart`.
+### 3. Dynamic Networking & Environment Selection (`ApiConfig`)
+- `ApiConfig` supports seamless environment switching:
+  - **Local:** Automatically detects platform to route to `127.0.0.1` (desktop/web) or the developer machine LAN IP (`192.168.1.49` on physical mobile devices).
+  - **Staging:** Google Cloud Run staging container.
+  - **Production:** Google Cloud Run production container.
+  - **Runtime Override:** Allows QA and developers to override endpoints and run active latency health checks directly from the app's Settings screen.
+- Persisted to `SharedPreferences` across app restarts.
 
-### "Fail-Soft" UI
-The app uses sophisticated "Skeleton" loaders (`core/widgets/skeletons.dart`) rather than simple spinners. Fallback mechanisms (e.g., placeholder images for missing avatars) are implemented across all media widgets to ensure robust error handling.
+### 4. Resilient HTTP Client (`ApiClient`)
+- Centralized `ApiClient` wraps `package:http`.
+- **Automatic Auth Injection:** Reads the active Supabase JWT session and attaches `Authorization: Bearer <token>`.
+- **Intelligent Error Handling:** Parses FastAPI error envelopes (`{"detail": ...}`) and maps HTTP status codes (401, 403, 404, 409, 429, 500) into human-friendly messages.
+- **Multipart Uploads:** Supports binary and multi-image uploads with automatic MIME-type resolution for mobile cameras.
+
+### 5. Media & High-Performance Video (`media_kit`)
+- Videos in campaigns and banners are powered by `media_kit` (using the native `libmpv` C++ backend), avoiding Android `SurfaceTexture` slanting glitches.
+
+### 6. Fail-Soft UI & Skeleton Loading
+- Eliminates jarring circular progress spinners in favor of layout-accurate skeleton placeholders (`core/widgets/skeletons.dart`).
+- When network connections hitch or timeout, the app displays user-friendly retry banners or seamlessly routes to `NoInternetPage`.

@@ -1,128 +1,157 @@
-# Scanner / Green Lens — Current State
+# 03 — Scanner / Green Lens — Engineering Reference
 
-Scope: `lib/features/scanner/` and `lib/core/widgets/in_app_camera_page.dart` in `bluedot_app`, cross-referenced with backend `bluedot_apis/app/api/v1/app/tags.py`.
+**Status:** 100% Complete & Fully Integrated  
+**Last Updated:** 2026-11-04  
+**Primary Endpoints:** `POST /api/v1/app/tags/scan`, `GET /api/v1/app/tags/history`  
+**Cross-Reference:** [10_database_schema_trees.md](10_database_schema_trees.md) for database relationships, species encyclopedia deduplication, PostGIS spatial queries, and fun fact extraction.
 
-**📚 See also:** [10_database_schema_trees.md](10_database_schema_trees.md) for complete database relationships, TreeSpecies encyclopedia architecture, tree tagging/allocation data flows, proximity deduplication logic, and fun facts extraction & storage.
+---
 
-## Files
+## 1. Overview
 
-- `pages/green_lens_page.dart` — `GreenLensPage`. On `initState`, schedules `_startCapture()` → `openInAppCamera(context, maxImages: 5, title: 'Scan a Tree')`. On success, calls `_runScan(photos)`, which fetches GPS via `Geolocator.getCurrentPosition`, then calls `ref.read(scanResultProvider.notifier).scan(images:, lat:, lng:)`. Pops the route, then calls `_showResultSheet(result)`. Shows `AiAnalyzingOverlay` while `_analyzing` is true.
-- `widgets/ai_analyzing_overlay.dart` — cosmetic full-screen loader cycling phrases ("Scanning leaf structure…", "Matching species database…") over a blurred captured photo while the scan request is in flight.
-- `widgets/scan_shared_widgets.dart` — `PillTag`, `Co2Card`, `PlantPlaceholder` (shared small widgets).
-- `widgets/scan_result_sheet.dart` — `ScanResultSheet`. Shows points badge, thumbnail, species name, pills, `Co2Card`, status message, and a "Save to My Collection & Geotag" CTA. Has a fallback `_buildNotIdentified` branch with a "Try Again" action. Contains a local `_estimateCo2` lookup table mirroring the backend's CO2 estimation.
-- `widgets/scan_history_detail_sheet.dart` — `ScanHistoryDetailSheet` (see below).
-- `models/scan_result_model.dart` — `ScanResult` (`status, message, treeId, speciesMatched, isNewSpecies, pointsAwarded, totalPoints, assetUrl, plantnetData, species`, with `isNewTag`/`isNotIdentified` getters); `SpeciesInfo` (`id, scientificName, localName, co2OffsetFactor, growthTimeYears, imageUrls, isPendingReview`); `PlantNetData` (`scientificName, commonName, score, family`); `ScanHistoryItem` (`id, imageUrl, imageUrls, lat, lng, taggedAt, plantnetSummary, plantnetData, species`, with `hasLocation` getter).
-- `data/scanner_repository.dart` — `scanTree()` (multipart POST to scan endpoint, 75s timeout), `fetchHistory()` (GET to scan history endpoint), `fetchMapTrees()` (GET map bounding box, `requireAuth: false`).
-- `providers/scanner_provider.dart` — Riverpod providers (see below).
+The Green Lens scanner is BlueDot's signature AI-powered feature. It allows users to photograph trees and plants, identify their botanical species in real time using Vertex AI / PlantNet, verify geospatial coordinates against existing trees within 5 meters, record them to the global database, and earn gamification XP points.
 
-## Full scan flow
+### Source Files
+- `lib/features/scanner/pages/green_lens_page.dart` — Full-screen scanner entry point, camera orchestration, and GPS capture.
+- `lib/core/widgets/in_app_camera_page.dart` — High-performance custom camera widget with multi-angle capture guidance, pinch-to-zoom, and vertical slider.
+- `lib/features/scanner/widgets/ai_analyzing_overlay.dart` — Animated backdrop while ML identification runs on the server.
+- `lib/features/scanner/widgets/scan_result_sheet.dart` — Interactive bottom sheet displaying species match, confidence score, CO₂ absorption card, and points awarded.
+- `lib/features/scanner/widgets/scan_history_detail_sheet.dart` — Reusable detail modal for examining past scans (shared with Profile and Eco Garden Map).
+- `lib/features/scanner/data/scanner_repository.dart` — Network repository calling `ApiClient.multipartPost`.
+- `lib/features/scanner/providers/scanner_provider.dart` — Riverpod providers (`scanResultProvider`, `scanHistoryProvider`, `mapTreesProvider`).
+- `lib/features/scanner/models/scan_result_model.dart` — Models for `ScanResult`, `SpeciesInfo`, `PlantNetData`, and `ScanHistoryItem`.
 
-1. **Capture**: `GreenLensPage._startCapture()` calls `openInAppCamera(...)`, which returns a `List<File>` once the user finishes capturing.
-2. **Trigger scan**: `_runScan(photos)` sets `_analyzing = true`, retrieves the device's current GPS position, then calls `ref.read(scanResultProvider.notifier).scan(images:, lat:, lng:)`.
-3. **Notifier → repository**: `ScanResultNotifier.scan()` clears prior state, then delegates to `ScannerRepository.scanTree(...)`.
-4. **Upload**: `ScannerRepository.scanTree()` does a multipart POST to `ApiConfig.scan` (`{baseUrl}/api/v1/app/tags/scan`) with fields `lat`, `lng` and files under field name `images`, 75-second timeout. Response parsed via `ScanResult.fromJson`.
-5. **Backend identification**: `scan_tree()` in `tags.py` calls `identify_plant(image_bytes_list, db)` → `_extract_identification()`, parsing **ALL** provided images simultaneously through Vertex AI/PlantNet. It checks the Tree Encyclopedia and a 5-meter proximity duplicate check, uploads images via `MediaService.upload_files`, creates/updates rows, and awards points — **50 points for a brand-new tree, 15 points for a verified/duplicate match**. If the AI confidence score is **>= 70%**, the backend automatically marks the new tag (and its associated tree species if new) as `status: 1` (Approved). Otherwise, it remains `status: 0` (Pending Review).
-6. **Result display**: `_showResultSheet(result)` opens `ScanResultSheet` as a modal bottom sheet (not a routed page).
-7. **"Save" CTA**: this button in `ScanResultSheet` is effectively cosmetic — it just pops the sheet. Actual persistence already happened server-side during step 5's POST. The `onSaved` callback parameter is optional and isn't even passed at the `GreenLensPage` call site.
-8. **History**: scan history is fetched on demand (not auto-refreshed after a scan) via `scanHistoryProvider`, which calls `GET /api/v1/app/tags/history`.
+---
 
-## Exact API calls
+## 2. Complete End-to-End Scan Flow
 
-### `POST {baseUrl}/api/v1/app/tags/scan` (`ApiConfig.scan`)
-
-Backend (`bluedot_apis/app/api/v1/app/tags.py`):
-```python
-@router.post("/scan")
-async def scan_tree(
-    lat: float = Form(...),
-    lng: float = Form(...),
-    images: List[UploadFile] = File(...),
-    db: Session = Depends(get_db),
-    current_user: AppUser = Depends(get_current_app_user)
-):
 ```
-No Pydantic request model — raw `Form`/`File` params. Response shape varies by branch, all raw dicts:
-- **not_identified** branch — plant could not be matched.
-- **verified** branch — matched an existing/known species, duplicate-proximity logic applies; awards 15 points.
-- **new_tag** branch — brand-new tagged tree; awards 50 points.
-
-Each branch includes a species payload (`_species_payload()` helper) with: `id, scientific_name, local_name, co2_offset_factor, growth_time_years, image_urls, is_pending_review`.
-
-### `GET {baseUrl}/api/v1/app/tags/history` (`ApiConfig.scanHistory`)
-
-Backend:
-```python
-@router.get("/history")
-def get_tag_history(skip: int = 0, limit: int = 20, db: Session = Depends(get_db), current_user: AppUser = Depends(get_current_app_user)):
+1. User taps Scanner FAB / Camera Icon
+   ↓
+2. GreenLensPage launches InAppCameraPage
+   - Yellow animated instruction banner prompts for clear multi-angle photos
+   - User captures 1 to 5 photos of leaves, bark, and overall tree structure
+   - Supports pinch-to-zoom and vertical zoom slider
+   ↓
+3. Device captures GPS Coordinates via Geolocator.getCurrentPosition()
+   ↓
+4. AiAnalyzingOverlay appears with blurred background and dynamic analysis stages
+   ↓
+5. ScannerRepository sends Multipart POST to /api/v1/app/tags/scan
+   - Includes lat, lng, and images[] list
+   - Uses extended 75-second network timeout for server-side AI processing
+   - Automatically injects Supabase JWT in Authorization header
+   ↓
+6. Backend Execution (bluedot_apis/app/api/v1/app/tags.py: scan_tree)
+   a. get_current_user dependency decodes JWT and identifies AppUser
+   b. identify_plant(image_bytes_list, db) runs Vertex AI / PlantNet identification
+   c. 5-meter proximity check via PostGIS ST_DWithin:
+      - Brand-New Tree: Awards +50 Impact Points
+      - Verified Match (existing tree within 5m): Awards +15 Impact Points
+   d. Auto-Publish threshold:
+      - Confidence score >= 70%: Status set to 1 (Approved / Published)
+      - Confidence score < 70%: Status set to 0 (Pending Review)
+   e. Uploads images to CDN via MediaService.upload_files
+   f. Extracts botanical fun facts and stores them in JSONB fun_facts column
+   g. Updates user's total_impact_points and records to tagged_trees ledger
+   ↓
+7. Client receives ScanResult response and presents ScanResultSheet
+   - Displays species local name and scientific name
+   - Shows XP earned with celebration badge
+   - Shows annual CO₂ absorption rating via Co2Card
+   - Shows botanical taxonomy and fun facts
+   - Tap "Save to Collection" closes the modal (tag is already committed on the backend)
 ```
-Response envelope: `{"count": ..., "data": [...]}`. Each item: `id, species_id, image_url, image_urls, lat, lng, tagged_at, plantnet_data_summary, plantnet_data, species`.
 
-There's also a `GET /api/v1/app/tags/map` route (bounding-box query) backing `fetchMapTrees()`, used by the map/Eco Garden feature, not by the scan flow itself.
+---
 
-**Backend auth caveat**: `get_current_app_user` in `tags.py` is explicitly commented as a `"Mock dependency for getting the current app user"` — `"In a real scenario, this would decode a JWT or verify a session."` It currently just queries the first active `AppUser` row in the database. This means all scan/scan-history calls are not actually scoped to the authenticated device user on the backend yet — worth flagging if this doc is read in the context of security/auth review.
+## 3. API Specification
 
-## Riverpod providers
+### `POST /api/v1/app/tags/scan` (`ApiConfig.scan`)
+- **Headers:** `Authorization: Bearer <Supabase_JWT>`
+- **Content-Type:** `multipart/form-data`
+- **Fields:**
+  - `lat` (float, required): Latitude coordinate
+  - `lng` (float, required): Longitude coordinate
+  - `images` (file list, required): 1 to 5 JPEG/PNG images
 
-- `scannerRepositoryProvider` — `Provider<ScannerRepository>`
-- `scanResultProvider` — `NotifierProvider<ScanResultNotifier, ScanResult?>`; exposes `.scan(images:, lat:, lng:)` and `.clear()`
-- `scanHistoryProvider` — `FutureProvider<List<ScanHistoryItem>>`
-- `mapTreesProvider` — `FutureProvider<List<ScanHistoryItem>>`; uses a fixed bounding box (`_bangaloreBoxDegrees = 0.3`) and filters out items whose species `isPendingReview` is true
-
-No dedicated provider was found for raw camera state, zoom, or upload progress — camera/zoom state lives locally inside `InAppCameraPage`'s `State` (see below), and upload progress isn't tracked beyond the binary "analyzing" boolean in `GreenLensPage`.
-
-## In-app camera widget (`lib/core/widgets/in_app_camera_page.dart`)
-
-Confirmed: pinch-to-zoom and a vertical zoom slider both exist.
-
-- Zoom state: local `double` fields `_minZoom`, `_maxZoom`, `_zoom`, `_baseZoom`.
-- Pinch-to-zoom gesture:
-  ```dart
-  child: GestureDetector(
-    onScaleStart: (_) => _baseZoom = _zoom,
-    onScaleUpdate: (details) => _setZoom(_baseZoom * details.scale),
-  ```
-- `_setZoom()` clamps the value between `_minZoom`/`_maxZoom` and calls `controller.setZoomLevel(clamped)`.
-- Vertical slider: rendered only if `_maxZoom > _minZoom`, implemented as `_ZoomSlider`, which wraps a standard horizontal `Slider` inside `RotatedBox(quarterTurns: 3, ...)` to present it vertically.
-
-**Shared usage confirmed** — `openInAppCamera()` is called from two distinct flows:
-- `lib/features/scanner/pages/green_lens_page.dart`: `openInAppCamera(context, maxImages: 5, title: 'Scan a Tree', instructionText: 'Take multiple photos...')`. A sleek yellow animated instruction banner now guides the user to take multiple angles of the tree.
-- `lib/features/action_hub/pages/suggest_site_page.dart`: `openInAppCamera(context, maxImages: remaining, title: 'Photograph the Site')`.
-
-So the same camera widget (with the same pinch-to-zoom/slider UX) backs both Green Lens tree scanning and the Action Hub's Suggest Site photo capture — single shared implementation, not duplicated per-feature.
-
-## Scan history UI
-
-The scan history list itself lives in the **Profile** feature, not inside `lib/features/scanner/`: `lib/features/profile/pages/profile_page.dart`, widget `_ScansHistory`.
-
-- Header: "Recent Scans".
-- Empty state: camera icon + "No scans yet! Use the Green Lens to identify plants."
-- List: `ListView.separated`, capped to the first 5 items (`items.take(5)`).
-- Each row computes `isPendingReview`, a scientific/common-name fallback chain, a primary label, and a secondary label (date + scientific name), shows a thumbnail plus labels.
-- Tapping a row opens `ScanHistoryDetailSheet` via `showModalBottomSheet`.
-
-### `ScanHistoryDetailSheet` (shared component — confirmed)
-
-Location: `lib/features/scanner/widgets/scan_history_detail_sheet.dart`.
-
-Takes a `ScanHistoryItem`. Renders a rounded bottom sheet capped at 90% height, containing:
-- `CachedNetworkImage` thumbnail (180×220) with skeleton/placeholder fallback states.
-- Scientific name (italic) and common name.
-- A `Wrap` of `PillTag`s showing match percentage, family, and an approval-status pill (pending vs. approved).
-- A `Co2Card` if the CO2 value is greater than 0.
-- A "Tagged on {date}" footer.
-
-**Confirmed shared with the map feature**: used in two places:
-1. `lib/features/profile/pages/profile_page.dart` — Recent Scans row tap.
-2. `lib/features/map/pages/eco_garden_page.dart` — `_showTreeDetail(item)`, opened from map marker taps.
-
-## Navigation routes
-
-Only one router entry exists for the scanner feature: `lib/core/router/app_router.dart`:
-```dart
-GoRoute(path: '/scanner', builder: (__, _) => const GreenLensPage()),
+#### Response Structure:
+```json
+{
+  "status": "new_tag",
+  "message": "Congratulations! You discovered and tagged a new tree.",
+  "tree_id": "uuid",
+  "species_matched": true,
+  "is_new_species": false,
+  "points_awarded": 50,
+  "total_points": 1370,
+  "asset_url": "https://cdn.bluedot.eco/trees/...",
+  "plantnet_data": {
+    "scientific_name": "Azadirachta indica",
+    "common_name": "Neem",
+    "score": 0.89,
+    "family": "Meliaceae"
+  },
+  "species": {
+    "id": "uuid",
+    "scientific_name": "Azadirachta indica",
+    "local_name": "Neem",
+    "co2_offset_factor": 21.77,
+    "growth_time_years": 15,
+    "fun_facts": [
+      "Known as the 'Village Pharmacy' in Ayurvedic medicine.",
+      "A single mature Neem tree absorbs over 20 kg of CO2 annually."
+    ],
+    "is_pending_review": false
+  }
+}
 ```
-There are no separate routes for scan history or the result/detail sheets — both `ScanResultSheet` and `ScanHistoryDetailSheet` are presented as modal bottom sheets, not pushed as distinct routes.
 
-## TODO / demo / mock comments found
+### `GET /api/v1/app/tags/history` (`ApiConfig.scanHistory`)
+- **Headers:** `Authorization: Bearer <Supabase_JWT>`
+- **Query Parameters:** `skip` (int, default 0), `limit` (int, default 20)
+- **Response:** Paginated list of user's personal tagged trees with image URLs, coordinates, and species payload.
 
-No "TODO", "FIXME", "mock", "demo", "not yet", or "hardcoded" comments were found anywhere in `lib/features/scanner/` (the Flutter side appears fully wired to the real backend — there is no `DemoData` usage in this feature at all). The one genuine "mock" note found during cross-referencing is on the **backend**: `tags.py`'s `get_current_app_user` dependency, explicitly commented as a mock auth stand-in (see auth caveat above) — this is a backend file, not part of the Flutter scanner feature, but is relevant context for anyone evaluating how "real" the scan flow's auth actually is end-to-end.
+---
+
+## 4. Riverpod Providers
+
+Defined in `lib/features/scanner/providers/scanner_provider.dart`:
+
+- **`scannerRepositoryProvider`** (`Provider<ScannerRepository>`):
+  Injects `ApiClient` for network operations.
+- **`scanResultProvider`** (`NotifierProvider<ScanResultNotifier, ScanResult?>`):
+  Manages state for the current scan session. Exposes `.scan(images:, lat:, lng:)` and `.clear()`.
+- **`scanHistoryProvider`** (`FutureProvider<List<ScanHistoryItem>>`):
+  Fetches user's past scans. Caches history and displays in Profile page.
+- **`mapTreesProvider`** (`FutureProvider<List<ScanHistoryItem>>`):
+  Fetches community-tagged trees within the Bangalore bounding box (`_bangaloreBoxDegrees = 0.3`) for the Eco Garden Map.
+
+---
+
+## 5. Shared Components
+
+### 1. `InAppCameraPage` (`lib/core/widgets/in_app_camera_page.dart`)
+Reused by:
+- Scanner feature (`GreenLensPage`)
+- Action Hub feature (`SuggestSitePage`)
+
+Features:
+- Pinch-to-zoom gesture detection
+- Custom vertical slider overlay
+- Multi-photo filmstrip preview with delete controls
+- Camera lens flip and flash controls
+
+### 2. `ScanHistoryDetailSheet` (`lib/features/scanner/widgets/scan_history_detail_sheet.dart`)
+Reused by:
+- Profile page ("Recent Scans" row tap)
+- Eco Garden Map page (Map marker pin tap)
+
+Displays:
+- Full thumbnail image with placeholder fallbacks
+- Scientific name (italicized) and regional local name
+- AI confidence match pill tag
+- Botanical family pill tag
+- Review status badge (`Pending review` vs `Approved`)
+- Annual CO₂ absorption card
+- Tagged timestamp and geospatial coordinates

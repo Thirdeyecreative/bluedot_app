@@ -1,24 +1,29 @@
-# Eco Garden Map — Current State
+# 04 — Eco Garden Map — Engineering Reference
 
-> Documented by reading the live source on 2026-06-18. The map feature was recently and heavily modified; everything below was re-verified against the current code (not carried over from any earlier description).
+**Status:** 100% Complete & Fully Integrated  
+**Last Updated:** 2026-11-04  
+**Primary Endpoint:** `GET /api/v1/app/tags/map`  
+**Cross-Reference:** [10_database_schema_trees.md](10_database_schema_trees.md) for PostGIS spatial indexing and bounding-box queries.
 
-**📚 See also:** [10_database_schema_trees.md](10_database_schema_trees.md) for the complete database schema showing how tagged trees are stored, indexed, and queried via PostGIS geospatial operations.
+---
 
-## Files read
+## 1. Overview
 
-- `lib/features/map/pages/eco_garden_page.dart` — the page/UI (only file under `lib/features/map/`; there is no separate `providers/`, `models/`, or `repositories/` subfolder for the map feature — those live in the `scanner` feature and are reused)
-- `lib/features/scanner/providers/scanner_provider.dart` — `mapTreesProvider`, Bangalore constants
-- `lib/features/scanner/data/scanner_repository.dart` — `fetchMapTrees`
-- `lib/features/scanner/models/scan_result_model.dart` — `ScanHistoryItem`, species payload shape
-- `lib/features/scanner/widgets/scan_history_detail_sheet.dart` — the detail sheet opened from the map
-- `lib/core/config/api_config.dart` — `mapData` endpoint constant
-- `lib/core/router/app_router.dart` — route registration
-- Backend: `bluedot_apis/app/api/v1/app/tags.py` — `GET /map` handler
+The Eco Garden Map is BlueDot's geospatial visualization feature. It renders an interactive map displaying all community-tagged trees across the region, user location tracking ("Blue Dot"), dynamic tree filtering, and quick-action detail bottom sheets.
 
-## Data source — confirmed all-community trees, not just current user's
+### Source Files
+- `lib/features/map/pages/eco_garden_page.dart` — Main map page using `flutter_map` (OpenStreetMap tiles).
+- `lib/features/scanner/providers/scanner_provider.dart` — `mapTreesProvider` supplying verified map trees.
+- `lib/features/scanner/data/scanner_repository.dart` — `fetchMapTrees()` querying the geospatial bounding box.
+- `lib/features/scanner/models/scan_result_model.dart` — `ScanHistoryItem` representing geotagged trees.
+- `lib/features/scanner/widgets/scan_history_detail_sheet.dart` — Shared tree inspection sheet.
 
-`ScannerRepository.fetchMapTrees()` (`scanner_repository.dart` lines 44-66) calls:
+---
 
+## 2. Geospatial Architecture & Data Flow
+
+### 1. Data Source (Community-Wide Trees)
+`ScannerRepository.fetchMapTrees()` issues a public `GET /api/v1/app/tags/map` query:
 ```dart
 await _api.get(ApiConfig.mapData, requireAuth: false, query: {
   'min_lat': minLat.toString(),
@@ -28,48 +33,14 @@ await _api.get(ApiConfig.mapData, requireAuth: false, query: {
 });
 ```
 
-`ApiConfig.mapData` = `$_app/tags/map` → `GET /api/v1/app/tags/map`.
+On the backend (`bluedot_apis/app/api/v1/app/tags.py: get_tags_map`):
+- Constructs a PostGIS bounding box polygon from `min_lat`, `min_lng`, `max_lat`, `max_lng`.
+- Queries `TaggedTree` records overlapping the bounding box using PostGIS spatial indexing (`&&` operator).
+- Eager-loads species information (`selectinload(TaggedTree.species)`).
+- **Public/Community Scope:** No `user_id` filter is applied; the map displays all trees tagged by any user across the community.
 
-On the backend, `tags.py` `get_tags_map` (lines 285-328) takes optional `min_lat, min_lng, max_lat, max_lng` query params, and when all four are present filters with a PostGIS bbox-overlap (`&&`) against a constructed `POLYGON(...)` — confirming a **bounding-box query**, not lat/lng/radius. Critically, the query is:
-
-```python
-query = db.query(TaggedTree).options(selectinload(TaggedTree.species))
-```
-
-with **no `user_id` filter at all** — it returns every `TaggedTree` row in the bbox regardless of which user tagged it. This confirms the map fetches **all community-tagged trees**, not just the current user's. The call is also made with `requireAuth: false` on the client side, consistent with this being a public/community endpoint.
-
-### Response shape per tree (from `tags.py` `get_tags_map`)
-
-```json
-{
-  "count": <int>,
-  "data": [
-    {
-      "id": ...,
-      "lat": <float>,
-      "lng": <float>,
-      "species_id": ...,
-      "species": {
-        "id": ..., "scientific_name": ..., "local_name": ...,
-        "co2_offset_factor": <float|null>, "growth_time_years": ...,
-        "image_urls": [...], "is_pending_review": <bool>
-      },
-      "plantnet_data": {...},
-      "image_url": <string|null>,
-      "tagged_at": <timestamp>
-    }, ...
-  ]
-}
-```
-
-`is_pending_review` is set as `species.status == TreeSpecies.STATUS_PENDING_REVIEW` (`_species_payload`, line 35).
-
-The Flutter side parses this into `ScanHistoryItem` (`scan_result_model.dart`) via `.fromJson`, then `fetchMapTrees` filters out items lacking coordinates: `.where((item) => item.hasLocation)`.
-
-## Pending-review filtering — confirmed
-
-`mapTreesProvider` (`scanner_provider.dart` lines 34-44):
-
+### 2. Client-Side Pending Review Filter
+In `scanner_provider.dart`:
 ```dart
 final mapTreesProvider = FutureProvider<List<ScanHistoryItem>>((ref) async {
   final trees = await ref.watch(scannerRepositoryProvider).fetchMapTrees(
@@ -78,107 +49,56 @@ final mapTreesProvider = FutureProvider<List<ScanHistoryItem>>((ref) async {
         maxLat: bangaloreCenterLat + _bangaloreBoxDegrees,
         maxLng: bangaloreCenterLng + _bangaloreBoxDegrees,
       );
-  // Species still awaiting admin review aren't confirmed yet -- keep them
-  // off the public map until approved.
+  // Keep pending review tags off the public map until approved
   return trees.where((t) => t.species?.isPendingReview != true).toList();
 });
 ```
+Trees whose species are awaiting administrative review (`isPendingReview == true`) are filtered out on the client to ensure only verified trees appear publicly.
 
-Confirmed: trees whose `species.isPendingReview == true` are filtered out **client-side**, after the backend fetch, before the page ever sees them. (Backend `tags.py` itself does not filter on review status — the filter is purely on the Flutter side in this provider.)
+---
 
-## Map centering and bounding box — confirmed Bangalore constants
+## 3. UI Features & Controls
 
-In `scanner_provider.dart` (lines 28-32):
+### 1. Map Coordinates & Centering
+- Default center: Bangalore coordinates (`12.9716, 77.5946`) with a bounding box of `± 0.3°` (~30 km radius).
+- On initialization, requests `Permission.locationWhenInUse`.
+- If granted, retrieves high-accuracy GPS coordinates via `Geolocator.getCurrentPosition()` and centers the map on the user.
+- If permission is denied or times out, safely falls back to the Bangalore center.
 
+### 2. User Live Location Marker ("Blue Dot")
+- Rendered as a pulsing, layered marker:
+  - Outer ring: 26×26 translucent circle (`AppColors.primaryBlue` with 60 alpha)
+  - Inner core: 14×14 solid circle (`AppColors.primaryBlue` with 2px white border)
+  - Wrapped in `IgnorePointer` to prevent accidental gesture blocking.
+
+### 3. Tree Pins & Detail Popups
+- Each verified tree renders as a green botanical marker icon.
+- Tapping a pin highlights it and presents a floating `_TreeInfoCard` at the bottom of the viewport showing:
+  - Tree thumbnail image
+  - Common and scientific name
+  - Tagged date
+- Tapping the `_TreeInfoCard` opens the modal `ScanHistoryDetailSheet` with full botanical facts and CO₂ absorption stats.
+
+### 4. Interactive Layer Toggle
+- A floating toggle button (`_LayerToggle`, top-right) allows users to hide/show the tree markers layer without re-fetching data.
+
+### 5. Zoom & Manual Refresh Controls
+- Floating `+` and `-` buttons clamped between zoom levels `4.0` and `20.0`.
+- Manual Refresh button (`Icons.refresh_rounded`) invalidates `mapTreesProvider` and triggers a smooth re-fetch with custom skeleton placeholders.
+
+### 6. Dynamic Bottom Stats Bar
+- **Tagged Trees:** Shows total count of community trees visible in the area.
+- **Your Trees:** Dynamically calculates `trees.where((t) => t.userId == currentUser.id).length` using `currentUserProvider`. Updates live without page reload.
+
+---
+
+## 4. Navigation
+
+Registered as a top-level route outside the bottom navigation shell:
 ```dart
-// Bangalore bounding box (~30km around the city center) used to scope the
-// Eco Garden map to trees tagged in and around Bangalore.
-const bangaloreCenterLat = 12.9716;
-const bangaloreCenterLng = 77.5946;
-const _bangaloreBoxDegrees = 0.3;
+GoRoute(path: '/map', builder: (__, _) => const EcoGardenPage())
 ```
-
-So the bbox sent to the backend is `[12.9716 ± 0.3, 77.5946 ± 0.3]`, i.e. roughly `12.6716–13.2716` lat by `77.2946–77.8946` lng (comment calls this "~30km around the city center").
-
-In `eco_garden_page.dart` (line 28): `static const _bangaloreCenter = LatLng(bangaloreCenterLat, bangaloreCenterLng);` — reuses the same constants for the map's visual center.
-
-### Location-permission fallback — confirmed
-
-`_loadMyLocation()` (lines 40-53):
-
-```dart
-final permission = await Permission.locationWhenInUse.request();
-if (!permission.isGranted) return;
-final position = await Geolocator.getCurrentPosition(
-  locationSettings: const LocationSettings(accuracy: LocationAccuracy.high, timeLimit: Duration(seconds: 5)),
-);
-if (mounted) setState(() => _myLocation = LatLng(position.latitude, position.longitude));
-```
-
-If permission is denied, the method simply `return`s early — `_myLocation` stays `null`. The `FlutterMap`'s `initialCenter` is `_myLocation ?? _bangaloreCenter` (line 98), so denial/failure of any kind (permission denied, or an exception caught by the surrounding `try/catch`, e.g. timeout) **confirmed to fall back to the Bangalore center**. A full-screen `CircularProgressIndicator` (`AppColors.primaryBlue`) is shown until `_locationResolved` becomes true (set in the `finally` block), so the map only renders once location resolution (success or failure) has completed.
-
-## User's live location marker — confirmed
-
-Rendered only `if (_myLocation != null)` (lines 161-188): a 26×26 `Marker` containing a translucent outer circle (`AppColors.primaryBlue.withAlpha(60)`) and a solid 14×14 inner circle (`AppColors.primaryBlue`, white 2px border) — a standard "blue dot" you-are-here style, wrapped in `IgnorePointer` (not tappable).
-
-## Zoom — confirmed
-
-`MapOptions` (lines 97-103):
-
-```dart
-initialZoom: 11.5,
-minZoom: 4,
-maxZoom: 20,
-```
-
-No explicit `interactionOptions` are set, so `flutter_map`'s default interaction flags apply, which include pinch-to-zoom (drag/pinch gestures are enabled by default unless overridden) — confirmed pinch gesture is not disabled anywhere in this file.
-
-Explicit +/- buttons exist (`_MapButton` with `Icons.add_rounded` / `Icons.remove_rounded`), wired to `_zoomBy(1)` / `_zoomBy(-1)`.
-
-### Manual Reload Button
-There is a dedicated manual reload button (`Icons.refresh_rounded`) located just below the layer toggle. Clicking it calls `ref.invalidate(mapTreesProvider)` and manually restarts the `flutter_map` UI via a fade animation. During the refresh, a highly precise skeleton loader perfectly mirrors the map buttons and stats bar, so the map UI looks beautifully coherent while loading.
-
-Confirmed the button-driven zoom is clamped to the same `4.0`–`20.0` range as `minZoom`/`maxZoom`.
-
-## Tapping a tree pin — confirmed
-
-Tapping a marker sets `_selectedMarkerIndex` (line 126), which renders a `_TreeInfoCard` (an info pill/popup, positioned bottom:150, lines 268-278) showing the tree's image (or a fallback icon), display name (`species.localName` → `species.scientificName` → `plantnetData.commonName` → `plantnetData.scientificName` → `'Unidentified plant'`), and tagged date.
-
-Tapping that card (`onTap: () => _showTreeDetail(...)`, line 276) calls `_showTreeDetail`, which opens:
-
-```dart
-showModalBottomSheet(
-  context: context,
-  isScrollControlled: true,
-  backgroundColor: Colors.transparent,
-  builder: (_) => ScanHistoryDetailSheet(item: item),
-);
-```
-
-Confirmed `ScanHistoryDetailSheet` lives at `lib/features/scanner/widgets/scan_history_detail_sheet.dart` and is a shared widget (also used from the Profile page's Recent Scans list, per its doc comment). It displays: the tree's image (`CachedNetworkImage` with skeleton placeholder and `PlantPlaceholder` error fallback), scientific name (italic) and common name, a "% Match" pill (from `plantnetData.score`) if present, a family pill if present, an **Approval status pill** — `'Pending review'` (amber, hourglass icon) if `species.isPendingReview == true`, else `'Approved'` (green, check icon) — a CO2 offset card (`Co2Card`) if `co2OffsetFactor > 0`, and the formatted tagged date.
-
-## Bottom stats bar — confirmed
-
-`_StatsBar` (lines 339-371), fed `treeCount: trees.length` where `trees` is the (already pending-review-filtered) list from `mapTreesProvider`:
-
-- **"Tagged Trees"** — shows `'$treeCount'` or `othersTreeCount` (the count of trees not tagged by the current user).
-- **"Your Trees"** — now dynamically calculated! It counts `trees.where((t) => t.userId == currentUser.id).length`. The UI uses `currentUserProvider` to determine which tags belong to the logged-in user. The old hardcoded `0` and TODO have been removed.
-
-## Riverpod providers used
-
-- `mapTreesProvider` (`FutureProvider<List<ScanHistoryItem>>`, defined in `scanner_provider.dart`) — fetches + filters the map's tree list. Watched in `eco_garden_page.dart` via `ref.watch(mapTreesProvider)`.
-- `scannerRepositoryProvider` (`Provider<ScannerRepository>`) — the underlying repository used by `mapTreesProvider`.
-
-No map-specific provider file exists; the map page reuses scanner-feature providers/models entirely.
-
-## Navigation route
-
-Registered in `app_router.dart`: `GoRoute(path: '/map', builder: (__, _) => const EcoGardenPage())` (top-level route, not nested under a shell). The page itself navigates back via `context.pop()`.
-
-## Other gaps / TODOs found
-
-A repo-wide search of the map feature folder and the scanner provider/repository/detail-sheet files for "TODO", "demo", "mock", "not yet" found no remaining hits! The map is now fully wired up.
-
-## Layer toggle (incidental finding)
-
-There is also a "Tagged Trees" layer toggle (`_LayerToggle`, top-right, `_showTrees` bool) that lets the user hide/show the tree `MarkerLayer` entirely — unrelated to the bottom stats bar's "Tagged Trees" label, which always shows the count regardless of toggle state.
+Can be accessed from:
+- Profile page (map action icon)
+- Home page quick actions
+- Direct route navigation (`context.push('/map')`)

@@ -1,76 +1,129 @@
-# Home Page — Current State
+# 02 — Home Feature — Engineering Reference
 
-Scope: `lib/features/home/` in `bluedot_app`, cross-referenced with `lib/core/config/api_config.dart`, `lib/core/demo/demo_data.dart`, `lib/core/router/app_router.dart`, and backend `bluedot_apis/app/api/v1/app/` + `bluedot_apis/app/api/v1/admin/`.
+**Status:** Fully Wired to Live Backend  
+**Last Updated:** 2026-11-04  
+**Primary Endpoints:** `GET /api/v1/app/home-feed`, `GET /api/v1/app/blogs`, `GET /api/v1/app/campaigns`  
 
-## Files
+---
 
-- `pages/home_page.dart` (~970 lines) — main page: pinned scanner hero with accelerometer-driven tagline animation, vortex scroll effect, campaigns carousel, blogs grid, quick-action pills.
-- `pages/blog_detail_page.dart` — reads `blogDetailProvider(slug)`, strips HTML tags from body, uses `SkeletonDetailPage` while loading.
-- `pages/notifications_page.dart` — reads `notificationsProvider`, has `markAllRead()`; purely in-memory, no API call.
-- `providers/home_provider.dart` — all home Riverpod providers.
-- `data/home_repository.dart` — wraps `ApiClient`; only `fetchScanTagline()` hits a real endpoint, everything else returns `DemoData` after a fake 250ms delay (`_demoDelay()`).
-- `models/blog_model.dart` — `BlogPost`: `id, slug, title, excerpt, bodyText, mediaUrls, author, publishedAt, linkedCampaignName, views` (parses snake_case keys); `thumbnailUrl` getter.
-- `models/campaign_model.dart` — `Campaign`: `id, title, targetAmount, currentAmountRaised, description, mediaUrls, campaignStatus`; `progressPercent` getter clamped 0–1.
-- `models/banner_model.dart` — `AppBanner`: `id, title, subtitle, imageUrl, placement`. **Bug**: `fromJson` reads `json['image']`, but the backend field is `image_url` — banners parsed from a real API response would silently lose their image.
-- `models/notification_model.dart` — `AppNotificationType` enum (`drive, badge, campaign, certificate, system`); `AppNotification`: `id, type, title, body, timeLabel, read, route`.
+## 1. Overview
 
-## Page sections — real backend vs demo data
+The Home screen serves as the core discovery hub for BlueDot. It delivers personalized impact greetings, promotional banners, upcoming plantation drives, active funding campaigns, and ecological educational blogs.
+
+### Source Files (`lib/features/home/`)
+- `pages/home_page.dart` — Main dashboard: Compact App Bar, Promo Banners Carousel, Upcoming Drives carousel, Active Campaigns carousel, and Blogs grid.
+- `pages/all_blogs_page.dart` — Full-page scrollable list of all published blogs with search and category filtering.
+- `pages/blog_detail_page.dart` — Detail reading view for articles by slug (`/home/blog/:slug`).
+- `pages/notifications_page.dart` — In-app notification center with read/unread tracking.
+- `widgets/promo_banner_carousel.dart` — Auto-advancing banner slider with pagination indicators and target links.
+- `providers/home_provider.dart` — Riverpod providers (`homeFeedProvider`, `blogsProvider`, `campaignsProvider`, `blogDetailProvider`, `notificationsProvider`).
+- `data/home_repository.dart` — Network repository calling `ApiClient`.
+- `models/banner_model.dart` — `AppBanner` with priority sorting and asset rendering.
+- `models/blog_model.dart` — `BlogPost` parsing author, media, view counters, and reading time.
+- `models/campaign_model.dart` — `Campaign` tracking fundraising goals, raised amounts, and progress percentages.
+
+---
+
+## 2. Page Sections & Backend Data Sources
 
 | Section | Source | Detail |
 |---|---|---|
-| Hero camera tagline | **REAL** | `HomeRepository.fetchScanTagline()` calls `GET /api/v1/app/config`, reads `json['scan_tagline']` |
-| Banners carousel | **DEMO** | `bannersProvider` exists but is **not even watched** in `home_page.dart` — banner UI isn't rendered. Repository returns `DemoData.banners` (1 item) regardless. |
-| Campaigns carousel | **DEMO** | `home_page.dart` watches `campaignsProvider`, but `HomeRepository` returns `DemoData.campaigns` (3 items) instead of calling an API |
-| Blogs grid | **DEMO** | `home_page.dart` watches `blogsProvider`, but `HomeRepository` returns `DemoData.blogs` (3 items) instead of calling an API |
-| Notifications | **DEMO** | `notificationsProvider` is a `Notifier` seeded directly from `DemoData.notifications`; no repository/API call involved at all |
-| Stats | None found | No dedicated stats section was found in the home page code |
+| **Compact App Bar** | `currentUserProvider` | Shows user profile avatar (tappable to `/profile`), level greeting, points pill, and notification bell with unread badge. |
+| **Legal Consent Check** | `legalServiceProvider` | On initial mount, verifies `checkConsentStatus()`. If legal documents were updated, opens `PolicyUpdateSheet`. |
+| **Promo Banners Carousel** | **REAL** (`homeFeedProvider`) | Banners returned from `GET /api/v1/app/home-feed`. If the database returns 0 banners, `DemoData.banners` is used as visual placeholder. |
+| **Upcoming Events** | **REAL** (`homeFeedProvider`) | Displays upcoming plantation events. Tapping a card routes to `/action-hub/event/:id`. |
+| **Active Campaigns** | **REAL** (`homeFeedProvider`) | Displays crowdfunding campaigns with live funding progress bars. Tapping routes to `/action-hub/campaign/:id`. |
+| **Stories & Updates (Blogs)** | **REAL** (`blogsProvider` / `homeFeedProvider`) | Displays latest published articles. "View All" navigates to `/home/blogs` (`AllBlogsPage`), card tap navigates to `/home/blog/:slug`. |
+| **Scan Tagline** | **REAL** (`homeFeedProvider`) | Dynamic tagline from server config (defaults to `"Every Scan Plants a Story."`). |
+| **Notifications** | Memory / State | `notificationsProvider` maintains read/unread status across the session. |
 
-Note: `ApiConfig.campaigns`, `ApiConfig.blogs`, and `ApiConfig.banners` constants are all defined but **never called** anywhere in `home_repository.dart`. Also, `blogs`/`banners` constants point at **admin** routes (`/api/v1/admin/blogs`, `/api/v1/admin/content/banners`), which require admin auth — there are no public `/api/v1/app/*` endpoints for banners/blogs/campaigns. This is the structural reason these sections are still demo-backed: the public-facing endpoints they'd need don't exist yet.
+---
 
-## Exact API calls
+## 3. API Integrations
 
-| Call | Endpoint | Backend confirmation |
-|---|---|---|
-| `fetchScanTagline()` | `GET {baseUrl}/api/v1/app/config` (`ApiConfig.homeScreenConfig`) | `bluedot_apis/app/api/v1/app/config.py`: `@router.get("")` → mounted at `/app/config`; returns `DEFAULT_HOME_SCREEN_CONFIG` merged with stored settings, no Pydantic model |
+### 1. `GET /api/v1/app/home-feed` (`ApiConfig.homeFeed`)
+Aggregated public feed endpoint. Combines all dashboard data into a single low-latency round-trip.
 
-No other home-feature repository methods make a network call — `fetchBanners`, `fetchBlogs`, `fetchCampaigns` (or equivalent) all short-circuit to `DemoData` after `_demoDelay()`.
+**Response Structure (`HomeFeedData`):**
+```json
+{
+  "tagline": "Every Scan Plants a Story.",
+  "banners": [
+    {
+      "id": "uuid",
+      "title": "Plant for the Future",
+      "subtitle": "Join our upcoming Bangalore drive",
+      "image_url": "https://...",
+      "target_link": "/action-hub/event/...",
+      "display_order": 1
+    }
+  ],
+  "campaigns": [
+    {
+      "id": "uuid",
+      "title": "Western Ghats Reforestation",
+      "target_amount": 500000.0,
+      "current_amount_raised": 320000.0,
+      "media_urls": ["https://..."]
+    }
+  ],
+  "events": [
+    {
+      "id": "uuid",
+      "title": "Cubbon Park Green Drive",
+      "event_date": "2026-11-15T09:00:00Z",
+      "site_name": "Cubbon Park, Bangalore",
+      "media_urls": ["https://..."]
+    }
+  ],
+  "blogs": [
+    {
+      "id": "uuid",
+      "slug": "why-urban-forests-matter",
+      "title": "Why Urban Forests Matter",
+      "excerpt": "Discover how micro-forests cool metropolitan heat islands...",
+      "author": "Dr. Ramesh Kumar",
+      "media_urls": ["https://..."]
+    }
+  ]
+}
+```
 
-### Hero tagline verification (confirmed)
+### 2. `GET /api/v1/app/blogs` (`ApiConfig.appBlogs`)
+- Supports query parameters: `page`, `limit`, and `search`.
+- Returns paginated list of published `BlogPost` items for `AllBlogsPage`.
 
-- `home_repository.dart`: `static const _defaultScanTagline = 'Every Scan Plants a Story.';`
-- `fetchScanTagline()` calls `_api.get(ApiConfig.homeScreenConfig)`, reads `json['scan_tagline']`, and falls back to `_defaultScanTagline` if the call fails.
-- `home_provider.dart`: `scanTaglineProvider = FutureProvider<String>(...)` wraps this call.
-- `home_page.dart`: `final tagline = ref.watch(scanTaglineProvider).value ?? 'Every Scan Plants a Story.';` — a second, duplicated hardcoded fallback string exists directly in the widget (in addition to the one in the repository), so the literal "Every Scan Plants a Story." appears in two places in the codebase.
-- Backend confirms it: `bluedot_apis/app/api/v1/app/config.py`: `DEFAULT_HOME_SCREEN_CONFIG = {"scan_tagline": "Every Scan Plants a Story."}`, served via `@router.get("")` mounted at `/app/config`.
+### 3. `GET /api/v1/app/blogs/{slug}` (`ApiConfig.appBlogDetail(slug)`)
+- Returns the complete blog post content and media metadata for `BlogDetailPage`.
 
-## Riverpod providers (`home_provider.dart` / `home_repository.dart`)
+### 4. `GET /api/v1/app/campaigns` (`ApiConfig.campaigns`)
+- Returns active fundraising campaigns.
 
-- `homeRepositoryProvider` — `Provider<HomeRepository>`
-- `bannersProvider` — `FutureProvider<List<AppBanner>>`
-- `blogsProvider` — `FutureProvider<List<BlogPost>>`
-- `campaignsProvider` — `FutureProvider<List<Campaign>>`
-- `scanTaglineProvider` — `FutureProvider<String>`
-- `blogDetailProvider` — `FutureProvider.family<BlogPost, String>` (keyed by slug)
-- `notificationsProvider` — `NotifierProvider<NotificationsNotifier, List<AppNotification>>`
-- `unreadCountProvider` — `Provider<int>` (derived from `notificationsProvider`)
+---
 
-## Navigation
+## 4. Riverpod Providers
 
-- Camera/scan CTA on home page routes to `/scanner` → `GreenLensPage` (`app_router.dart`: `GoRoute(path: '/scanner', builder: (__, _) => const GreenLensPage())`).
-- Blog detail navigation: nested route `path: 'blog/:slug'` under `/home`, resolving to `/home/blog/:slug` → `BlogDetailPage(slug: state.pathParameters['slug']!)`.
-- No campaign detail route exists anywhere in the router — tapping a campaign card (if wired) has nowhere dedicated to go yet.
-- No banner detail/tap-through route found either.
+Defined in `lib/features/home/providers/home_provider.dart`:
 
-## TODO / demo / mock comments found
+- **`homeFeedProvider`** (`FutureProvider<HomeFeedData>`):
+  Watches `homeRepositoryProvider.fetchHomeFeed()`. Powers the primary dashboard widgets.
+- **`blogsProvider`** (`FutureProvider<List<BlogPost>>`):
+  Watches `homeRepositoryProvider.fetchBlogs()`. Powers the blogs section and `AllBlogsPage`.
+- **`campaignsProvider`** (`FutureProvider<List<Campaign>>`):
+  Watches `homeRepositoryProvider.fetchCampaigns()`.
+- **`blogDetailProvider`** (`FutureProvider.family<BlogPost, String>`):
+  Loads a specific blog post by slug or ID.
+- **`notificationsProvider`** (`NotifierProvider<NotificationsNotifier, List<AppNotification>>`):
+  Tracks local notification feed state with `.markAllRead()` and `.markRead(id)`.
+- **`unreadCountProvider`** (`Provider<int>`):
+  Computed count of unread notifications for the app-bar notification badge.
 
-No "TODO", "FIXME", "not yet", or "hardcoded" comments were found anywhere in `lib/features/home/`. All "demo" matches are direct `DemoData` usages rather than comments flagging future work:
+---
 
-- `home_provider.dart`: `import` of `DemoData`; notifications `Notifier.build()` returns `DemoData.notifications` directly.
-- `home_repository.dart`: `import` of `DemoData`; `_demoDelay()` helper (250ms artificial delay); `fetchBanners`/`fetchBlogs`/`fetchCampaigns`-equivalent methods each do `await _demoDelay(); return DemoData.x;`.
+## 5. Navigation Routes
 
-## Backend route reference
-
-- `app/api/v1/app/config.py`: `@router.get("")` → `GET /api/v1/app/config`, raw dict response, no request/response Pydantic model.
-- `app/api/v1/admin/content.py`: `@router.get("/banners", response_model=BannerListResponse)` plus POST/PATCH/DELETE/PUT-reorder; `BannerResponse` fields: `id, title, subtitle, image_url, placement, is_published, target_link, linked_campaign_id, linked_campaign_name, display_order, views, clicks, status, published_at, created_at, updated_at`.
-- `app/api/v1/admin/blogs.py`: `@router.get("", response_model=BlogListResponse)` plus POST/GET-by-id/PATCH/DELETE/PUT-reorder; `BlogResponse` fields: `id, slug, title, body_text, media_urls, is_published, author, excerpt, linked_campaign_id, linked_campaign_name, published_at, created_at, updated_at, status, views, clicks, display_order`.
-- Both blogs and banners are stored in a single `AppContent` table, differentiated by a `content_type` column — both are admin-managed content, not yet exposed via a public app-facing endpoint.
+Configured in `lib/core/router/app_router.dart`:
+- `/home` — Dashboard root inside `StatefulShellBranch(0)`
+- `/home/blogs` — `AllBlogsPage` (list of all articles)
+- `/home/blog/:slug` — `BlogDetailPage` (article reader)
+- `/notifications` — `NotificationsPage` (standalone full screen)
