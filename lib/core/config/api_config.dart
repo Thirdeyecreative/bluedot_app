@@ -110,8 +110,8 @@ class ApiConfig {
   static const String _apiPort = String.fromEnvironment('API_PORT', defaultValue: '8000');
 
   /// Developer machine Wi-Fi IPv4 address on the local network.
-  /// Updated to match current DHCP lease (192.168.1.7).
-  static const String currentLanIp = '192.168.1.7';
+  /// Updated to match current DHCP lease (192.168.1.49).
+  static const String currentLanIp = '192.168.1.49';
 
   /// Resolves the smartest local host for the current runtime platform:
   /// - Web / Desktop (Windows, macOS, Linux): 127.0.0.1
