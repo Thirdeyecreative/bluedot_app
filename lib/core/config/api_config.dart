@@ -203,6 +203,8 @@ class ApiConfig {
   static String get homeFeed => '$_app/home-feed';
   static String get campaigns => '$_app/campaigns';
   static String get donations => '$_app/donations';
+  static String get initiateDonation => '$_app/donations/initiate';
+  static String get verifyDonation => '$_app/donations/verify';
   static String get userProfile => '$_app/profile';
   static String get userCertificates => '$_app/profile/certificates';
   static String get leaderboard => '$_app/leaderboard';

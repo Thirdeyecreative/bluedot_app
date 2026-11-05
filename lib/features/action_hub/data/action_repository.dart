@@ -58,6 +58,33 @@ class ActionRepository {
     return (data as Map<String, dynamic>?) ?? {};
   }
 
+  Future<Map<String, dynamic>> initiateDonation({
+    required int amount,
+    String? campaignId,
+    String? eventId,
+    String? pan,
+    String? donorName,
+    String? occasionText,
+  }) async {
+    final body = <String, dynamic>{
+      'amount': amount,
+    };
+    if (campaignId != null && campaignId.isNotEmpty) body['campaign_id'] = campaignId;
+    if (eventId != null && eventId.isNotEmpty) body['event_id'] = eventId;
+    if (pan != null && pan.isNotEmpty) body['pan_number'] = pan;
+    if (donorName != null && donorName.isNotEmpty) body['donor_name'] = donorName;
+    if (occasionText != null && occasionText.isNotEmpty) body['occasion_text'] = occasionText;
+
+    final data = await _api.post(ApiConfig.initiateDonation, body: body, requireAuth: true);
+    return (data as Map<String, dynamic>?) ?? {};
+  }
+
+  Future<Map<String, dynamic>> verifyDonation(String orderId) async {
+    final body = <String, dynamic>{'order_id': orderId};
+    final data = await _api.post(ApiConfig.verifyDonation, body: body, requireAuth: true);
+    return (data as Map<String, dynamic>?) ?? {};
+  }
+
   Future<Map<String, dynamic>> donateForCampaign(
     String campaignId,
     int amount, {

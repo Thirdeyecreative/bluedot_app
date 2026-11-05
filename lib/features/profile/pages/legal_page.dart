@@ -297,9 +297,20 @@ class TermsPage extends StatelessWidget {
           ),
           LegalSection(
             'Donations & 80G Receipts',
-            'Donations made through the app are routed to verified restoration campaigns. 80G tax '
-                'receipts are issued only against a valid PAN and successfully settled payments. Donations '
-                'are generally non-refundable except as required by law.',
+            'Donations made through the app are routed directly to verified ecological restoration campaigns. '
+                'Under Section 80G of the Income Tax Act, 80G tax certificates are generated against a valid '
+                'PAN and settled payment.',
+          ),
+          LegalSection(
+            'Cancellation & Refund Policy',
+            'Contributions made towards restoration causes are generally non-refundable once committed to ground '
+                'plantation. However, if a duplicate or erroneous charge occurs due to a technical error, donors '
+                'may request a cancellation and refund within 7 days of the transaction by contacting '
+                'support@bluedot.eco with their Donation Order ID.\n\n'
+                'Upon verification and administrative approval, refunds are credited back to the original '
+                'payment source (UPI bank account, debit card, or credit card) within 5–7 business days via the '
+                'Cashfree Payment Gateway. Any associated 80G tax certificate and impact points (XP) will be '
+                'cancelled upon refund settlement.',
           ),
           LegalSection(
             'Rewards & Points',

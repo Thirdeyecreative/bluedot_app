@@ -135,32 +135,54 @@ Refunds are supported for accidental donations or cancellation requests:
 ## 7. Implementation Tracking Checklist
 
 ### 🟢 Completed & Verified
+- [x] **Complete Payment State Lifecycle Handling (Success, Pending, Under Review, Failed, Cancelled, Refunded)**:
+  - [x] Backend `/verify` endpoint maps all Cashfree gateway order statuses (`PAID`, `ACTIVE`/`PENDING`, `FLAGGED`, `FAILED`/`EXPIRED`, `REFUNDED`) into clear, non-panicking JSON responses.
+  - [x] Asynchronous Webhook listener handles `PAYMENT_SUCCESS_WEBHOOK`, `PAYMENT_FAILED_WEBHOOK`, `PAYMENT_USER_DROPPED_WEBHOOK`, and `REFUND_SUCCESS_WEBHOOK`.
+  - [x] Flutter client interactive Pending dialog (`AppFeedback.showPaymentPending`) with a live "Check Status Now" button that verifies bank confirmation on demand.
+  - [x] Dedicated Payment Failed & Cancelled dialog (`AppFeedback.showPaymentFailed`) with transparent money-safety assurance (24–48 hr auto-refund).
+  - [x] 80G Tax Vault (`settings_page.dart`) updated with dynamic color-coded state badges and an inline "Verify Bank Settlement" action button for unresolved pending orders.
 - [x] **Database Schema**: `Campaign`, `Donation`, `Receipt80G`, and `Refund` SQLAlchemy models (`models/financial.py`).
 - [x] **80G Tax Vault Backend**: Historical donation retrieval with PAN status and receipt links (`GET /api/v1/app/donations`).
-- [x] **Admin Finance Endpoints**: Admin audit logging and manual refund request handling (`api/v1/admin/finance.py`).
+- [x] **Admin Finance Endpoints & Cashfree Refund Integration**:
+  - [x] Admin audit logging and refund tracking (`api/v1/admin/finance.py`).
+  - [x] Automated bank refund execution through `cashfree_service.initiate_refund(...)`.
+  - [x] Ledger rollback (deducting campaign raised funds and reversing user XP upon refund approval).
+- [x] **User-Facing Legal Refund Policy**: Official Cancellation & Refund Policy added to App Terms & Legal (`legal_page.dart`) satisfying Indian PG & RBI compliance.
 - [x] **Flutter UI Flow**: Interactive `DonationSheet` with amount selectors (₹500, ₹800, ₹1500, Custom), PAN validation, and XP preview (`action_hub_page.dart`).
+- [x] **Background Data Synchronization**: Real-time multi-provider reload (`Future.wait`) running behind the "Thank You! 🌿" modal so campaign funds, progress bars, and user XP update instantly.
 - [x] **Cashfree Account Activation**: Payment Gateway and Secure ID activated on Cashfree Merchant Dashboard.
+- [x] **Cashfree Backend Configuration**: Added `CASHFREE_APP_ID`, `CASHFREE_SECRET_KEY`, `CASHFREE_ENV`, and `cashfree_base_url` to `bluedot_apis/app/core/config.py` and `.env`.
+- [x] **Live Sandbox Authentication**: Tested and verified live sandbox communication (`create_order` & `get_order_status` return HTTP 200 with active session).
+- [x] **Backend `CashfreeService`**: Async client built in `bluedot_apis/app/services/cashfree_service.py` supporting order creation, direct status verification, refunds, and HMAC SHA-256 webhook validation.
+- [x] **Payment API Endpoints**:
+  - [x] `POST /api/v1/app/donations/initiate`: Creates pending donation and fetches Cashfree `payment_session_id`.
+  - [x] `POST /api/v1/app/donations/verify`: Double-verifies bank settlement with Cashfree using row-level locking (`with_for_update`) and commits XP + 80G receipt idempotently.
+  - [x] `POST /api/v1/app/donations/webhook`: Public asynchronous webhook endpoint with HMAC signature checking.
+- [x] **Flutter Cashfree SDK**:
+  - [x] `flutter_cashfree_pg_sdk` installed in `bluedot_app/pubspec.yaml`.
+  - [x] `AndroidManifest.xml` updated with package queries for Google Pay, PhonePe, Paytm, BHIM, Airtel, and `upi://` URI schemes.
+  - [x] `CashfreePaymentService` created in `lib/core/services/cashfree_payment_service.dart` with BlueDot green styling and desktop/simulator mock fallback.
+  - [x] `ActionRepository` updated with `initiateDonation` and `verifyDonation`.
+  - [x] `DonationSheet` in `action_hub_page.dart` and `_DonationTile` in `event_detail_page.dart` connected to the full Cashfree initiation, checkout, and verification pipeline.
 
 ---
 
 ### 🟡 In Progress / Next Up
-- [ ] **Cashfree Credentials Configuration**: Add `CASHFREE_APP_ID`, `CASHFREE_SECRET_KEY`, and `CASHFREE_ENV` to `bluedot_apis/.env` and `app/core/config.py`.
-- [ ] **Backend `CashfreeService`**: Build async client in `bluedot_apis/app/services/cashfree_service.py` to create orders, verify payments, and compute HMAC signatures.
-- [ ] **API Endpoints**:
-  - [ ] `POST /api/v1/app/donations/initiate`: Create pending donation and request Cashfree session ID.
-  - [ ] `POST /api/v1/app/donations/verify`: Verify payment with Cashfree and atomically settle XP + 80G.
-  - [ ] `POST /api/v1/webhooks/cashfree`: Asynchronous webhook handler for server-to-server notifications.
-- [ ] **Flutter SDK Integration**:
-  - [ ] Add `flutter_cashfree_pg_sdk` to `bluedot_app/pubspec.yaml`.
-  - [ ] Update `AndroidManifest.xml` with UPI Intent package visibility queries (`tez`, `phonepe`, `paytmmp`).
-  - [ ] Connect `ActionRepository` and `DonationSheet` to trigger native Cashfree payment checkout.
+- [ ] **End-to-End Test Run**: Perform a test donation via the Flutter mobile app to see the native checkout and celebrate with the Thank You modal!
 
 ---
 
 ### 🔴 Testing & Go-Live Verification
-- [ ] End-to-end sandbox test using Cashfree Test UPI and Simulator.
-- [ ] Verify atomic rollback by simulating database timeouts during settlement.
-- [ ] Verify idempotency by testing repeated verification calls.
-- [ ] Verify 80G receipt PDF generation on successful donation.
-- [ ] Switch from `TEST` to `PROD` credentials before public release.
+- [ ] Verify test transaction using Cashfree Test UPI simulator.
+- [ ] Verify atomic rollback if database error occurs.
+- [ ] Confirm receipt generated in 80G Tax Vault after payment.
+- [ ] Switch `CASHFREE_ENV=PROD` with live production credentials.
+
+---
+
+### 🔴 Testing & Go-Live Verification
+- [ ] Verify test transaction using Cashfree Test UPI simulator.
+- [ ] Verify atomic transaction rollback if database error occurs.
+- [ ] Confirm receipt generated in 80G Tax Vault after payment.
+- [ ] Switch `CASHFREE_ENV=PROD` with live production credentials.
 

@@ -10,6 +10,8 @@ import '../../../core/widgets/server_settings_modal.dart';
 import '../../auth/providers/auth_provider.dart';
 import '../../auth/data/auth_repository.dart';
 import '../../legal/services/legal_service.dart';
+import '../../action_hub/data/action_repository.dart';
+import '../../../core/widgets/app_feedback.dart';
 
 import 'package:permission_handler/permission_handler.dart';
 
@@ -740,16 +742,85 @@ class TaxVaultPage extends ConsumerWidget {
   }
 }
 
-class _DonationReceiptCard extends StatelessWidget {
+class _DonationReceiptCard extends ConsumerStatefulWidget {
   final Map<String, dynamic> data;
   const _DonationReceiptCard({required this.data});
 
   @override
+  ConsumerState<_DonationReceiptCard> createState() => _DonationReceiptCardState();
+}
+
+class _DonationReceiptCardState extends ConsumerState<_DonationReceiptCard> {
+  bool _verifying = false;
+
+  Color _badgeColor(String status) {
+    switch (status) {
+      case 'Receipt Ready':
+        return AppColors.forestGreen;
+      case 'Generating':
+        return AppColors.primaryBlue;
+      case 'Pending PAN':
+        return AppColors.warningAmber;
+      case 'Pending Confirmation':
+      case 'Pending':
+        return Colors.amber.shade800;
+      case 'Under Review':
+        return Colors.teal;
+      case 'Refunded':
+        return Colors.purple.shade700;
+      case 'Failed':
+      case 'Cancelled':
+      default:
+        return AppColors.errorRed;
+    }
+  }
+
+  Future<void> _verifyOrder(String orderId) async {
+    setState(() => _verifying = true);
+    try {
+      final repo = ref.read(actionRepositoryProvider);
+      final res = await repo.verifyDonation(orderId);
+      final status = (res['status'] as String? ?? '').toLowerCase();
+      if (!mounted) return;
+
+      if (status == 'success' || res['payment_status'] == 'Completed') {
+        AppFeedback.showSuccess(context, 'Payment confirmed! 80G receipt is ready.');
+        ref.refresh(donationsProvider);
+      } else if (status == 'pending') {
+        AppFeedback.showPaymentPending(
+          context,
+          reason: res['message'] ?? 'Still awaiting bank confirmation.',
+          onCheckStatus: () async {
+            final retry = await repo.verifyDonation(orderId);
+            final ok = retry['status'] == 'success' || retry['payment_status'] == 'Completed';
+            if (ok) ref.refresh(donationsProvider);
+            return ok;
+          },
+        );
+      } else {
+        AppFeedback.showPaymentFailed(
+          context,
+          reason: res['message'] ?? 'Transaction could not be confirmed.',
+        );
+        ref.refresh(donationsProvider);
+      }
+    } catch (e) {
+      if (!mounted) return;
+      AppFeedback.showError(context, e);
+    } finally {
+      if (mounted) setState(() => _verifying = false);
+    }
+  }
+
+  @override
   Widget build(BuildContext context) {
-    final status = data['status'] ?? 'Pending';
+    final status = (widget.data['status'] as String?) ?? 'Pending';
     final isReady = status == 'Receipt Ready';
-    final amount = data['amount'] != null ? (data['amount'] as num).toInt() : 0;
-    final receiptId = data['receipt_id'] ?? data['id'];
+    final isPendingBank = status == 'Pending Confirmation' || status == 'Pending';
+    final amount = widget.data['amount'] != null ? (widget.data['amount'] as num).toInt() : 0;
+    final receiptId = widget.data['receipt_id'] ?? widget.data['id'];
+    final orderId = widget.data['order_id'] as String?;
+    final color = _badgeColor(status);
 
     return Container(
       margin: const EdgeInsets.only(bottom: 12),
@@ -765,18 +836,21 @@ class _DonationReceiptCard extends StatelessWidget {
           Row(
             children: [
               Expanded(
-                child: Text(data['campaign'] ?? 'General Donation', style: const TextStyle(fontWeight: FontWeight.w700, fontSize: 14)),
+                child: Text(
+                  widget.data['campaign'] ?? 'General Donation',
+                  style: const TextStyle(fontWeight: FontWeight.w700, fontSize: 14),
+                ),
               ),
               Container(
                 padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
                 decoration: BoxDecoration(
-                  color: (isReady ? AppColors.forestGreen : AppColors.primaryYellow).withAlpha(20),
+                  color: color.withAlpha(25),
                   borderRadius: BorderRadius.circular(8),
                 ),
                 child: Text(
-                  status as String,
+                  status,
                   style: TextStyle(
-                    color: isReady ? AppColors.forestGreen : AppColors.warningAmber,
+                    color: color,
                     fontSize: 11,
                     fontWeight: FontWeight.w700,
                   ),
@@ -789,14 +863,14 @@ class _DonationReceiptCard extends StatelessWidget {
             children: [
               Text('₹$amount', style: const TextStyle(fontWeight: FontWeight.w700, color: AppColors.primaryBlue, fontSize: 16)),
               const SizedBox(width: 12),
-              Text(data['date'] as String, style: const TextStyle(color: AppColors.textMedium, fontSize: 13)),
+              Text(widget.data['date'] as String, style: const TextStyle(color: AppColors.textMedium, fontSize: 13)),
             ],
           ),
           if (receiptId != null) ...[
             const SizedBox(height: 4),
             Text(receiptId as String, style: const TextStyle(color: AppColors.textLight, fontSize: 11, fontFamily: 'monospace')),
           ],
-          if (isReady && data['receipt_url'] != null) ...[
+          if (isReady && widget.data['receipt_url'] != null) ...[
             const SizedBox(height: 14),
             SizedBox(
               width: double.infinity,
@@ -812,6 +886,30 @@ class _DonationReceiptCard extends StatelessWidget {
                 style: ElevatedButton.styleFrom(
                   backgroundColor: AppColors.forestGreen,
                   shape: const StadiumBorder(),
+                ),
+              ),
+            ),
+          ] else if (isPendingBank && orderId != null && orderId.isNotEmpty) ...[
+            const SizedBox(height: 12),
+            SizedBox(
+              width: double.infinity,
+              height: 38,
+              child: OutlinedButton.icon(
+                onPressed: _verifying ? null : () => _verifyOrder(orderId),
+                icon: _verifying
+                    ? const SizedBox(
+                        width: 14,
+                        height: 14,
+                        child: CircularProgressIndicator(strokeWidth: 2, color: AppColors.primaryBlue),
+                      )
+                    : const Icon(Icons.refresh_rounded, size: 16, color: AppColors.primaryBlue),
+                label: Text(
+                  _verifying ? 'Checking with Bank...' : 'Verify Bank Settlement',
+                  style: const TextStyle(fontSize: 12, fontWeight: FontWeight.w700, color: AppColors.primaryBlue),
+                ),
+                style: OutlinedButton.styleFrom(
+                  shape: const StadiumBorder(),
+                  side: const BorderSide(color: AppColors.primaryBlue),
                 ),
               ),
             ),

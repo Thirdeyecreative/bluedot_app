@@ -3,6 +3,7 @@ import 'package:flutter_animate/flutter_animate.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import '../../../core/constants/app_colors.dart';
+import '../../../core/services/cashfree_payment_service.dart';
 import '../../../core/widgets/app_feedback.dart';
 import '../../../core/widgets/media_carousel.dart';
 import '../../../core/widgets/skeletons.dart';
@@ -699,31 +700,146 @@ class _DonationSheetState extends ConsumerState<DonationSheet> {
     setState(() => _isSubmitting = true);
     try {
       final repo = ref.read(actionRepositoryProvider);
-      final res = await repo.donateForCampaign(
-        widget.campaign.id,
-        amount,
+
+      // Step 1: Initiate donation and obtain Cashfree payment session
+      final initRes = await repo.initiateDonation(
+        amount: amount,
+        campaignId: widget.campaign.id,
         pan: pan.isNotEmpty ? pan : null,
       );
 
-      final xpEarned = res['xp_awarded'] ?? (100 + (amount ~/ 10));
+      final orderId = initRes['order_id'] as String?;
+      final sessionId = initRes['payment_session_id'] as String?;
+      final env = (initRes['environment'] as String?) ?? 'TEST';
+      final isMock = initRes['is_mock'] == true;
 
-      // Invalidate and refresh user profile and donation tax vault
-      await ref.read(authNotifierProvider.notifier).refreshProfile();
-      ref.invalidate(donationsProvider);
-      ref.invalidate(campaignsProvider);
+      if (orderId == null) {
+        throw 'Failed to initiate donation order.';
+      }
 
+      // Step 2: Launch Cashfree Native Checkout (UPI Intent / Cards)
+      final cfService = CashfreePaymentService();
+      final cfResult = await cfService.startPayment(
+        orderId: orderId,
+        paymentSessionId: sessionId ?? '',
+        environment: env,
+        isMock: isMock,
+      );
+
+      if (!cfResult.isSuccess) {
+        if (!mounted) return;
+        await AppFeedback.showPaymentFailed(
+          context,
+          reason: cfResult.errorMessage ??
+              (cfResult.isCancelled
+                  ? 'Payment was cancelled.'
+                  : 'Payment could not be completed.'),
+          wasCancelled: cfResult.isCancelled,
+        );
+        return;
+      }
+
+      // Step 3: Double-Verify Payment directly with Backend
+      final verifyRes = await repo.verifyDonation(orderId);
+      final verifyStatus = (verifyRes['status'] as String? ?? '').toLowerCase();
+      final isSettled = verifyStatus == 'success' || verifyRes['payment_status'] == 'Completed';
+
+      if (!isSettled) {
+        if (!mounted) return;
+
+        if (verifyStatus == 'pending') {
+          // Reassuring, interactive pending state dialog
+          final settledOnRetry = await AppFeedback.showPaymentPending(
+            context,
+            reason: (verifyRes['message'] as String?) ??
+                'Payment is awaiting confirmation from your bank or UPI app.',
+            onCheckStatus: () async {
+              final retryRes = await repo.verifyDonation(orderId);
+              return retryRes['status'] == 'success' || retryRes['payment_status'] == 'Completed';
+            },
+          );
+
+          if (settledOnRetry == true) {
+            // Succeeded on manual retry!
+            if (!mounted) return;
+            Navigator.pop(context);
+            final refreshFuture = Future.wait([
+              ref.read(authNotifierProvider.notifier).refreshProfile(),
+              ref.refresh(campaignsProvider.future),
+              ref.refresh(homeFeedProvider.future),
+              ref.refresh(donationsProvider.future),
+            ]).catchError((e) => <dynamic>[]);
+
+            await AppFeedback.showThankYou(
+              context,
+              title: 'Thank You! 🌿',
+              message: 'Your donation of ₹$amount towards "${widget.campaign.title}" was confirmed!',
+              xpLabel: '+${100 + (amount ~/ 10)} XP earned!',
+            );
+            await refreshFuture;
+            return;
+          }
+
+          // User opted to check later
+          if (!mounted) return;
+          Navigator.pop(context);
+          return;
+        } else if (verifyStatus == 'under_review') {
+          await AppFeedback.showPaymentPending(
+            context,
+            isUnderReview: true,
+            reason: (verifyRes['message'] as String?) ??
+                'Payment is under routine review by the banking network.',
+          );
+          if (!mounted) return;
+          Navigator.pop(context);
+          return;
+        } else {
+          // Explicitly failed or expired
+          await AppFeedback.showPaymentFailed(
+            context,
+            reason: (verifyRes['message'] as String?) ??
+                'Payment could not be completed by your bank.',
+            wasCancelled: false,
+          );
+          return;
+        }
+      }
+      final xpEarned = verifyRes['xp_awarded'] ?? (100 + (amount ~/ 10));
+
+      // Dismiss the donation sheet first so the user returns to the campaign view
       if (!mounted) return;
       Navigator.pop(context);
 
+      // Trigger immediate background sync for all impacted providers:
+      // Campaign progress, Home feed activity, User Profile XP, and 80G Tax Vault
+      final refreshFuture = Future.wait([
+        ref.read(authNotifierProvider.notifier).refreshProfile(),
+        ref.refresh(campaignsProvider.future),
+        ref.refresh(homeFeedProvider.future),
+        ref.refresh(donationsProvider.future),
+      ]).catchError((e) {
+        debugPrint('[DonationSync] Background refresh error: $e');
+        return <dynamic>[];
+      });
+
+      // Show the celebratory Thank You popup.
+      // While this popup is visible, the background page re-renders with updated numbers!
       await AppFeedback.showThankYou(
         context,
         title: 'Thank You! 🌿',
         message: 'Your donation of ₹$amount towards "${widget.campaign.title}" was successful!',
         xpLabel: '+$xpEarned XP earned!',
       );
+
+      await refreshFuture;
     } catch (e) {
       if (!mounted) return;
-      AppFeedback.showError(context, e);
+      await AppFeedback.showPaymentFailed(
+        context,
+        reason: AppFeedback.messageForError(e),
+        wasCancelled: false,
+      );
     } finally {
       if (mounted) setState(() => _isSubmitting = false);
     }
