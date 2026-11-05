@@ -24,6 +24,7 @@ Every feature in the application has been verified against the live source code 
 | [10_database_schema_trees.md](10_database_schema_trees.md) | **Database Schema (Trees & Operations)** | **100% Real Backend.** Comprehensive entity-relationship diagram, PostGIS spatial geometries (`POINT`, `POLYGON`), PostGIS `ST_DWithin` deduplication, and single-source-of-truth `tree_species` encyclopedia with JSONB fun facts. |
 | [11_app_architecture_and_directory.md](11_app_architecture_and_directory.md) | **App Architecture & Directory** | Modular feature-first architecture, Riverpod state management, GoRouter routing, `media_kit` native C++ video engine, and skeleton loaders. |
 | [12_legal_and_compliance.md](12_legal_and_compliance.md) | **Legal & Privacy Compliance** | **100% Real Backend.** Dynamic markdown document rendering for Terms and Privacy, affirmative consent recording on login, retroactive `PolicyUpdateSheet` for policy updates, and GDPR/DPDP data export & deletion requests (`POST /api/v1/app/legal/privacy-request`). |
+| [13_cashfree_payment_gateway.md](13_cashfree_payment_gateway.md) | **Cashfree Payment Gateway** | **In Progress.** Zero-trust client-server-gateway architecture, Cashfree PG v2023-08-01, ACID atomic transactions, CAP theorem (CP prioritized), HMAC-SHA256 webhooks, UPI Intent SDK checkout, and automated refunds. |
 
 ---
 
