@@ -89,6 +89,21 @@ class ApiClient {
     return _handle(res);
   }
 
+  Future<dynamic> patch(
+    String url, {
+    dynamic body,
+    dynamic data,
+    bool requireAuth = true,
+  }) async {
+    final payload = body ?? data;
+    final res = await _guard(() async => http.patch(
+          Uri.parse(url),
+          headers: await _headers(requireAuth: requireAuth),
+          body: payload != null ? jsonEncode(payload) : null,
+        ));
+    return _handle(res);
+  }
+
   Future<dynamic> delete(
     String url, {
     bool requireAuth = true,

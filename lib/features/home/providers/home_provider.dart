@@ -1,5 +1,7 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import '../../../core/config/api_config.dart';
 import '../../../core/demo/demo_data.dart';
+import '../../../core/services/api_client.dart';
 import '../data/home_repository.dart';
 import '../models/blog_model.dart';
 import '../models/campaign_model.dart';
@@ -27,14 +29,41 @@ final notificationsProvider =
 
 class NotificationsNotifier extends Notifier<List<AppNotification>> {
   @override
-  List<AppNotification> build() => DemoData.notifications;
+  List<AppNotification> build() {
+    _loadLiveNotifications();
+    return DemoData.notifications;
+  }
+
+  Future<void> _loadLiveNotifications() async {
+    try {
+      final client = ref.read(apiClientProvider);
+      final res = await client.get(ApiConfig.notifications, requireAuth: true);
+      final list = res['data'] as List<dynamic>? ?? [];
+      if (list.isNotEmpty) {
+        state = list.map((e) => AppNotification.fromJson(e as Map<String, dynamic>)).toList();
+      }
+    } catch (_) {
+      // Fallback gracefully to DemoData if offline or unauthenticated
+    }
+  }
 
   int get unreadCount => state.where((n) => !n.read).length;
 
-  void markAllRead() => state = [for (final n in state) n.copyWith(read: true)];
+  Future<void> markAllRead() async {
+    state = [for (final n in state) n.copyWith(read: true)];
+    try {
+      final client = ref.read(apiClientProvider);
+      await client.post(ApiConfig.markAllNotificationsRead, requireAuth: true);
+    } catch (_) {}
+  }
 
-  void markRead(String id) =>
-      state = [for (final n in state) if (n.id == id) n.copyWith(read: true) else n];
+  Future<void> markRead(String id) async {
+    state = [for (final n in state) if (n.id == id) n.copyWith(read: true) else n];
+    try {
+      final client = ref.read(apiClientProvider);
+      await client.patch(ApiConfig.markNotificationRead(id), requireAuth: true);
+    } catch (_) {}
+  }
 }
 
 final unreadCountProvider = Provider<int>((ref) {

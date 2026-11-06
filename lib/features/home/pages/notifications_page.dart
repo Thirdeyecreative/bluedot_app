@@ -157,6 +157,8 @@ class _NotificationCard extends ConsumerWidget {
         return const _NotifStyle(Icons.volunteer_activism_rounded, AppColors.terracotta);
       case AppNotificationType.certificate:
         return const _NotifStyle(Icons.verified_rounded, AppColors.primaryBlue);
+      case AppNotificationType.donation:
+        return const _NotifStyle(Icons.favorite_rounded, AppColors.forestGreen);
       case AppNotificationType.system:
         return const _NotifStyle(Icons.eco_rounded, AppColors.slateBlue);
     }

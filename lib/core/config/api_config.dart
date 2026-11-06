@@ -207,6 +207,9 @@ class ApiConfig {
   static String get verifyDonation => '$_app/donations/verify';
   static String get userProfile => '$_app/profile';
   static String get userCertificates => '$_app/profile/certificates';
+  static String get notifications => '$_app/notifications';
+  static String get markAllNotificationsRead => '$_app/notifications/mark-all-read';
+  static String markNotificationRead(String id) => '$_app/notifications/$id/read';
   static String get leaderboard => '$_app/leaderboard';
   static String get homeScreenConfig => '$_app/config';
   static String get appBanners => '$_app/banners';
