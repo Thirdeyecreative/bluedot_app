@@ -5,6 +5,7 @@ import 'package:go_router/go_router.dart';
 import 'package:url_launcher/url_launcher.dart';
 import '../../../core/constants/app_colors.dart';
 import '../../../core/services/api_client.dart';
+import '../../../core/services/storage_service.dart';
 import '../../../core/config/api_config.dart';
 import '../../../core/widgets/server_settings_modal.dart';
 import '../../auth/providers/auth_provider.dart';
@@ -876,10 +877,34 @@ class _DonationReceiptCardState extends ConsumerState<_DonationReceiptCard> {
               width: double.infinity,
               height: 40,
               child: ElevatedButton.icon(
-                onPressed: () {
-                  ScaffoldMessenger.of(context).showSnackBar(
-                    SnackBar(content: Text('Downloading receipt $receiptId...'), backgroundColor: AppColors.forestGreen),
-                  );
+                onPressed: () async {
+                  final rawUrl = widget.data['receipt_url'] as String? ?? '';
+                  final recId = widget.data['receipt_id'] as String? ?? widget.data['id'] as String? ?? '';
+                  String finalUrl = rawUrl;
+                  if (finalUrl.startsWith('/')) {
+                    finalUrl = '${ApiConfig.baseUrl}$finalUrl';
+                  } else if (!finalUrl.startsWith('http')) {
+                    finalUrl = '${ApiConfig.baseUrl}/api/v1/app/donations/receipts/$recId/download';
+                  }
+                  try {
+                    final token = await ref.read(storageServiceProvider).getToken();
+                    if (token != null && token.isNotEmpty) {
+                      final sep = finalUrl.contains('?') ? '&' : '?';
+                      finalUrl = '$finalUrl${sep}token=$token';
+                    }
+                    final uri = Uri.parse(finalUrl);
+                    if (await canLaunchUrl(uri)) {
+                      await launchUrl(uri, mode: LaunchMode.externalApplication);
+                    } else {
+                      if (context.mounted) {
+                        AppFeedback.showError(context, 'Could not open receipt link.');
+                      }
+                    }
+                  } catch (e) {
+                    if (context.mounted) {
+                      AppFeedback.showError(context, 'Error downloading receipt: $e');
+                    }
+                  }
                 },
                 icon: const Icon(Icons.picture_as_pdf_rounded, size: 16),
                 label: const Text('Download 80G PDF', style: TextStyle(fontSize: 13)),

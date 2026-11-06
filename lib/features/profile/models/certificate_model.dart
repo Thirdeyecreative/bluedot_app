@@ -7,6 +7,8 @@ class VolunteerCertificate {
   final int hours;
   final String role; // e.g. Volunteer, Team Lead
   final String certificateNo;
+  final String? downloadUrl;
+  final String? verificationUrl;
 
   const VolunteerCertificate({
     required this.id,
@@ -17,5 +19,7 @@ class VolunteerCertificate {
     required this.hours,
     this.role = 'Volunteer',
     required this.certificateNo,
+    this.downloadUrl,
+    this.verificationUrl,
   });
 }

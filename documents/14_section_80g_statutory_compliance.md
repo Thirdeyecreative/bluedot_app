@@ -150,5 +150,6 @@ The export endpoint (`GET /api/v1/admin/finance/export/form-10bd`) generates a C
 - [x] CBDT Form 10BD Exporter: Implemented `GET /api/v1/admin/finance/export/form-10bd`.
 - [x] Form 10BE Filing Updater: Implemented `POST /api/v1/admin/finance/receipts/mark-10bd-filed`.
 - [x] Admin UI Integration: Added "Export Form 10BD (Income Tax)" button and dynamic PDF download links in `bluedot_admin_panel/frontend/src/pages/Finance.jsx`.
+- [x] Admin Form 10BE ARN Verification Modal: Added interactive modal in `Finance.jsx` with financial year selection, Govt ARN input, and real-time Rule 18AB status badges in the receipts ledger.
 - [x] ACID & CAP Theorem Verified: Atomicity, row-locking isolation, consistency invariants, and CP network-partition resilience confirmed.
 

@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_animate/flutter_animate.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../core/constants/app_colors.dart';
+import '../../../core/services/storage_service.dart';
 import '../../../core/widgets/skeletons.dart';
 import '../../auth/providers/auth_provider.dart';
 import '../models/certificate_model.dart';
@@ -223,9 +224,11 @@ class _CertificateSheetState extends ConsumerState<_CertificateSheet> {
     if (_isDownloading || _isSharing) return;
     setState(() => _isDownloading = true);
     try {
+      final token = await ref.read(storageServiceProvider).getToken();
       await CertificatePdfService.downloadCertificate(
         cert: widget.cert,
         recipientName: recipientName,
+        token: token,
       );
     } catch (e) {
       if (mounted) {
@@ -245,9 +248,11 @@ class _CertificateSheetState extends ConsumerState<_CertificateSheet> {
     if (_isDownloading || _isSharing) return;
     setState(() => _isSharing = true);
     try {
+      final token = await ref.read(storageServiceProvider).getToken();
       await CertificatePdfService.shareCertificate(
         cert: widget.cert,
         recipientName: recipientName,
+        token: token,
       );
     } catch (e) {
       if (mounted) {

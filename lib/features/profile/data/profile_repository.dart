@@ -46,6 +46,8 @@ class ProfileRepository {
         hours: e['hours'] as int,
         role: e['role'] as String,
         certificateNo: e['certificateNo'] as String,
+        downloadUrl: e['downloadUrl'] as String? ?? e['download_url'] as String?,
+        verificationUrl: e['verificationUrl'] as String? ?? e['verification_url'] as String?,
       )).toList();
     } catch (e) {
       // Fallback to demo data if offline or no backend

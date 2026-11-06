@@ -1,7 +1,9 @@
 import 'dart:typed_data';
+import 'package:http/http.dart' as http;
 import 'package:pdf/pdf.dart';
 import 'package:pdf/widgets.dart' as pw;
 import 'package:printing/printing.dart';
+import '../../../core/config/api_config.dart';
 import '../models/certificate_model.dart';
 
 class CertificatePdfService {
@@ -324,17 +326,51 @@ class CertificatePdfService {
     );
   }
 
+  /// Fetches the server's official verified PDF with BlueDot seal and verification QR code,
+  /// falling back gracefully to local client rendering if offline.
+  static Future<Uint8List> getCertificateBytes({
+    required VolunteerCertificate cert,
+    required String recipientName,
+    String? token,
+  }) async {
+    if (cert.downloadUrl != null && cert.downloadUrl!.isNotEmpty) {
+      try {
+        final cleanBase = ApiConfig.baseUrl.endsWith('/')
+            ? ApiConfig.baseUrl.substring(0, ApiConfig.baseUrl.length - 1)
+            : ApiConfig.baseUrl;
+        final endpoint = cert.downloadUrl!.startsWith('/') ? cert.downloadUrl! : '/${cert.downloadUrl!}';
+        var finalUrl = '$cleanBase$endpoint';
+        final headers = <String, String>{};
+        if (token != null && token.isNotEmpty) {
+          headers['Authorization'] = 'Bearer $token';
+          final sep = finalUrl.contains('?') ? '&' : '?';
+          finalUrl = '$finalUrl${sep}token=$token';
+        }
+        final res = await http.get(Uri.parse(finalUrl), headers: headers).timeout(const Duration(seconds: 8));
+        if (res.statusCode == 200 && res.bodyBytes.isNotEmpty) {
+          return res.bodyBytes;
+        }
+      } catch (_) {
+        // Fall back gracefully to local client rendering
+      }
+    }
+    return generatePdf(cert: cert, recipientName: recipientName);
+  }
+
   /// Opens the native platform print and PDF viewer dialog, allowing the user
   /// to save the PDF directly to storage (Downloads, iCloud, Drive, etc.).
   static Future<void> downloadCertificate({
     required VolunteerCertificate cert,
     required String recipientName,
+    String? token,
   }) async {
+    final pdfBytes = await getCertificateBytes(
+      cert: cert,
+      recipientName: recipientName,
+      token: token,
+    );
     await Printing.layoutPdf(
-      onLayout: (PdfPageFormat format) async => generatePdf(
-        cert: cert,
-        recipientName: recipientName,
-      ),
+      onLayout: (PdfPageFormat format) async => pdfBytes,
       name: 'BlueDot_Certificate_${cert.certificateNo}.pdf',
     );
   }
@@ -343,10 +379,12 @@ class CertificatePdfService {
   static Future<void> shareCertificate({
     required VolunteerCertificate cert,
     required String recipientName,
+    String? token,
   }) async {
-    final bytes = await generatePdf(
+    final bytes = await getCertificateBytes(
       cert: cert,
       recipientName: recipientName,
+      token: token,
     );
     await Printing.sharePdf(
       bytes: bytes,

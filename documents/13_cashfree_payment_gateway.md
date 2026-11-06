@@ -178,3 +178,30 @@ For full details on Income Tax Rule 18AB compliance, Form 10BD annual statement 
   - [x] Form 10BD CSV export endpoint for Income Tax e-Filing Portal.
   - [x] Form 10BE ARN updater and tracking.
   - [x] Direct PDF streaming endpoints for app donors and admin panel.
+- [x] **Automated Background Reconciliation Worker (Self-Healing Ledger)**:
+  - [x] Background asyncio daemon running every 10 minutes spawned on FastAPI startup (`main.py`).
+  - [x] Sweeps pending/active/under-review donations created within the last 48 hours.
+  - [x] Executes full atomic settlement (XP credit, campaign sync, 80G tax receipt, activity feed, Redis cache bust) for confirmed payments.
+  - [x] Automatically expires sessions older than 30 minutes with zero payment attempts.
+  - [x] Global manual sync endpoint `POST /api/v1/admin/operations/reconcile-gateway`.
+
+---
+
+### 🟡 Future Production & Cloud Deployment Tasks (To-Do for Later)
+- [ ] **GCP Cloud Scheduler Setup for Serverless Reconciliation**:
+  - When Cloud Run scales to zero instances during periods of inactivity, the internal Python `asyncio` task sleeps with the container.
+  - Set up a GCP Cloud Scheduler HTTP cron job to hit `POST /api/v1/admin/operations/reconcile-gateway` every 10 minutes (`*/10 * * * *`) so Cloud Run wakes up, sweeps the ledger, and returns to sleep.
+  - Setup Command:
+    ```bash
+    gcloud scheduler jobs create http bluedot-gateway-reconciliation \
+        --schedule="*/10 * * * *" \
+        --uri="https://bluedot-backend-426166329141.asia-south1.run.app/api/v1/admin/operations/reconcile-gateway" \
+        --http-method=POST \
+        --headers="Content-Type=application/json" \
+        --time-zone="Asia/Kolkata" \
+        --oidc-service-account-email="<service-account>@bluedot.iam.gserviceaccount.com"
+    ```
+- [ ] **Switch Cashfree to Live Production**:
+  - Update `CASHFREE_ENV=PROD` in GCP Cloud Run environment variables / Secret Manager.
+  - Replace sandbox API keys with live production `CASHFREE_APP_ID` and `CASHFREE_SECRET_KEY`.
+
