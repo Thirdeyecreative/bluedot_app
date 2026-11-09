@@ -698,6 +698,7 @@ class _DonationTileState extends State<_DonationTile> {
               ref.refresh(eventDetailProvider(widget.eventId).future),
               ref.refresh(eventsProvider.future),
               ref.refresh(homeFeedProvider.future),
+              ref.read(notificationsProvider.notifier).refresh(),
             ]).catchError((e) => <dynamic>[]);
 
             if (!context.mounted) return;
@@ -740,6 +741,7 @@ class _DonationTileState extends State<_DonationTile> {
         ref.refresh(eventDetailProvider(widget.eventId).future),
         ref.refresh(eventsProvider.future),
         ref.refresh(homeFeedProvider.future),
+        ref.read(notificationsProvider.notifier).refresh(),
       ]).catchError((e) {
         debugPrint('[EventDonationSync] Background refresh error: $e');
         return <dynamic>[];

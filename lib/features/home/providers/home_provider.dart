@@ -38,13 +38,17 @@ class NotificationsNotifier extends Notifier<List<AppNotification>> {
     try {
       final client = ref.read(apiClientProvider);
       final res = await client.get(ApiConfig.notifications, requireAuth: true);
-      final list = res['data'] as List<dynamic>? ?? [];
-      if (list.isNotEmpty) {
+      if (res is Map<String, dynamic> && res.containsKey('data')) {
+        final list = res['data'] as List<dynamic>? ?? [];
         state = list.map((e) => AppNotification.fromJson(e as Map<String, dynamic>)).toList();
       }
     } catch (_) {
       // Fallback gracefully to DemoData if offline or unauthenticated
     }
+  }
+
+  Future<void> refresh() async {
+    await _loadLiveNotifications();
   }
 
   int get unreadCount => state.where((n) => !n.read).length;

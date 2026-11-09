@@ -768,6 +768,7 @@ class _DonationSheetState extends ConsumerState<DonationSheet> {
               ref.refresh(campaignsProvider.future),
               ref.refresh(homeFeedProvider.future),
               ref.refresh(donationsProvider.future),
+              ref.read(notificationsProvider.notifier).refresh(),
             ]).catchError((e) => <dynamic>[]);
 
             await AppFeedback.showThankYou(
@@ -818,6 +819,7 @@ class _DonationSheetState extends ConsumerState<DonationSheet> {
         ref.refresh(campaignsProvider.future),
         ref.refresh(homeFeedProvider.future),
         ref.refresh(donationsProvider.future),
+        ref.read(notificationsProvider.notifier).refresh(),
       ]).catchError((e) {
         debugPrint('[DonationSync] Background refresh error: $e');
         return <dynamic>[];
