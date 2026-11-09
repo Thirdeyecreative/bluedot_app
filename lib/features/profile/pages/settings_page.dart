@@ -2,6 +2,7 @@ import 'package:flutter/material.dart' hide Badge;
 import 'package:flutter_animate/flutter_animate.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
+import 'package:supabase_flutter/supabase_flutter.dart';
 import 'package:url_launcher/url_launcher.dart';
 import '../../../core/constants/app_colors.dart';
 import '../../../core/services/api_client.dart';
@@ -887,7 +888,8 @@ class _DonationReceiptCardState extends ConsumerState<_DonationReceiptCard> {
                     finalUrl = '${ApiConfig.baseUrl}/api/v1/app/donations/receipts/$recId/download';
                   }
                   try {
-                    final token = await ref.read(storageServiceProvider).getToken();
+                    final session = Supabase.instance.client.auth.currentSession;
+                    final token = session?.accessToken ?? await ref.read(storageServiceProvider).getToken();
                     if (token != null && token.isNotEmpty) {
                       final sep = finalUrl.contains('?') ? '&' : '?';
                       finalUrl = '$finalUrl${sep}token=$token';
