@@ -11,6 +11,7 @@ import '../widgets/scan_result_sheet.dart';
 import '../widgets/ai_analyzing_overlay.dart';
 import '../../../core/widgets/in_app_camera_page.dart';
 import '../../../core/services/api_client.dart';
+import '../../auth/providers/auth_provider.dart';
 
 /// Entry point for "The Green Lens": opens the same in-app multi-photo
 /// camera used by Suggest Site, then runs the AI identification flow.
@@ -83,8 +84,15 @@ class _GreenLensPageState extends ConsumerState<GreenLensPage> {
           );
       if (!mounted) return;
       if (result != null) {
-        context.pop();
-        _showResultSheet(result);
+        // Trigger live refresh of user impact XP, scan history, and map markers
+        ref.read(authNotifierProvider.notifier).refreshProfile();
+        ref.invalidate(scanHistoryProvider);
+        ref.invalidate(mapTreesProvider);
+
+        await _showResultSheet(result);
+        if (mounted) context.pop();
+      } else {
+        if (mounted) context.pop();
       }
     } catch (e) {
       if (!mounted) return;
@@ -98,8 +106,8 @@ class _GreenLensPageState extends ConsumerState<GreenLensPage> {
     }
   }
 
-  void _showResultSheet(ScanResult result) {
-    showModalBottomSheet(
+  Future<void> _showResultSheet(ScanResult result) {
+    return showModalBottomSheet(
       context: context,
       isScrollControlled: true,
       backgroundColor: Colors.transparent,

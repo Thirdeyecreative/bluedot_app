@@ -91,23 +91,25 @@ class PlantNetData {
   });
 
   factory PlantNetData.fromJson(Map<String, dynamic> json) {
-    // Pl@ntNet returns results as a list; pick the top one
+    // Pl@ntNet returns results as a list, or the backend passes best_match directly
     final results = json['results'] as List<dynamic>?;
-    if (results != null && results.isNotEmpty) {
-      final top = results.first as Map<String, dynamic>;
-      final species = top['species'] as Map<String, dynamic>?;
-      final commonNames = species?['commonNames'] as List<dynamic>?;
-      return PlantNetData(
-        scientificName: species?['scientificNameWithoutAuthor'] as String?,
-        commonName: commonNames?.isNotEmpty == true ? commonNames!.first as String? : null,
-        score: (top['score'] as num?)?.toDouble(),
-        family: (species?['family'] as Map<String, dynamic>?)?['scientificNameWithoutAuthor'] as String?,
-      );
-    }
+    final top = (results != null && results.isNotEmpty)
+        ? results.first as Map<String, dynamic>
+        : json;
+
+    final species = top['species'] as Map<String, dynamic>?;
+    final commonNames = species?['commonNames'] as List<dynamic>?;
+    final common = (commonNames != null && commonNames.isNotEmpty)
+        ? commonNames.first as String?
+        : (top['common_name'] as String?);
+
     return PlantNetData(
-      scientificName: json['scientific_name'] as String?,
-      commonName: json['common_name'] as String?,
-      score: (json['score'] as num?)?.toDouble(),
+      scientificName: (species?['scientificNameWithoutAuthor'] as String?) ??
+          (top['scientific_name'] as String?),
+      commonName: common,
+      score: (top['score'] as num?)?.toDouble(),
+      family: (species?['family'] as Map<String, dynamic>?)?['scientificNameWithoutAuthor'] as String? ??
+          (top['family'] as String?),
     );
   }
 }
