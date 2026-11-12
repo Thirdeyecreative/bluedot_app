@@ -5,6 +5,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../features/home/data/notifications_repository.dart';
 import '../utils/route_dispatcher.dart';
+import 'fcm_push_adapter.dart';
 
 /// Provider-agnostic contract for push notification SDKs (FCM, OneSignal, APNs).
 ///
@@ -61,7 +62,10 @@ class StubPushProviderAdapter implements PushProviderAdapter {
 }
 
 final pushNotificationServiceProvider = Provider<PushNotificationService>((ref) {
-  return PushNotificationService(ref.watch(notificationsRepositoryProvider));
+  return PushNotificationService(
+    ref.watch(notificationsRepositoryProvider),
+    adapter: FcmPushAdapter(),
+  );
 });
 
 /// Passiton-standard Push Notification coordinator:
