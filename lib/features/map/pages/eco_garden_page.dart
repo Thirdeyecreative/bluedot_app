@@ -1,3 +1,4 @@
+import 'package:cached_network_image/cached_network_image.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_animate/flutter_animate.dart';
 import 'package:flutter_map/flutter_map.dart';
@@ -173,40 +174,61 @@ class _EcoGardenPageState extends ConsumerState<EcoGardenPage> {
                         ? (tree.status == 1 ? AppColors.forestGreen : AppColors.warningAmber)
                         : (tree.status == 1 ? AppColors.primaryBlue : AppColors.warningAmber);
 
+                    final double pillSize = isSelected ? 46 : 40;
+                    final bool hasImage = tree.imageUrl != null && tree.imageUrl!.trim().isNotEmpty;
+
                     return Marker(
                       point: LatLng(tree.lat!, tree.lng!),
-                      width: 36,
-                      height: 44,
+                      width: 50,
+                      height: 56,
+                      alignment: Alignment.bottomCenter,
                       child: GestureDetector(
                         onTap: () => setState(() => _selectedMarkerIndex = i),
                         child: Column(
+                          mainAxisSize: MainAxisSize.min,
+                          mainAxisAlignment: MainAxisAlignment.end,
                           children: [
                             AnimatedContainer(
                               duration: 200.ms,
-                              width: isSelected ? 36 : 28,
-                              height: isSelected ? 36 : 28,
+                              width: pillSize,
+                              height: pillSize,
+                              padding: const EdgeInsets.all(2.5),
                               decoration: BoxDecoration(
-                                color: markerColor,
-                                shape: BoxShape.circle,
-                                border: Border.all(color: Colors.white, width: 2),
+                                color: Colors.white,
+                                borderRadius: BorderRadius.circular(22),
+                                border: Border.all(color: markerColor, width: 2.5),
                                 boxShadow: [
                                   BoxShadow(
-                                    color: markerColor.withAlpha(100),
+                                    color: markerColor.withAlpha(isSelected ? 140 : 90),
                                     blurRadius: isSelected ? 12 : 6,
+                                    offset: const Offset(0, 2),
                                   ),
                                 ],
                               ),
-                              child: Center(
-                                child: Icon(
-                                  tree.status == 1 ? Icons.eco_rounded : Icons.hourglass_top_rounded,
-                                  color: Colors.white,
-                                  size: 16,
-                                ),
+                              child: ClipRRect(
+                                borderRadius: BorderRadius.circular(18),
+                                child: hasImage
+                                    ? CachedNetworkImage(
+                                        imageUrl: tree.imageUrl!,
+                                        fit: BoxFit.cover,
+                                        placeholder: (_, __) => _MarkerFallbackIcon(
+                                          color: markerColor,
+                                          status: tree.status,
+                                        ),
+                                        errorWidget: (_, __, ___) => _MarkerFallbackIcon(
+                                          color: markerColor,
+                                          status: tree.status,
+                                        ),
+                                      )
+                                    : _MarkerFallbackIcon(
+                                        color: markerColor,
+                                        status: tree.status,
+                                      ),
                               ),
                             ),
                             Container(
-                              width: 2,
-                              height: 8,
+                              width: 2.5,
+                              height: 7,
                               color: markerColor,
                             ),
                           ],
@@ -541,4 +563,24 @@ class _TreeInfoCard extends StatelessWidget {
         decoration: BoxDecoration(color: AppColors.primaryBlue.withAlpha(25), shape: BoxShape.circle),
         child: const Icon(Icons.eco_rounded, color: AppColors.primaryBlue, size: 28),
       );
+}
+
+class _MarkerFallbackIcon extends StatelessWidget {
+  final Color color;
+  final int status;
+  const _MarkerFallbackIcon({required this.color, required this.status});
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      color: color,
+      child: Center(
+        child: Icon(
+          status == 1 ? Icons.eco_rounded : Icons.hourglass_top_rounded,
+          color: Colors.white,
+          size: 18,
+        ),
+      ),
+    );
+  }
 }
