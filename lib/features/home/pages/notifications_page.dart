@@ -75,7 +75,7 @@ class _NotificationsPageState extends ConsumerState<NotificationsPage> {
           IconButton(
             tooltip: 'Notification settings',
             icon: const Icon(Icons.settings_outlined),
-            onPressed: () => context.push('/profile/settings'),
+            onPressed: () => context.go('/profile/settings'),
           ),
         ],
         bottom: PreferredSize(
