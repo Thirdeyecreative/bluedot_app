@@ -84,7 +84,6 @@ class RouteDispatcher {
         return '/action-hub';
       case 'admin_broadcast':
       case 'announcement':
-        return '/notifications';
       default:
         return null;
     }
@@ -98,6 +97,12 @@ class RouteDispatcher {
   }) {
     final resolved = resolveRoute(route: route, type: type, data: data);
     if (resolved == null || resolved.isEmpty) return;
+
+    // Avoid pushing a duplicate Notifications page when already viewing it.
+    if (resolved == '/notifications' &&
+        GoRouterState.of(context).uri.path == '/notifications') {
+      return;
+    }
 
     if (_isSupportedRoute(resolved)) {
       context.push(resolved);
