@@ -6,11 +6,13 @@ import 'package:supabase_flutter/supabase_flutter.dart';
 import 'package:url_launcher/url_launcher.dart';
 import '../../../core/constants/app_colors.dart';
 import '../../../core/services/api_client.dart';
+import '../../../core/services/push_notification_service.dart';
 import '../../../core/services/storage_service.dart';
 import '../../../core/config/api_config.dart';
 import '../../../core/widgets/server_settings_modal.dart';
 import '../../auth/providers/auth_provider.dart';
 import '../../auth/data/auth_repository.dart';
+import '../../home/data/notifications_repository.dart';
 import '../../legal/services/legal_service.dart';
 import '../../action_hub/data/action_repository.dart';
 import '../../../core/widgets/app_feedback.dart';
@@ -20,40 +22,45 @@ import 'package:permission_handler/permission_handler.dart';
 // ── Notification preference providers ─────────────────────────────────────────
 
 final _pushEnabledProvider = AsyncNotifierProvider<PushNotificationNotifier, bool>(PushNotificationNotifier.new);
-final _emailEnabledProvider = NotifierProvider<_EmailNotifier, bool>(_EmailNotifier.new);
 
-/// Email preference toggle — syncs to the backend JSONB `preferences` column.
-/// Uses `ref.watch` so the initial value reacts to profile refreshes (e.g. after
-/// login), and optimistically updates the UI, rolling back on API failure.
-class _EmailNotifier extends Notifier<bool> {
+/// Uniform notification preference toggle (Passiton standard) — syncs granular
+/// keys (`drive_updates`, `badge_updates`, `donation_alerts`, `announcements`,
+/// `email_enabled`) to `/api/v1/app/notifications/preferences` and updates
+/// `currentUserProvider`, rolling back optimistically on API failure.
+final _notifPrefProvider = NotifierProvider.family<_NotifPrefNotifier, bool, String>(_NotifPrefNotifier.new);
+
+class _NotifPrefNotifier extends Notifier<bool> {
+  final String prefKey;
+  _NotifPrefNotifier(this.prefKey);
+
   @override
   bool build() {
-    // watch (not read) so the toggle updates if the user profile is refreshed.
     final user = ref.watch(currentUserProvider);
-    return user?.preferences?['email_enabled'] as bool? ?? true;
+    return user?.preferences?[prefKey] as bool? ?? true;
   }
 
-  Future<void> toggle() async {
+  Future<void> toggle(BuildContext context) async {
     final previous = state;
     final newState = !previous;
-    // Optimistic UI update
     state = newState;
     try {
-      await _syncPreference('email_enabled', newState);
+      final merged = await ref.read(notificationsRepositoryProvider).updatePreferences({prefKey: newState});
+      final user = ref.read(currentUserProvider);
+      if (user != null) {
+        final nextPrefs = Map<String, dynamic>.from(user.preferences ?? {})..addAll(merged);
+        ref.read(currentUserProvider.notifier).set(user.copyWith(preferences: nextPrefs));
+      }
     } catch (_) {
-      // Revert on failure — the pragmatic approach: never leave the UI lying
-      // to the user about what the backend actually stored.
       state = previous;
+      if (context.mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('Failed to save notification preference. Please try again.'),
+            backgroundColor: Colors.red,
+          ),
+        );
+      }
     }
-  }
-
-  Future<void> _syncPreference(String key, bool value) async {
-    final user = ref.read(currentUserProvider);
-    final prefs = Map<String, dynamic>.from(user?.preferences ?? {});
-    prefs[key] = value;
-    final repo = ref.read(authRepositoryProvider);
-    final updatedUser = await repo.updatePreferences(prefs);
-    ref.read(currentUserProvider.notifier).set(updatedUser);
   }
 }
 
@@ -102,12 +109,17 @@ class PushNotificationNotifier extends AsyncNotifier<bool> with WidgetsBindingOb
   /// Syncs the push_enabled flag to the backend JSONB column.
   /// Errors are intentionally propagated so callers can show user feedback.
   Future<void> _syncToBackend(bool isGranted) async {
+    final merged = await ref
+        .read(notificationsRepositoryProvider)
+        .updatePreferences({'push_enabled': isGranted});
     final user = ref.read(currentUserProvider);
-    final prefs = Map<String, dynamic>.from(user?.preferences ?? {});
-    prefs['push_enabled'] = isGranted;
-    final repo = ref.read(authRepositoryProvider);
-    final updatedUser = await repo.updatePreferences(prefs);
-    ref.read(currentUserProvider.notifier).set(updatedUser);
+    if (user != null) {
+      final nextPrefs = Map<String, dynamic>.from(user.preferences ?? {})..addAll(merged);
+      ref.read(currentUserProvider.notifier).set(user.copyWith(preferences: nextPrefs));
+    }
+    if (isGranted) {
+      await ref.read(pushNotificationServiceProvider).initialize(requestPermission: false);
+    }
   }
 
   /// The main toggle action — called from the Settings page Switch widget.
@@ -201,7 +213,12 @@ class SettingsPage extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final pushEnabled = ref.watch(_pushEnabledProvider);
-    final emailEnabled = ref.watch(_emailEnabledProvider);
+    final pushGranted = pushEnabled.value ?? false;
+    final driveUpdates = ref.watch(_notifPrefProvider('drive_updates'));
+    final badgeUpdates = ref.watch(_notifPrefProvider('badge_updates'));
+    final donationAlerts = ref.watch(_notifPrefProvider('donation_alerts'));
+    final announcements = ref.watch(_notifPrefProvider('announcements'));
+    final emailEnabled = ref.watch(_notifPrefProvider('email_enabled'));
 
     return Scaffold(
       appBar: AppBar(
@@ -241,7 +258,7 @@ class SettingsPage extends ConsumerWidget {
           _SettingsTile(
             icon: Icons.notifications_outlined,
             label: 'Push Notifications',
-            subtitle: 'Drives, badge unlocks, campaign updates',
+            subtitle: 'Master toggle for device push alerts',
             trailing: pushEnabled.when(
               data: (enabled) => Switch.adaptive(
                 value: enabled,
@@ -253,12 +270,60 @@ class SettingsPage extends ConsumerWidget {
             ),
           ),
           _SettingsTile(
+            icon: Icons.park_outlined,
+            label: 'Drive & Event Updates',
+            subtitle: 'Plantation drive reminders, RSVPs, check-ins',
+            trailing: Switch.adaptive(
+              value: pushGranted && driveUpdates,
+              onChanged: pushGranted
+                  ? (_) => ref.read(_notifPrefProvider('drive_updates').notifier).toggle(context)
+                  : null,
+              activeTrackColor: AppColors.primaryBlue,
+            ),
+          ),
+          _SettingsTile(
+            icon: Icons.workspace_premium_outlined,
+            label: 'Badges & Tree Milestones',
+            subtitle: 'Tree tags, badge unlocks, certificates',
+            trailing: Switch.adaptive(
+              value: pushGranted && badgeUpdates,
+              onChanged: pushGranted
+                  ? (_) => ref.read(_notifPrefProvider('badge_updates').notifier).toggle(context)
+                  : null,
+              activeTrackColor: AppColors.primaryBlue,
+            ),
+          ),
+          _SettingsTile(
+            icon: Icons.favorite_outline_rounded,
+            label: 'Donation & 80G Alerts',
+            subtitle: 'Payment confirmations & tax receipt alerts',
+            trailing: Switch.adaptive(
+              value: pushGranted && donationAlerts,
+              onChanged: pushGranted
+                  ? (_) => ref.read(_notifPrefProvider('donation_alerts').notifier).toggle(context)
+                  : null,
+              activeTrackColor: AppColors.primaryBlue,
+            ),
+          ),
+          _SettingsTile(
+            icon: Icons.campaign_outlined,
+            label: 'Announcements',
+            subtitle: 'Community broadcasts & campaign updates',
+            trailing: Switch.adaptive(
+              value: pushGranted && announcements,
+              onChanged: pushGranted
+                  ? (_) => ref.read(_notifPrefProvider('announcements').notifier).toggle(context)
+                  : null,
+              activeTrackColor: AppColors.primaryBlue,
+            ),
+          ),
+          _SettingsTile(
             icon: Icons.email_outlined,
             label: 'Email Notifications',
             subtitle: 'Receipts, event reminders, newsletters',
             trailing: Switch.adaptive(
               value: emailEnabled,
-              onChanged: (_) => ref.read(_emailEnabledProvider.notifier).toggle(),
+              onChanged: (_) => ref.read(_notifPrefProvider('email_enabled').notifier).toggle(context),
               activeTrackColor: AppColors.primaryBlue,
             ),
           ),

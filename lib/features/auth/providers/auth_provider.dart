@@ -1,6 +1,7 @@
 import 'dart:io';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:supabase_flutter/supabase_flutter.dart' as supabase;
+import '../../../core/services/push_notification_service.dart';
 import '../data/auth_repository.dart';
 import '../models/user_model.dart';
 
@@ -14,6 +15,10 @@ final authStateProvider = FutureProvider<bool>((ref) async {
     await supabase.Supabase.instance.client.auth.signOut();
   }
   ref.read(currentUserProvider.notifier).set(user);
+  if (user != null) {
+    // Initialize push notification service (no-op stub until provider adapter is plugged in)
+    ref.read(pushNotificationServiceProvider).initialize(requestPermission: false);
+  }
   return user != null;
 });
 
@@ -112,6 +117,7 @@ class AuthNotifier extends Notifier<AsyncValue<void>> {
   }
 
   Future<void> signOut() async {
+    await ref.read(pushNotificationServiceProvider).clearTokenOnLogout();
     await _repo.signOut();
   }
 

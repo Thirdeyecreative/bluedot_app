@@ -210,6 +210,9 @@ class ApiConfig {
   static String get notifications => '$_app/notifications';
   static String get markAllNotificationsRead => '$_app/notifications/mark-all-read';
   static String markNotificationRead(String id) => '$_app/notifications/$id/read';
+  static String deleteNotification(String id) => '$_app/notifications/$id';
+  static String get notificationDeviceToken => '$_app/notifications/device-token';
+  static String get notificationPreferences => '$_app/notifications/preferences';
   static String get leaderboard => '$_app/leaderboard';
   static String get homeScreenConfig => '$_app/config';
   static String get appBanners => '$_app/banners';
