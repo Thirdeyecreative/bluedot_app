@@ -4,6 +4,7 @@ import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../features/home/data/notifications_repository.dart';
+import '../router/app_router.dart';
 import '../utils/route_dispatcher.dart';
 import 'fcm_push_adapter.dart';
 
@@ -112,7 +113,7 @@ class PushNotificationService {
       }));
       _subs.add(_adapter.onForegroundMessage.listen(_foregroundEventsCtrl.add));
       _subs.add(_adapter.onNotificationTap.listen((data) {
-        _pendingTapData = data;
+        _handleNotificationTap(data);
       }));
     }
 
@@ -158,6 +159,21 @@ class PushNotificationService {
     try {
       await _adapter.deleteToken();
     } catch (_) {}
+  }
+
+  void _handleNotificationTap(Map<String, dynamic> data) {
+    debugPrint('[PushNotificationService] Notification tapped: $data');
+    final context = rootNavigatorKey.currentContext;
+    if (context != null && context.mounted) {
+      RouteDispatcher.dispatch(
+        context,
+        route: data['route']?.toString(),
+        type: data['type']?.toString(),
+        data: data,
+      );
+    } else {
+      _pendingTapData = data;
+    }
   }
 
   /// Processes any notification tap captured during cold/terminated launch

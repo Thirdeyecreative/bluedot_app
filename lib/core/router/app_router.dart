@@ -31,11 +31,11 @@ import '../../features/auth/pages/complete_profile_page.dart';
 import '../../features/scanner/pages/green_lens_page.dart';
 import '../widgets/no_internet_page.dart';
 
-final _rootNavigatorKey = GlobalKey<NavigatorState>();
+final rootNavigatorKey = GlobalKey<NavigatorState>();
 
 final routerProvider = Provider<GoRouter>((ref) {
   final router = GoRouter(
-    navigatorKey: _rootNavigatorKey,
+    navigatorKey: rootNavigatorKey,
     initialLocation: '/splash',
     redirect: (context, state) {
       // Only consider the user truly "logged in" if we have successfully fetched

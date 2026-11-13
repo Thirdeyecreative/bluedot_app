@@ -15,6 +15,7 @@ class RouteDispatcher {
     '/scanner',
     '/notifications',
     '/action-hub',
+    '/action-hub/suggest-site',
     '/directory',
     '/profile',
     '/profile/badges',
@@ -82,10 +83,13 @@ class RouteDispatcher {
           return '/action-hub/campaign/$campaignId';
         }
         return '/action-hub';
+      case 'suggestion':
+      case 'site_suggestion':
+        return '/action-hub/suggest-site';
       case 'admin_broadcast':
       case 'announcement':
       default:
-        return null;
+        return '/notifications';
     }
   }
 
