@@ -15,6 +15,7 @@ import '../widgets/promo_banner_carousel.dart';
 import '../../auth/providers/auth_provider.dart';
 import '../../legal/services/legal_service.dart';
 import '../../legal/widgets/policy_update_sheet.dart';
+import '../../../core/services/push_notification_service.dart';
 
 /// The primary discovery dashboard for BlueDot.
 ///
@@ -41,6 +42,8 @@ class _HomePageState extends ConsumerState<HomePage> {
     super.initState();
     WidgetsBinding.instance.addPostFrameCallback((_) {
       _checkPolicyConsent();
+      ref.read(pushNotificationServiceProvider).initialize(requestPermission: true);
+      ref.read(pushNotificationServiceProvider).processPendingNotification(context);
     });
   }
 

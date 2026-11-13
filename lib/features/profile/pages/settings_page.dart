@@ -118,7 +118,7 @@ class PushNotificationNotifier extends AsyncNotifier<bool> with WidgetsBindingOb
       ref.read(currentUserProvider.notifier).set(user.copyWith(preferences: nextPrefs));
     }
     if (isGranted) {
-      await ref.read(pushNotificationServiceProvider).initialize(requestPermission: false);
+      await ref.read(pushNotificationServiceProvider).initialize(requestPermission: true);
     }
   }
 

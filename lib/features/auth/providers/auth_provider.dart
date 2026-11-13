@@ -16,8 +16,8 @@ final authStateProvider = FutureProvider<bool>((ref) async {
   }
   ref.read(currentUserProvider.notifier).set(user);
   if (user != null) {
-    // Initialize push notification service (no-op stub until provider adapter is plugged in)
-    ref.read(pushNotificationServiceProvider).initialize(requestPermission: false);
+    // Initialize push notification service & sync device token with backend
+    ref.read(pushNotificationServiceProvider).initialize(requestPermission: true);
   }
   return user != null;
 });
@@ -68,6 +68,9 @@ class AuthNotifier extends Notifier<AsyncValue<void>> {
     state = await AsyncValue.guard(() async {
       user = await _repo.verifyOtp(phone: phone, otp: otp);
       ref.read(currentUserProvider.notifier).set(user);
+      if (user != null) {
+        await ref.read(pushNotificationServiceProvider).initialize(requestPermission: true);
+      }
     });
     return user;
   }

@@ -98,31 +98,39 @@ class PushNotificationService {
   }
 
   Future<void> initialize({bool requestPermission = false}) async {
-    if (_initialized) return;
-    _initialized = true;
+    if (!_initialized) {
+      _initialized = true;
 
-    await _adapter.initialize(requestPermission: requestPermission);
+      for (final sub in _subs) {
+        await sub.cancel();
+      }
+      _subs.clear();
 
-    for (final sub in _subs) {
-      await sub.cancel();
+      _subs.add(_adapter.onTokenRefresh.listen((token) async {
+        debugPrint('[PushNotificationService] onTokenRefresh emitted: $token');
+        await syncTokenToBackend(token);
+      }));
+      _subs.add(_adapter.onForegroundMessage.listen(_foregroundEventsCtrl.add));
+      _subs.add(_adapter.onNotificationTap.listen((data) {
+        _pendingTapData = data;
+      }));
     }
-    _subs.clear();
 
-    _subs.add(_adapter.onTokenRefresh.listen(syncTokenToBackend));
-    _subs.add(_adapter.onForegroundMessage.listen(_foregroundEventsCtrl.add));
-    _subs.add(_adapter.onNotificationTap.listen((data) {
-      _pendingTapData = data;
-    }));
-
-    final token = await _adapter.getToken();
-    if (token != null && token.isNotEmpty) {
-      await syncTokenToBackend(token);
+    try {
+      await _adapter.initialize(requestPermission: requestPermission);
+      final token = await _adapter.getToken();
+      debugPrint('[PushNotificationService] Retrieved FCM token: $token');
+      if (token != null && token.isNotEmpty) {
+        await syncTokenToBackend(token);
+      }
+    } catch (e) {
+      debugPrint('[PushNotificationService] Error initializing push notifications: $e');
     }
   }
 
-  Future<void> syncTokenToBackend(String? token) async {
+  Future<void> syncTokenToBackend(String? token, {bool force = false}) async {
     if (token == null || token.trim().isEmpty) return;
-    if (_lastSyncedToken == token) return;
+    if (!force && _lastSyncedToken == token) return;
 
     try {
       final platform = kIsWeb
@@ -134,6 +142,7 @@ class PushNotificationService {
         platform: platform,
       );
       _lastSyncedToken = token;
+      debugPrint('[PushNotificationService] Successfully registered FCM device token on backend');
     } catch (e) {
       debugPrint('[PushNotificationService] Failed to sync device token: $e');
     }

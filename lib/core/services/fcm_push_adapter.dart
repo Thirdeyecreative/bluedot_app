@@ -31,18 +31,38 @@ class FcmPushAdapter implements PushProviderAdapter {
   @override
   Future<void> initialize({required bool requestPermission}) async {
     if (requestPermission) {
-      await _messaging.requestPermission(
+      try {
+        final settings = await _messaging.requestPermission(
+          alert: true,
+          badge: true,
+          sound: true,
+          announcement: false,
+          carPlay: false,
+          criticalAlert: false,
+          provisional: false,
+        );
+        debugPrint('[FCM] Authorization status: ${settings.authorizationStatus}');
+      } catch (e) {
+        debugPrint('[FCM] requestPermission error: $e');
+      }
+    }
+
+    try {
+      await _messaging.setForegroundNotificationPresentationOptions(
         alert: true,
         badge: true,
         sound: true,
       );
+    } catch (e) {
+      debugPrint('[FCM] setForegroundNotificationPresentationOptions error: $e');
     }
 
     await _tokenSub?.cancel();
     await _foregroundSub?.cancel();
     await _openedAppSub?.cancel();
 
-    _tokenSub = _messaging.onRegistered.listen((token) {
+    _tokenSub = _messaging.onTokenRefresh.listen((token) {
+      debugPrint('[FCM] onTokenRefresh emitted: $token');
       _currentToken = token;
       _tokenRefreshCtrl.add(token);
     });
@@ -55,9 +75,13 @@ class FcmPushAdapter implements PushProviderAdapter {
       _tapCtrl.add(_messageToMap(message));
     });
 
-    final initialMessage = await _messaging.getInitialMessage();
-    if (initialMessage != null) {
-      _tapCtrl.add(_messageToMap(initialMessage));
+    try {
+      final initialMessage = await _messaging.getInitialMessage();
+      if (initialMessage != null) {
+        _tapCtrl.add(_messageToMap(initialMessage));
+      }
+    } catch (e) {
+      debugPrint('[FCM] getInitialMessage error: $e');
     }
   }
 
@@ -73,24 +97,48 @@ class FcmPushAdapter implements PushProviderAdapter {
 
   @override
   Future<String?> getToken() async {
-    if (_currentToken != null) return _currentToken;
-    await _messaging.register();
-    return _currentToken;
+    if (_currentToken != null && _currentToken!.isNotEmpty) {
+      return _currentToken;
+    }
+    try {
+      final token = await _messaging.getToken();
+      if (token != null && token.isNotEmpty) {
+        _currentToken = token;
+      }
+      return token;
+    } catch (e) {
+      debugPrint('[FCM] getToken error: $e');
+      return null;
+    }
   }
 
   @override
   Future<void> deleteToken() async {
     _currentToken = null;
-    await _messaging.unregister();
+    try {
+      await _messaging.deleteToken();
+    } catch (e) {
+      debugPrint('[FCM] deleteToken error: $e');
+    }
   }
 
   @override
-  Future<void> subscribeToTopic(String topic) =>
-      _messaging.subscribeToTopic(topic);
+  Future<void> subscribeToTopic(String topic) async {
+    try {
+      await _messaging.subscribeToTopic(topic);
+    } catch (e) {
+      debugPrint('[FCM] subscribeToTopic error: $e');
+    }
+  }
 
   @override
-  Future<void> unsubscribeFromTopic(String topic) =>
-      _messaging.unsubscribeFromTopic(topic);
+  Future<void> unsubscribeFromTopic(String topic) async {
+    try {
+      await _messaging.unsubscribeFromTopic(topic);
+    } catch (e) {
+      debugPrint('[FCM] unsubscribeFromTopic error: $e');
+    }
+  }
 
   @override
   Stream<String> get onTokenRefresh => _tokenRefreshCtrl.stream;
@@ -101,4 +149,3 @@ class FcmPushAdapter implements PushProviderAdapter {
   @override
   Stream<Map<String, dynamic>> get onNotificationTap => _tapCtrl.stream;
 }
-
