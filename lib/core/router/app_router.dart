@@ -117,10 +117,12 @@ final routerProvider = Provider<GoRouter>((ref) {
                 builder: (__, _) => const HomePage(),
                 routes: [
                   GoRoute(
+                    parentNavigatorKey: rootNavigatorKey,
                     path: 'blogs',
                     builder: (__, _) => const AllBlogsPage(),
                   ),
                   GoRoute(
+                    parentNavigatorKey: rootNavigatorKey,
                     path: 'blog/:slug',
                     builder: (_, state) => BlogDetailPage(slug: state.pathParameters['slug']!),
                   ),
@@ -139,20 +141,24 @@ final routerProvider = Provider<GoRouter>((ref) {
                 },
                 routes: [
                   GoRoute(
+                    parentNavigatorKey: rootNavigatorKey,
                     path: 'campaign/:id',
                     builder: (_, state) => CampaignDetailPage(campaignId: state.pathParameters['id']!),
                   ),
                   GoRoute(
+                    parentNavigatorKey: rootNavigatorKey,
                     path: 'event/:id',
                     builder: (_, state) => EventDetailPage(eventId: state.pathParameters['id']!),
                     routes: [
                       GoRoute(
+                        parentNavigatorKey: rootNavigatorKey,
                         path: 'checkin',
                         builder: (_, state) => EventCheckinPage(eventId: state.pathParameters['id']!),
                       ),
                     ],
                   ),
                   GoRoute(
+                    parentNavigatorKey: rootNavigatorKey,
                     path: 'suggest-site',
                     builder: (__, _) => const SuggestSitePage(),
                   ),
@@ -167,6 +173,7 @@ final routerProvider = Provider<GoRouter>((ref) {
                 builder: (__, _) => const DirectoryPage(),
                 routes: [
                   GoRoute(
+                    parentNavigatorKey: rootNavigatorKey,
                     path: 'species/:id',
                     builder: (_, state) => SpeciesDetailPage(speciesId: state.pathParameters['id']!),
                   ),
@@ -180,19 +187,56 @@ final routerProvider = Provider<GoRouter>((ref) {
                 path: '/profile',
                 builder: (__, _) => const ProfilePage(),
                 routes: [
-                  GoRoute(path: 'badges', builder: (__, _) => const BadgesPage()),
-                  GoRoute(path: 'leaderboard', builder: (__, _) => const LeaderboardPage()),
-                  GoRoute(path: 'edit', builder: (__, _) => const EditProfilePage()),
-                  GoRoute(path: 'certificates', builder: (__, _) => const CertificatesPage()),
                   GoRoute(
+                    parentNavigatorKey: rootNavigatorKey,
+                    path: 'badges',
+                    builder: (__, _) => const BadgesPage(),
+                  ),
+                  GoRoute(
+                    parentNavigatorKey: rootNavigatorKey,
+                    path: 'leaderboard',
+                    builder: (__, _) => const LeaderboardPage(),
+                  ),
+                  GoRoute(
+                    parentNavigatorKey: rootNavigatorKey,
+                    path: 'edit',
+                    builder: (__, _) => const EditProfilePage(),
+                  ),
+                  GoRoute(
+                    parentNavigatorKey: rootNavigatorKey,
+                    path: 'certificates',
+                    builder: (__, _) => const CertificatesPage(),
+                  ),
+                  GoRoute(
+                    parentNavigatorKey: rootNavigatorKey,
                     path: 'settings',
                     builder: (__, _) => const SettingsPage(),
                     routes: [
-                      GoRoute(path: 'tax-vault', builder: (__, _) => const TaxVaultPage()),
-                      GoRoute(path: 'edit', builder: (__, _) => const EditProfilePage()),
-                      GoRoute(path: 'terms', builder: (__, _) => const TermsPage()),
-                      GoRoute(path: 'privacy', builder: (__, _) => const PrivacyPage()),
-                      GoRoute(path: 'certificates', builder: (__, _) => const CertificatesPage()),
+                      GoRoute(
+                        parentNavigatorKey: rootNavigatorKey,
+                        path: 'tax-vault',
+                        builder: (__, _) => const TaxVaultPage(),
+                      ),
+                      GoRoute(
+                        parentNavigatorKey: rootNavigatorKey,
+                        path: 'edit',
+                        builder: (__, _) => const EditProfilePage(),
+                      ),
+                      GoRoute(
+                        parentNavigatorKey: rootNavigatorKey,
+                        path: 'terms',
+                        builder: (__, _) => const TermsPage(),
+                      ),
+                      GoRoute(
+                        parentNavigatorKey: rootNavigatorKey,
+                        path: 'privacy',
+                        builder: (__, _) => const PrivacyPage(),
+                      ),
+                      GoRoute(
+                        parentNavigatorKey: rootNavigatorKey,
+                        path: 'certificates',
+                        builder: (__, _) => const CertificatesPage(),
+                      ),
                     ],
                   ),
                 ],

@@ -396,114 +396,291 @@ class _NotificationCard extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final style = _styleFor(item.type);
+    final resolvedRoute = RouteDispatcher.resolveRoute(
+      route: item.route,
+      type: item.rawType,
+      data: item.data,
+    );
+    final hasAction = resolvedRoute != null &&
+        resolvedRoute.isNotEmpty &&
+        resolvedRoute != '/notifications';
 
-    return GestureDetector(
-      onTap: () {
-        ref.read(notificationsProvider.notifier).markRead(item.id);
-        RouteDispatcher.dispatch(
-          context,
-          route: item.route,
-          type: item.rawType,
-          data: item.data,
-        );
-      },
-      child: Container(
-        padding: const EdgeInsets.all(14),
-        decoration: BoxDecoration(
-          color: item.read ? AppColors.surfaceCard : Colors.white,
-          borderRadius: BorderRadius.circular(16),
-          border: Border.all(
-            color: item.read
-                ? AppColors.borderLight
-                : style.color.withAlpha(70),
-          ),
-        ),
-        child: Row(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Container(
-              width: 42,
-              height: 42,
-              decoration: BoxDecoration(
-                color: style.color.withAlpha(22),
-                borderRadius: BorderRadius.circular(12),
-              ),
-              child: Icon(style.icon, color: style.color, size: 22),
+    final actionLabel = _actionLabelFor(item, resolvedRoute);
+
+    return Material(
+      color: Colors.transparent,
+      child: InkWell(
+        borderRadius: BorderRadius.circular(16),
+        onTap: () => _handleTap(context, ref, resolvedRoute),
+        child: Container(
+          padding: const EdgeInsets.all(14),
+          decoration: BoxDecoration(
+            color: item.read ? AppColors.surfaceCard : Colors.white,
+            borderRadius: BorderRadius.circular(16),
+            border: Border.all(
+              color: item.read
+                  ? AppColors.borderLight
+                  : style.color.withAlpha(70),
             ),
-            const SizedBox(width: 12),
-            Expanded(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Row(
-                    children: [
-                      Expanded(
-                        child: Text(
-                          item.title,
-                          style: TextStyle(
-                            fontWeight: item.read
-                                ? FontWeight.w600
-                                : FontWeight.w700,
-                            fontSize: 14,
-                            color: AppColors.textDark,
-                          ),
-                        ),
-                      ),
-                      if (!item.read)
-                        Container(
-                          margin: const EdgeInsets.only(left: 8, top: 4),
-                          width: 8,
-                          height: 8,
-                          decoration: const BoxDecoration(
-                            color: AppColors.primaryBlue,
-                            shape: BoxShape.circle,
-                          ),
-                        ),
-                    ],
-                  ),
-                  const SizedBox(height: 4),
-                  Text(
-                    item.body,
-                    style: const TextStyle(
-                      color: AppColors.textMedium,
-                      fontSize: 12.5,
-                      height: 1.4,
-                    ),
-                  ),
-                  const SizedBox(height: 8),
-                  Row(
-                    children: [
-                      Text(
-                        item.timeLabel,
-                        style: const TextStyle(
-                          color: AppColors.textLight,
-                          fontSize: 11,
-                        ),
-                      ),
-                      if (item.isBroadcast) ...[
-                        const SizedBox(width: 8),
-                        Container(
-                          padding: const EdgeInsets.symmetric(
-                            horizontal: 6,
-                            vertical: 2,
-                          ),
-                          decoration: BoxDecoration(
-                            color: AppColors.primaryBlue.withAlpha(18),
-                            borderRadius: BorderRadius.circular(6),
-                          ),
-                          child: const Text(
-                            'Announcement',
+          ),
+          child: Row(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Container(
+                width: 42,
+                height: 42,
+                decoration: BoxDecoration(
+                  color: style.color.withAlpha(22),
+                  borderRadius: BorderRadius.circular(12),
+                ),
+                child: Icon(style.icon, color: style.color, size: 22),
+              ),
+              const SizedBox(width: 12),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Row(
+                      children: [
+                        Expanded(
+                          child: Text(
+                            item.title,
                             style: TextStyle(
-                              color: AppColors.primaryBlue,
-                              fontSize: 10,
-                              fontWeight: FontWeight.w600,
+                              fontWeight: item.read
+                                  ? FontWeight.w600
+                                  : FontWeight.w700,
+                              fontSize: 14,
+                              color: AppColors.textDark,
                             ),
                           ),
                         ),
+                        if (!item.read)
+                          Container(
+                            margin: const EdgeInsets.only(left: 8, top: 4),
+                            width: 8,
+                            height: 8,
+                            decoration: const BoxDecoration(
+                              color: AppColors.primaryBlue,
+                              shape: BoxShape.circle,
+                            ),
+                          ),
                       ],
-                    ],
+                    ),
+                    const SizedBox(height: 4),
+                    Text(
+                      item.body,
+                      style: const TextStyle(
+                        color: AppColors.textMedium,
+                        fontSize: 12.5,
+                        height: 1.4,
+                      ),
+                    ),
+                    const SizedBox(height: 8),
+                    Row(
+                      children: [
+                        Text(
+                          item.timeLabel,
+                          style: const TextStyle(
+                            color: AppColors.textLight,
+                            fontSize: 11,
+                          ),
+                        ),
+                        if (item.isBroadcast) ...[
+                          const SizedBox(width: 8),
+                          Container(
+                            padding: const EdgeInsets.symmetric(
+                              horizontal: 6,
+                              vertical: 2,
+                            ),
+                            decoration: BoxDecoration(
+                              color: AppColors.primaryBlue.withAlpha(18),
+                              borderRadius: BorderRadius.circular(6),
+                            ),
+                            child: const Text(
+                              'Announcement',
+                              style: TextStyle(
+                                color: AppColors.primaryBlue,
+                                fontSize: 10,
+                                fontWeight: FontWeight.w600,
+                              ),
+                            ),
+                          ),
+                        ],
+                        const Spacer(),
+                        if (hasAction && actionLabel != null)
+                          Container(
+                            padding: const EdgeInsets.symmetric(
+                              horizontal: 8,
+                              vertical: 3,
+                            ),
+                            decoration: BoxDecoration(
+                              color: style.color.withAlpha(18),
+                              borderRadius: BorderRadius.circular(8),
+                            ),
+                            child: Row(
+                              mainAxisSize: MainAxisSize.min,
+                              children: [
+                                Text(
+                                  actionLabel,
+                                  style: TextStyle(
+                                    color: style.color,
+                                    fontSize: 11,
+                                    fontWeight: FontWeight.w700,
+                                  ),
+                                ),
+                                const SizedBox(width: 2),
+                                Icon(
+                                  Icons.arrow_forward_ios_rounded,
+                                  size: 10,
+                                  color: style.color,
+                                ),
+                              ],
+                            ),
+                          )
+                        else
+                          Icon(
+                            Icons.chevron_right_rounded,
+                            size: 18,
+                            color: AppColors.textLight.withAlpha(140),
+                          ),
+                      ],
+                    ),
+                  ],
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
+  void _handleTap(
+    BuildContext context,
+    WidgetRef ref,
+    String? resolvedRoute,
+  ) {
+    ref.read(notificationsProvider.notifier).markRead(item.id);
+
+    if (resolvedRoute != null &&
+        resolvedRoute.isNotEmpty &&
+        resolvedRoute != '/notifications') {
+      RouteDispatcher.dispatch(
+        context,
+        route: item.route,
+        type: item.rawType,
+        data: item.data,
+      );
+    } else {
+      _showAnnouncementSheet(context, item);
+    }
+  }
+
+  String? _actionLabelFor(AppNotification item, String? route) {
+    if (route == null) return null;
+    if (route.startsWith('/action-hub/event/')) return 'View Event';
+    if (route.startsWith('/action-hub/campaign/')) return 'View Campaign';
+    if (route.startsWith('/profile/settings/tax-vault')) return '80G Receipt';
+    if (route.startsWith('/profile/badges')) return 'Badges';
+    if (route.startsWith('/profile/certificates')) return 'Certificate';
+    if (route.startsWith('/map')) return 'Eco Map';
+    if (route.startsWith('/action-hub/suggest-site')) return 'Site Suggestion';
+    if (route.startsWith('/profile/leaderboard')) return 'Leaderboard';
+    if (route.startsWith('/directory')) return 'Directory';
+    if (route.startsWith('/home/blog')) return 'Read Story';
+    if (route.startsWith('/action-hub')) return 'Action Hub';
+    return 'View';
+  }
+
+  void _showAnnouncementSheet(BuildContext context, AppNotification item) {
+    showModalBottomSheet<void>(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: Colors.transparent,
+      builder: (ctx) => Container(
+        padding: const EdgeInsets.fromLTRB(24, 20, 24, 32),
+        decoration: const BoxDecoration(
+          color: Colors.white,
+          borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
+        ),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Center(
+              child: Container(
+                width: 40,
+                height: 4,
+                margin: const EdgeInsets.only(bottom: 20),
+                decoration: BoxDecoration(
+                  color: AppColors.borderLight,
+                  borderRadius: BorderRadius.circular(2),
+                ),
+              ),
+            ),
+            Row(
+              children: [
+                Container(
+                  padding:
+                      const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                  decoration: BoxDecoration(
+                    color: AppColors.primaryBlue.withAlpha(20),
+                    borderRadius: BorderRadius.circular(8),
                   ),
-                ],
+                  child: const Text(
+                    'Community Announcement',
+                    style: TextStyle(
+                      color: AppColors.primaryBlue,
+                      fontSize: 11,
+                      fontWeight: FontWeight.w700,
+                    ),
+                  ),
+                ),
+                const Spacer(),
+                Text(
+                  item.timeLabel,
+                  style:
+                      const TextStyle(color: AppColors.textLight, fontSize: 12),
+                ),
+              ],
+            ),
+            const SizedBox(height: 14),
+            Text(
+              item.title,
+              style: const TextStyle(
+                fontSize: 18,
+                fontWeight: FontWeight.w700,
+                color: AppColors.textDark,
+              ),
+            ),
+            const SizedBox(height: 10),
+            Text(
+              item.body,
+              style: const TextStyle(
+                fontSize: 14,
+                height: 1.5,
+                color: AppColors.textMedium,
+              ),
+            ),
+            const SizedBox(height: 24),
+            SizedBox(
+              width: double.infinity,
+              height: 46,
+              child: FilledButton(
+                onPressed: () {
+                  Navigator.pop(ctx);
+                  RouteDispatcher.dispatch(context, route: '/action-hub');
+                },
+                style: FilledButton.styleFrom(
+                  backgroundColor: AppColors.primaryBlue,
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(12),
+                  ),
+                ),
+                child: const Text(
+                  'Explore Action Hub',
+                  style: TextStyle(fontWeight: FontWeight.w600),
+                ),
               ),
             ),
           ],

@@ -55,6 +55,9 @@ class RouteDispatcher {
         data?['event_id']?.toString() ?? data?['eventId']?.toString();
     final campaignId =
         data?['campaign_id']?.toString() ?? data?['campaignId']?.toString();
+    final slug = data?['slug']?.toString();
+    final speciesId =
+        data?['species_id']?.toString() ?? data?['speciesId']?.toString();
 
     // If explicit route is provided
     if (route != null && route.trim().isNotEmpty) {
@@ -71,18 +74,18 @@ class RouteDispatcher {
       return trimmed;
     }
 
-    // Direct event or campaign fallback when IDs are in data payload
-    if (eventId != null &&
-        eventId.isNotEmpty &&
-        (normalizedType == 'drive' ||
-            normalizedType == 'drive_reminder' ||
-            normalizedType.contains('event'))) {
+    // Direct content fallback when IDs are in data payload
+    if (eventId != null && eventId.isNotEmpty) {
       return '/action-hub/event/$eventId';
     }
-    if (campaignId != null &&
-        campaignId.isNotEmpty &&
-        (normalizedType == 'campaign' || normalizedType == 'campaign_update')) {
+    if (campaignId != null && campaignId.isNotEmpty) {
       return '/action-hub/campaign/$campaignId';
+    }
+    if (slug != null && slug.isNotEmpty) {
+      return '/home/blog/$slug';
+    }
+    if (speciesId != null && speciesId.isNotEmpty) {
+      return '/directory/species/$speciesId';
     }
 
     switch (normalizedType) {
@@ -91,39 +94,48 @@ class RouteDispatcher {
       case 'event_rsvp':
       case 'event_checkin':
       case 'event_update':
-        if (eventId != null && eventId.isNotEmpty) {
-          return '/action-hub/event/$eventId';
-        }
+      case 'event':
         return '/action-hub?tab=0';
+      case 'campaign':
+      case 'campaign_update':
+      case 'cause':
+        return '/action-hub?tab=1';
       case 'tree_tagged':
+      case 'tree_approved':
+      case 'tree':
         return '/map';
       case 'badge':
       case 'badge_earned':
+      case 'badge_unlocked':
         return '/profile/badges';
       case 'certificate':
       case 'certificate_ready':
+      case 'volunteer_certificate':
         return '/profile/certificates';
       case 'donation':
       case 'donation_confirmed':
+      case 'receipt_80g':
+      case 'tax_vault':
         return '/profile/settings/tax-vault';
-      case 'campaign':
-      case 'campaign_update':
-        if (campaignId != null && campaignId.isNotEmpty) {
-          return '/action-hub/campaign/$campaignId';
-        }
-        return '/action-hub?tab=1';
       case 'suggestion':
       case 'site_suggestion':
+      case 'suggestion_approved':
+      case 'suggestion_rejected':
         return '/action-hub/suggest-site';
+      case 'leaderboard':
+      case 'impact_milestone':
+      case 'xp':
+        return '/profile/leaderboard';
+      case 'blog':
+      case 'story':
+      case 'article':
+        return '/home/blogs';
+      case 'species':
+      case 'species_discovery':
+        return '/directory';
       case 'admin_broadcast':
       case 'announcement':
       default:
-        if (eventId != null && eventId.isNotEmpty) {
-          return '/action-hub/event/$eventId';
-        }
-        if (campaignId != null && campaignId.isNotEmpty) {
-          return '/action-hub/campaign/$campaignId';
-        }
         return '/notifications';
     }
   }
@@ -137,15 +149,25 @@ class RouteDispatcher {
     final resolved = resolveRoute(route: route, type: type, data: data);
     if (resolved == null || resolved.isEmpty) return;
 
-    // Avoid pushing a duplicate Notifications page when already viewing it.
+    // Avoid pushing duplicate notifications route
     if (resolved == '/notifications' &&
         GoRouterState.of(context).uri.path == '/notifications') {
       return;
     }
 
     if (_isSupportedRoute(resolved)) {
-      context.push(resolved);
-      return;
+      try {
+        context.push(resolved);
+        return;
+      } catch (pushErr) {
+        debugPrint('RouteDispatcher: push failed ($pushErr), using go()');
+        try {
+          GoRouter.of(context).go(resolved);
+          return;
+        } catch (goErr) {
+          debugPrint('RouteDispatcher: go failed ($goErr)');
+        }
+      }
     }
 
     debugPrint(

@@ -203,6 +203,88 @@ void main() {
     // 4. Missing IDs degrade cleanly to Action Hub tab index
     expect(RouteDispatcher.resolveRoute(type: 'drive'), '/action-hub?tab=0');
     expect(RouteDispatcher.resolveRoute(type: 'campaign'), '/action-hub?tab=1');
+
+    // 5. Additional situations
+    expect(
+      RouteDispatcher.resolveRoute(type: 'blog', data: {'slug': 'urban-forests'}),
+      '/home/blog/urban-forests',
+    );
+    expect(
+      RouteDispatcher.resolveRoute(type: 'species', data: {'species_id': 'sp-101'}),
+      '/directory/species/sp-101',
+    );
+    expect(
+      RouteDispatcher.resolveRoute(type: 'leaderboard'),
+      '/profile/leaderboard',
+    );
+    expect(
+      RouteDispatcher.resolveRoute(type: 'receipt_80g'),
+      '/profile/settings/tax-vault',
+    );
+    expect(
+      RouteDispatcher.resolveRoute(type: 'volunteer_certificate'),
+      '/profile/certificates',
+    );
+    expect(
+      RouteDispatcher.resolveRoute(type: 'tree_approved'),
+      '/map',
+    );
+    expect(
+      RouteDispatcher.resolveRoute(type: 'site_suggestion'),
+      '/action-hub/suggest-site',
+    );
+  });
+
+  testWidgets('NotificationsPage displays action pills and opens announcement sheet on tap',
+      (WidgetTester tester) async {
+    final fakeRepo = _FakeNotificationsRepository([
+      const AppNotification(
+        id: 'drive-notif',
+        type: AppNotificationType.drive,
+        rawType: 'drive',
+        category: 'drives',
+        title: 'Holi Plantation Drive',
+        body: 'Meet at Gate 2',
+        timeLabel: '2m ago',
+        route: '/action-hub/event/evt-101',
+      ),
+      const AppNotification(
+        id: 'broadcast-notif',
+        type: AppNotificationType.system,
+        rawType: 'admin_broadcast',
+        category: 'announcements',
+        title: 'Happy Environment Day',
+        body: 'Thank you for making Earth greener!',
+        timeLabel: '1h ago',
+        isBroadcast: true,
+      ),
+    ]);
+
+    await tester.pumpWidget(
+      ProviderScope(
+        overrides: [
+          currentUserProvider.overrideWith(_LoggedInUserNotifier.new),
+          notificationsRepositoryProvider.overrideWithValue(fakeRepo),
+        ],
+        child: MaterialApp(
+          theme: AppTheme.lightTheme,
+          home: const NotificationsPage(),
+        ),
+      ),
+    );
+
+    await tester.pumpAndSettle();
+
+    // Verify "View Event" pill appears on actionable event notification
+    expect(find.text('View Event'), findsOneWidget);
+
+    // Tap the announcement card (without deep link)
+    await tester.tap(find.text('Happy Environment Day'));
+    await tester.pumpAndSettle();
+
+    // Verify bottom sheet opened
+    expect(find.text('Community Announcement'), findsOneWidget);
+    expect(find.text('Explore Action Hub'), findsOneWidget);
   });
 
   test('AppNotification.fromJson correctly segregates events and campaigns', () {

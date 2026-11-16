@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'package:cached_network_image/cached_network_image.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_animate/flutter_animate.dart';
@@ -16,6 +17,7 @@ import '../../auth/providers/auth_provider.dart';
 import '../../legal/services/legal_service.dart';
 import '../../legal/widgets/policy_update_sheet.dart';
 import '../../../core/services/push_notification_service.dart';
+import '../../../core/utils/route_dispatcher.dart';
 
 /// The primary discovery dashboard for BlueDot.
 ///
@@ -36,6 +38,7 @@ class HomePage extends ConsumerStatefulWidget {
 
 class _HomePageState extends ConsumerState<HomePage> {
   final _scroll = ScrollController();
+  StreamSubscription<Map<String, dynamic>>? _foregroundPushSub;
 
   @override
   void initState() {
@@ -44,6 +47,55 @@ class _HomePageState extends ConsumerState<HomePage> {
       _checkPolicyConsent();
       ref.read(pushNotificationServiceProvider).initialize(requestPermission: true);
       ref.read(pushNotificationServiceProvider).processPendingNotification(context);
+
+      _foregroundPushSub = ref
+          .read(pushNotificationServiceProvider)
+          .foregroundEvents
+          .listen((data) {
+        if (!mounted) return;
+        ref.read(notificationsProvider.notifier).refresh();
+        final title = data['title']?.toString() ?? 'BlueDot Notification';
+        final body = data['body']?.toString() ?? '';
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            behavior: SnackBarBehavior.floating,
+            backgroundColor: AppColors.textDark,
+            content: Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  title,
+                  style: const TextStyle(
+                    fontWeight: FontWeight.w700,
+                    color: Colors.white,
+                  ),
+                ),
+                if (body.isNotEmpty)
+                  Text(
+                    body,
+                    style: const TextStyle(fontSize: 12.5, color: Colors.white70),
+                    maxLines: 2,
+                    overflow: TextOverflow.ellipsis,
+                  ),
+              ],
+            ),
+            duration: const Duration(seconds: 5),
+            action: SnackBarAction(
+              label: 'View',
+              textColor: AppColors.primaryYellow,
+              onPressed: () {
+                RouteDispatcher.dispatch(
+                  context,
+                  route: data['route']?.toString(),
+                  type: data['type']?.toString(),
+                  data: data,
+                );
+              },
+            ),
+          ),
+        );
+      });
     });
   }
 
@@ -56,6 +108,7 @@ class _HomePageState extends ConsumerState<HomePage> {
 
   @override
   void dispose() {
+    _foregroundPushSub?.cancel();
     _scroll.dispose();
     super.dispose();
   }
