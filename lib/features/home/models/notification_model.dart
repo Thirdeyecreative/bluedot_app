@@ -44,11 +44,17 @@ class AppNotification {
     };
 
     final createdAtRaw = json['created_at'] as String?;
-    final parsedDate = createdAtRaw != null ? DateTime.tryParse(createdAtRaw)?.toLocal() : null;
+    DateTime? parsedDate;
+    if (createdAtRaw != null && createdAtRaw.trim().isNotEmpty) {
+      final raw = createdAtRaw.trim();
+      final utcIso = (raw.endsWith('Z') || raw.contains('+')) ? raw : '${raw}Z';
+      parsedDate = DateTime.tryParse(utcIso)?.toLocal();
+    }
+    final relativeLabel = _formatRelativeTime(parsedDate);
     final serverLabel = (json['timeLabel'] as String?)?.trim();
-    final computedLabel = (serverLabel != null && serverLabel.isNotEmpty)
-        ? serverLabel
-        : _formatRelativeTime(parsedDate);
+    final computedLabel = (relativeLabel.isNotEmpty && parsedDate != null)
+        ? relativeLabel
+        : (serverLabel != null && serverLabel.isNotEmpty ? serverLabel : 'Just now');
 
     final rawData = json['data'];
     final parsedData = rawData is Map<String, dynamic>
