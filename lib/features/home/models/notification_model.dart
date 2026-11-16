@@ -1,4 +1,11 @@
-enum AppNotificationType { drive, badge, campaign, certificate, donation, system }
+enum AppNotificationType {
+  drive,
+  badge,
+  campaign,
+  certificate,
+  donation,
+  system,
+}
 
 class AppNotification {
   final String id;
@@ -31,16 +38,44 @@ class AppNotification {
 
   factory AppNotification.fromJson(Map<String, dynamic> json) {
     final rawType = (json['type'] as String? ?? 'system').trim().toLowerCase();
+    final rawData = json['data'];
+    final parsedData = rawData is Map<String, dynamic>
+        ? rawData
+        : (rawData is Map
+              ? Map<String, dynamic>.from(rawData)
+              : const <String, dynamic>{});
+
+    final hasEvent =
+        parsedData['event_id'] != null || parsedData['eventId'] != null;
+    final hasCampaign =
+        parsedData['campaign_id'] != null || parsedData['campaignId'] != null;
+
     final type = switch (rawType) {
-      'drive' || 'drive_reminder' || 'event_rsvp' || 'event_checkin' || 'event_update' =>
-        AppNotificationType.drive,
-      'badge' || 'badge_earned' || 'tree_tagged' || 'suggestion_approved' || 'suggestion_rejected' =>
-        AppNotificationType.badge,
-      'campaign' || 'campaign_update' || 'admin_broadcast' || 'announcement' =>
-        AppNotificationType.campaign,
+      'drive' ||
+      'drive_reminder' ||
+      'event_rsvp' ||
+      'event_checkin' ||
+      'event_update' => AppNotificationType.drive,
+      'badge' ||
+      'badge_earned' ||
+      'tree_tagged' ||
+      'suggestion_approved' ||
+      'suggestion_rejected' => AppNotificationType.badge,
+      'campaign' || 'campaign_update' => AppNotificationType.campaign,
       'certificate' || 'certificate_ready' => AppNotificationType.certificate,
       'donation' || 'donation_confirmed' => AppNotificationType.donation,
-      _ => AppNotificationType.system,
+      'admin_broadcast' || 'announcement' =>
+        hasEvent
+            ? AppNotificationType.drive
+            : (hasCampaign
+                  ? AppNotificationType.campaign
+                  : AppNotificationType.system),
+      _ =>
+        hasEvent
+            ? AppNotificationType.drive
+            : (hasCampaign
+                  ? AppNotificationType.campaign
+                  : AppNotificationType.system),
     };
 
     final createdAtRaw = json['created_at'] as String?;
@@ -54,18 +89,32 @@ class AppNotification {
     final serverLabel = (json['timeLabel'] as String?)?.trim();
     final computedLabel = (relativeLabel.isNotEmpty && parsedDate != null)
         ? relativeLabel
-        : (serverLabel != null && serverLabel.isNotEmpty ? serverLabel : 'Just now');
+        : (serverLabel != null && serverLabel.isNotEmpty
+              ? serverLabel
+              : 'Just now');
 
-    final rawData = json['data'];
-    final parsedData = rawData is Map<String, dynamic>
-        ? rawData
-        : (rawData is Map ? Map<String, dynamic>.from(rawData) : const <String, dynamic>{});
+    final explicitCategory = (json['category'] as String?)
+        ?.trim()
+        .toLowerCase();
+    final effectiveCategory =
+        (explicitCategory != null &&
+            explicitCategory.isNotEmpty &&
+            explicitCategory != 'system' &&
+            explicitCategory != 'announcements')
+        ? explicitCategory
+        : (hasEvent
+              ? 'drives'
+              : (hasCampaign
+                    ? 'donations'
+                    : (explicitCategory?.isNotEmpty == true
+                          ? explicitCategory!
+                          : _inferCategory(rawType))));
 
     return AppNotification(
       id: json['id']?.toString() ?? '',
       type: type,
       rawType: rawType,
-      category: (json['category'] as String?)?.trim().toLowerCase() ?? _inferCategory(rawType),
+      category: effectiveCategory,
       title: json['title'] as String? ?? '',
       body: json['body'] as String? ?? '',
       timeLabel: computedLabel,
@@ -79,10 +128,22 @@ class AppNotification {
 
   static String _inferCategory(String rawType) {
     return switch (rawType) {
-      'drive' || 'drive_reminder' || 'event_rsvp' || 'event_checkin' || 'event_update' => 'drives',
-      'badge' || 'badge_earned' || 'tree_tagged' || 'certificate' || 'certificate_ready' || 'suggestion_approved' || 'suggestion_rejected' =>
-        'badges',
-      'donation' || 'donation_confirmed' || 'campaign' || 'campaign_update' => 'donations',
+      'drive' ||
+      'drive_reminder' ||
+      'event_rsvp' ||
+      'event_checkin' ||
+      'event_update' => 'drives',
+      'badge' ||
+      'badge_earned' ||
+      'tree_tagged' ||
+      'certificate' ||
+      'certificate_ready' ||
+      'suggestion_approved' ||
+      'suggestion_rejected' => 'badges',
+      'donation' ||
+      'donation_confirmed' ||
+      'campaign' ||
+      'campaign_update' => 'donations',
       'admin_broadcast' || 'announcement' => 'announcements',
       _ => 'system',
     };
@@ -96,24 +157,37 @@ class AppNotification {
     if (diff.inHours < 24) return '${diff.inHours}h ago';
     if (diff.inDays == 1) return 'Yesterday';
     if (diff.inDays < 7) return '${diff.inDays}d ago';
-    const months = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+    const months = [
+      'Jan',
+      'Feb',
+      'Mar',
+      'Apr',
+      'May',
+      'Jun',
+      'Jul',
+      'Aug',
+      'Sep',
+      'Oct',
+      'Nov',
+      'Dec',
+    ];
     return '${dt.day.toString().padLeft(2, '0')} ${months[dt.month - 1]}';
   }
 
   AppNotification copyWith({bool? read}) => AppNotification(
-        id: id,
-        type: type,
-        rawType: rawType,
-        category: category,
-        title: title,
-        body: body,
-        timeLabel: timeLabel,
-        read: read ?? this.read,
-        isBroadcast: isBroadcast,
-        route: route,
-        data: data,
-        createdAt: createdAt,
-      );
+    id: id,
+    type: type,
+    rawType: rawType,
+    category: category,
+    title: title,
+    body: body,
+    timeLabel: timeLabel,
+    read: read ?? this.read,
+    isBroadcast: isBroadcast,
+    route: route,
+    data: data,
+    createdAt: createdAt,
+  );
 }
 
 class PaginatedNotificationsResponse {
@@ -135,7 +209,8 @@ class PaginatedNotificationsResponse {
         .whereType<Map>()
         .map((e) => AppNotification.fromJson(Map<String, dynamic>.from(e)))
         .toList();
-    final unread = (json['unread_count'] as num?)?.toInt() ??
+    final unread =
+        (json['unread_count'] as num?)?.toInt() ??
         items.where((n) => !n.read).length;
     final total = (json['total'] as num?)?.toInt() ?? items.length;
     final hasMore = json['has_more'] as bool? ?? (items.length < total);

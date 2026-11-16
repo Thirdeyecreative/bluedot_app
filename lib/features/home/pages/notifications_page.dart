@@ -20,7 +20,7 @@ class _NotificationsPageState extends ConsumerState<NotificationsPage> {
     (key: 'all', label: 'All'),
     (key: 'drives', label: 'Drives & Events'),
     (key: 'badges', label: 'Badges & Trees'),
-    (key: 'donations', label: 'Donations'),
+    (key: 'donations', label: 'Campaigns & Donations'),
     (key: 'announcements', label: 'Announcements'),
   ];
 
@@ -66,7 +66,8 @@ class _NotificationsPageState extends ConsumerState<NotificationsPage> {
         actions: [
           if (unread > 0)
             TextButton(
-              onPressed: () => ref.read(notificationsProvider.notifier).markAllRead(),
+              onPressed: () =>
+                  ref.read(notificationsProvider.notifier).markAllRead(),
               child: const Text(
                 'Mark all read',
                 style: TextStyle(fontSize: 13, fontWeight: FontWeight.w600),
@@ -93,16 +94,22 @@ class _NotificationsPageState extends ConsumerState<NotificationsPage> {
                 return ChoiceChip(
                   label: Text(tab.label),
                   selected: isSelected,
-                  onSelected: (_) => ref.read(notificationsProvider.notifier).setCategory(tab.key),
+                  onSelected: (_) => ref
+                      .read(notificationsProvider.notifier)
+                      .setCategory(tab.key),
                   selectedColor: AppColors.primaryBlue.withAlpha(24),
                   backgroundColor: Colors.white,
                   side: BorderSide(
-                    color: isSelected ? AppColors.primaryBlue : AppColors.borderLight,
+                    color: isSelected
+                        ? AppColors.primaryBlue
+                        : AppColors.borderLight,
                   ),
                   labelStyle: TextStyle(
                     fontSize: 12.5,
                     fontWeight: isSelected ? FontWeight.w700 : FontWeight.w500,
-                    color: isSelected ? AppColors.primaryBlue : AppColors.textMedium,
+                    color: isSelected
+                        ? AppColors.primaryBlue
+                        : AppColors.textMedium,
                   ),
                   visualDensity: VisualDensity.compact,
                   showCheckmark: false,
@@ -120,7 +127,11 @@ class _NotificationsPageState extends ConsumerState<NotificationsPage> {
     );
   }
 
-  Widget _buildBody(NotificationsState notifState, List<AppNotification> items, int unread) {
+  Widget _buildBody(
+    NotificationsState notifState,
+    List<AppNotification> items,
+    int unread,
+  ) {
     if (notifState.isLoading && items.isEmpty) {
       return const _NotificationsSkeleton();
     }
@@ -137,16 +148,24 @@ class _NotificationsPageState extends ConsumerState<NotificationsPage> {
                 child: Column(
                   mainAxisAlignment: MainAxisAlignment.center,
                   children: [
-                    Icon(Icons.cloud_off_rounded, size: 56, color: AppColors.slateBlue.withAlpha(140)),
+                    Icon(
+                      Icons.cloud_off_rounded,
+                      size: 56,
+                      color: AppColors.slateBlue.withAlpha(140),
+                    ),
                     const SizedBox(height: 16),
                     Text(
                       notifState.error!,
                       textAlign: TextAlign.center,
-                      style: const TextStyle(color: AppColors.textMedium, fontSize: 14),
+                      style: const TextStyle(
+                        color: AppColors.textMedium,
+                        fontSize: 14,
+                      ),
                     ),
                     const SizedBox(height: 16),
                     FilledButton.icon(
-                      onPressed: () => ref.read(notificationsProvider.notifier).refresh(),
+                      onPressed: () =>
+                          ref.read(notificationsProvider.notifier).refresh(),
                       icon: const Icon(Icons.refresh_rounded, size: 18),
                       label: const Text('Retry'),
                     ),
@@ -204,7 +223,11 @@ class _NotificationsPageState extends ConsumerState<NotificationsPage> {
         final card = _NotificationCard(item: item)
             .animate()
             .fadeIn(delay: (35 * (itemIndex.clamp(0, 8))).ms)
-            .slideY(begin: 0.04, end: 0, delay: (35 * (itemIndex.clamp(0, 8))).ms);
+            .slideY(
+              begin: 0.04,
+              end: 0,
+              delay: (35 * (itemIndex.clamp(0, 8))).ms,
+            );
 
         if (item.isBroadcast) {
           return Padding(
@@ -225,13 +248,22 @@ class _NotificationsPageState extends ConsumerState<NotificationsPage> {
                 color: AppColors.errorRed.withAlpha(24),
                 borderRadius: BorderRadius.circular(16),
               ),
-              child: const Icon(Icons.delete_outline_rounded, color: AppColors.errorRed),
+              child: const Icon(
+                Icons.delete_outline_rounded,
+                color: AppColors.errorRed,
+              ),
             ),
             onDismissed: (_) async {
-              final deleted = await ref.read(notificationsProvider.notifier).deleteNotification(item.id);
+              final deleted = await ref
+                  .read(notificationsProvider.notifier)
+                  .deleteNotification(item.id);
               if (!deleted && context.mounted) {
                 ScaffoldMessenger.of(context).showSnackBar(
-                  const SnackBar(content: Text('Could not dismiss notification. Please try again.')),
+                  const SnackBar(
+                    content: Text(
+                      'Could not dismiss notification. Please try again.',
+                    ),
+                  ),
                 );
               }
             },
@@ -276,9 +308,18 @@ class _NotificationsSkeleton extends StatelessWidget {
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    Text('Notification title placeholder', style: TextStyle(fontSize: 14, fontWeight: FontWeight.w700)),
+                    Text(
+                      'Notification title placeholder',
+                      style: TextStyle(
+                        fontSize: 14,
+                        fontWeight: FontWeight.w700,
+                      ),
+                    ),
                     SizedBox(height: 6),
-                    Text('Notification body description line placeholder for loading state', style: TextStyle(fontSize: 12.5)),
+                    Text(
+                      'Notification body description line placeholder for loading state',
+                      style: TextStyle(fontSize: 12.5),
+                    ),
                     SizedBox(height: 8),
                     Text('2h ago', style: TextStyle(fontSize: 11)),
                   ],
@@ -299,11 +340,16 @@ class _EmptyNotifications extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final subtitle = switch (category) {
-      'drives' => 'Upcoming plantation drive reminders and check-in updates will appear here.',
-      'badges' => 'Badge unlocks, tree tagging milestones, and volunteer certificates will appear here.',
-      'donations' => 'Your 80G tax receipt alerts and campaign milestones will appear here.',
-      'announcements' => 'Community updates and announcements from BlueDot will appear here.',
-      _ => 'Drive reminders, badge unlocks, donation alerts, and campaign updates will appear here.',
+      'drives' =>
+        'Upcoming plantation drive reminders and check-in updates will appear here.',
+      'badges' =>
+        'Badge unlocks, tree tagging milestones, and volunteer certificates will appear here.',
+      'donations' =>
+        'Your 80G tax receipt alerts and campaign milestones will appear here.',
+      'announcements' =>
+        'Community updates and announcements from BlueDot will appear here.',
+      _ =>
+        'Drive reminders, badge unlocks, donation alerts, and campaign updates will appear here.',
     };
 
     return Center(
@@ -312,17 +358,29 @@ class _EmptyNotifications extends StatelessWidget {
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
-            Icon(Icons.notifications_off_outlined, size: 64, color: AppColors.slateBlue.withAlpha(120)),
+            Icon(
+              Icons.notifications_off_outlined,
+              size: 64,
+              color: AppColors.slateBlue.withAlpha(120),
+            ),
             const SizedBox(height: 16),
             const Text(
               "You're all caught up",
-              style: TextStyle(fontWeight: FontWeight.w700, fontSize: 16, color: AppColors.textDark),
+              style: TextStyle(
+                fontWeight: FontWeight.w700,
+                fontSize: 16,
+                color: AppColors.textDark,
+              ),
             ),
             const SizedBox(height: 8),
             Text(
               subtitle,
               textAlign: TextAlign.center,
-              style: const TextStyle(color: AppColors.textMedium, fontSize: 13, height: 1.5),
+              style: const TextStyle(
+                color: AppColors.textMedium,
+                fontSize: 13,
+                height: 1.5,
+              ),
             ),
           ],
         ),
@@ -354,7 +412,11 @@ class _NotificationCard extends ConsumerWidget {
         decoration: BoxDecoration(
           color: item.read ? AppColors.surfaceCard : Colors.white,
           borderRadius: BorderRadius.circular(16),
-          border: Border.all(color: item.read ? AppColors.borderLight : style.color.withAlpha(70)),
+          border: Border.all(
+            color: item.read
+                ? AppColors.borderLight
+                : style.color.withAlpha(70),
+          ),
         ),
         child: Row(
           crossAxisAlignment: CrossAxisAlignment.start,
@@ -362,7 +424,10 @@ class _NotificationCard extends ConsumerWidget {
             Container(
               width: 42,
               height: 42,
-              decoration: BoxDecoration(color: style.color.withAlpha(22), borderRadius: BorderRadius.circular(12)),
+              decoration: BoxDecoration(
+                color: style.color.withAlpha(22),
+                borderRadius: BorderRadius.circular(12),
+              ),
               child: Icon(style.icon, color: style.color, size: 22),
             ),
             const SizedBox(width: 12),
@@ -376,7 +441,9 @@ class _NotificationCard extends ConsumerWidget {
                         child: Text(
                           item.title,
                           style: TextStyle(
-                            fontWeight: item.read ? FontWeight.w600 : FontWeight.w700,
+                            fontWeight: item.read
+                                ? FontWeight.w600
+                                : FontWeight.w700,
                             fontSize: 14,
                             color: AppColors.textDark,
                           ),
@@ -387,20 +454,39 @@ class _NotificationCard extends ConsumerWidget {
                           margin: const EdgeInsets.only(left: 8, top: 4),
                           width: 8,
                           height: 8,
-                          decoration: const BoxDecoration(color: AppColors.primaryBlue, shape: BoxShape.circle),
+                          decoration: const BoxDecoration(
+                            color: AppColors.primaryBlue,
+                            shape: BoxShape.circle,
+                          ),
                         ),
                     ],
                   ),
                   const SizedBox(height: 4),
-                  Text(item.body, style: const TextStyle(color: AppColors.textMedium, fontSize: 12.5, height: 1.4)),
+                  Text(
+                    item.body,
+                    style: const TextStyle(
+                      color: AppColors.textMedium,
+                      fontSize: 12.5,
+                      height: 1.4,
+                    ),
+                  ),
                   const SizedBox(height: 8),
                   Row(
                     children: [
-                      Text(item.timeLabel, style: const TextStyle(color: AppColors.textLight, fontSize: 11)),
+                      Text(
+                        item.timeLabel,
+                        style: const TextStyle(
+                          color: AppColors.textLight,
+                          fontSize: 11,
+                        ),
+                      ),
                       if (item.isBroadcast) ...[
                         const SizedBox(width: 8),
                         Container(
-                          padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                          padding: const EdgeInsets.symmetric(
+                            horizontal: 6,
+                            vertical: 2,
+                          ),
                           decoration: BoxDecoration(
                             color: AppColors.primaryBlue.withAlpha(18),
                             borderRadius: BorderRadius.circular(6),
@@ -431,9 +517,15 @@ class _NotificationCard extends ConsumerWidget {
       case AppNotificationType.drive:
         return const _NotifStyle(Icons.park_rounded, AppColors.forestGreen);
       case AppNotificationType.badge:
-        return const _NotifStyle(Icons.workspace_premium_rounded, AppColors.primaryYellow);
+        return const _NotifStyle(
+          Icons.workspace_premium_rounded,
+          AppColors.primaryYellow,
+        );
       case AppNotificationType.campaign:
-        return const _NotifStyle(Icons.volunteer_activism_rounded, AppColors.terracotta);
+        return const _NotifStyle(
+          Icons.volunteer_activism_rounded,
+          AppColors.terracotta,
+        );
       case AppNotificationType.certificate:
         return const _NotifStyle(Icons.verified_rounded, AppColors.primaryBlue);
       case AppNotificationType.donation:

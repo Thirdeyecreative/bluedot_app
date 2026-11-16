@@ -48,13 +48,42 @@ class RouteDispatcher {
     String? type,
     Map<String, dynamic>? data,
   }) {
+    final normalizedType = (type ?? data?['type']?.toString() ?? '')
+        .trim()
+        .toLowerCase();
+    final eventId =
+        data?['event_id']?.toString() ?? data?['eventId']?.toString();
+    final campaignId =
+        data?['campaign_id']?.toString() ?? data?['campaignId']?.toString();
+
+    // If explicit route is provided
     if (route != null && route.trim().isNotEmpty) {
-      return route.trim();
+      final trimmed = route.trim();
+      // If server sent a generic route but specific content IDs exist, prefer the deep target
+      if (trimmed == '/notifications' || trimmed == '/action-hub') {
+        if (eventId != null && eventId.isNotEmpty) {
+          return '/action-hub/event/$eventId';
+        }
+        if (campaignId != null && campaignId.isNotEmpty) {
+          return '/action-hub/campaign/$campaignId';
+        }
+      }
+      return trimmed;
     }
 
-    final normalizedType = (type ?? data?['type']?.toString() ?? '').trim().toLowerCase();
-    final eventId = data?['event_id']?.toString() ?? data?['eventId']?.toString();
-    final campaignId = data?['campaign_id']?.toString() ?? data?['campaignId']?.toString();
+    // Direct event or campaign fallback when IDs are in data payload
+    if (eventId != null &&
+        eventId.isNotEmpty &&
+        (normalizedType == 'drive' ||
+            normalizedType == 'drive_reminder' ||
+            normalizedType.contains('event'))) {
+      return '/action-hub/event/$eventId';
+    }
+    if (campaignId != null &&
+        campaignId.isNotEmpty &&
+        (normalizedType == 'campaign' || normalizedType == 'campaign_update')) {
+      return '/action-hub/campaign/$campaignId';
+    }
 
     switch (normalizedType) {
       case 'drive':
@@ -65,7 +94,7 @@ class RouteDispatcher {
         if (eventId != null && eventId.isNotEmpty) {
           return '/action-hub/event/$eventId';
         }
-        return '/action-hub';
+        return '/action-hub?tab=0';
       case 'tree_tagged':
         return '/map';
       case 'badge':
@@ -82,13 +111,19 @@ class RouteDispatcher {
         if (campaignId != null && campaignId.isNotEmpty) {
           return '/action-hub/campaign/$campaignId';
         }
-        return '/action-hub';
+        return '/action-hub?tab=1';
       case 'suggestion':
       case 'site_suggestion':
         return '/action-hub/suggest-site';
       case 'admin_broadcast':
       case 'announcement':
       default:
+        if (eventId != null && eventId.isNotEmpty) {
+          return '/action-hub/event/$eventId';
+        }
+        if (campaignId != null && campaignId.isNotEmpty) {
+          return '/action-hub/campaign/$campaignId';
+        }
         return '/notifications';
     }
   }
@@ -113,7 +148,9 @@ class RouteDispatcher {
       return;
     }
 
-    debugPrint('RouteDispatcher: Unknown route received from server: $resolved');
+    debugPrint(
+      'RouteDispatcher: Unknown route received from server: $resolved',
+    );
     if (context.mounted) {
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(
@@ -123,4 +160,3 @@ class RouteDispatcher {
     }
   }
 }
-
