@@ -10,6 +10,7 @@ class TreeSpecies {
   final String? description;
   final String? family;
   final String? nativeRegion;
+  final String location;
 
   const TreeSpecies({
     required this.id,
@@ -21,6 +22,7 @@ class TreeSpecies {
     this.description,
     this.family,
     this.nativeRegion,
+    this.location = 'Others',
   });
 
   factory TreeSpecies.fromJson(Map<String, dynamic> json) => TreeSpecies(
@@ -33,7 +35,10 @@ class TreeSpecies {
         description: json['description'] as String?,
         family: json['family'] as String?,
         nativeRegion: json['native_region'] as String?,
+        location: json['location'] as String? ?? 'Others',
       );
+
+  bool get isIndian => location.toLowerCase().contains('indian');
 
   String? get thumbnailUrl {
     if (imageUrls.isEmpty) return null;

@@ -54,6 +54,35 @@ class SpeciesDetailPage extends ConsumerWidget {
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
+                    // Origin / Location Badge
+                    Container(
+                      margin: const EdgeInsets.only(bottom: 10),
+                      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
+                      decoration: BoxDecoration(
+                        color: s.isIndian ? AppColors.forestGreen.withAlpha(20) : AppColors.slateBlue.withAlpha(20),
+                        borderRadius: BorderRadius.circular(12),
+                        border: Border.all(
+                          color: s.isIndian ? AppColors.forestGreen.withAlpha(80) : AppColors.slateBlue.withAlpha(80),
+                          width: 1,
+                        ),
+                      ),
+                      child: Row(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          Text(s.isIndian ? '🇮🇳' : '🌍', style: const TextStyle(fontSize: 12)),
+                          const SizedBox(width: 5),
+                          Text(
+                            s.isIndian ? 'Indian Native Species' : 'Other Global Species',
+                            style: TextStyle(
+                              fontSize: 12,
+                              fontWeight: FontWeight.w700,
+                              color: s.isIndian ? AppColors.forestGreen : AppColors.slateBlue,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ).animate().fadeIn(),
+
                     // Name + scientific
                     Text(s.localName, style: Theme.of(context).textTheme.headlineMedium?.copyWith(fontWeight: FontWeight.w700))
                         .animate().fadeIn().slideY(begin: 0.1, end: 0),
