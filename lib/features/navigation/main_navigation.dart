@@ -99,10 +99,11 @@ class _BlueDotNavBar extends ConsumerWidget {
     return CapsuleNavBar(
       currentIndex: currentIndex,
       onTap: onTapNav,
-      backgroundColor: const Color(0xFFE1BCB4),    // Soft Blush Terracotta from swatch
-      activeCapsuleColor: Colors.white,            // Clean white expanding capsule
-      activeColor: const Color(0xFF8E4533),        // Deep rich terracotta text & icon
-      inactiveColor: const Color(0xFF5A3D36),      // Grounded warm earthen charcoal outline
+      onCenterTap: () => context.push('/scanner'),
+      backgroundColor: AppColors.primaryBlue,
+      activeCapsuleColor: const Color(0xFF26377B),
+      activeColor: Colors.white,
+      inactiveColor: Colors.white.withOpacity(0.7),
       items: [
         const CapsuleNavItem(
           icon: Icons.home_outlined,
@@ -110,13 +111,13 @@ class _BlueDotNavBar extends ConsumerWidget {
           label: 'Home',
         ),
         const CapsuleNavItem(
-          icon: Icons.explore_outlined,
-          activeIcon: Icons.explore_rounded,
-          label: 'Action Hub',
+          icon: Icons.yard_outlined,
+          activeIcon: Icons.yard_rounded,
+          label: 'Action',
         ),
         const CapsuleNavItem(
-          icon: Icons.park_outlined,
-          activeIcon: Icons.park_rounded,
+          icon: Icons.explore_outlined,
+          activeIcon: Icons.explore_rounded,
           label: 'Directory',
         ),
         CapsuleNavItem(

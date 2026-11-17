@@ -12,16 +12,6 @@ class SearchQueryNotifier extends Notifier<String> {
   void update(String q) => state = q;
 }
 
-final locationFilterProvider = NotifierProvider<LocationFilterNotifier, String>(
-  LocationFilterNotifier.new,
-);
-
-class LocationFilterNotifier extends Notifier<String> {
-  @override
-  String build() => 'Indian'; // Default to Indian data as requested
-  void update(String loc) => state = loc;
-}
-
 final isFetchingMoreProvider = NotifierProvider<IsFetchingMoreNotifier, bool>(
   IsFetchingMoreNotifier.new,
 );
@@ -48,9 +38,7 @@ class SpeciesListNotifier extends AsyncNotifier<List<TreeSpecies>> {
   @override
   Future<List<TreeSpecies>> build() async {
     final query = ref.watch(searchQueryProvider).trim();
-    final locationFilter = ref.watch(locationFilterProvider);
     final isSearching = query.isNotEmpty;
-    final locationParam = locationFilter == 'All' ? null : locationFilter;
 
     // When searching, fetch all matching results in a single unpaginated API call
     if (isSearching) {
@@ -59,7 +47,6 @@ class SpeciesListNotifier extends AsyncNotifier<List<TreeSpecies>> {
           .watch(directoryRepositoryProvider)
           .fetchSpecies(
             search: query,
-            location: locationParam,
             limit: 500,
             offset: 0,
           );
@@ -72,7 +59,6 @@ class SpeciesListNotifier extends AsyncNotifier<List<TreeSpecies>> {
         .watch(directoryRepositoryProvider)
         .fetchSpecies(
           search: null,
-          location: locationParam,
           limit: _limit,
           offset: 0,
         );
@@ -87,9 +73,6 @@ class SpeciesListNotifier extends AsyncNotifier<List<TreeSpecies>> {
     final currentData = state.value;
     if (currentData == null) return;
 
-    final locationFilter = ref.read(locationFilterProvider);
-    final locationParam = locationFilter == 'All' ? null : locationFilter;
-
     _isLoadingMore = true;
     ref.read(isFetchingMoreProvider.notifier).update(true);
 
@@ -99,7 +82,6 @@ class SpeciesListNotifier extends AsyncNotifier<List<TreeSpecies>> {
           .read(directoryRepositoryProvider)
           .fetchSpecies(
             search: null,
-            location: locationParam,
             limit: _limit,
             offset: offset,
           );

@@ -45,13 +45,6 @@ class _DirectoryPageState extends ConsumerState<DirectoryPage> {
     });
   }
 
-  void _onSelectLocation(String loc) {
-    if (_scrollController.hasClients) {
-      _scrollController.jumpTo(0);
-    }
-    ref.read(locationFilterProvider.notifier).update(loc);
-  }
-
   @override
   void dispose() {
     _searchController.dispose();
@@ -65,13 +58,9 @@ class _DirectoryPageState extends ConsumerState<DirectoryPage> {
     final speciesAsync = ref.watch(speciesListProvider);
     final isFetchingMore = ref.watch(isFetchingMoreProvider);
     final searchQuery = ref.watch(searchQueryProvider).trim();
-    final activeLocation = ref.watch(locationFilterProvider);
     final list = speciesAsync.value;
     final isInitialLoading = speciesAsync.isLoading && list == null;
     final isSearchingBackground = speciesAsync.isLoading && list != null;
-
-    final indianList = list?.where((s) => s.isIndian).toList() ?? [];
-    final othersList = list?.where((s) => !s.isIndian).toList() ?? [];
 
     return PopScope(
       canPop: false,
@@ -113,10 +102,10 @@ class _DirectoryPageState extends ConsumerState<DirectoryPage> {
                   style: Theme.of(context).textTheme.titleLarge?.copyWith(fontWeight: FontWeight.w700),
                 ),
                 bottom: PreferredSize(
-                  preferredSize: const Size.fromHeight(114),
+                  preferredSize: const Size.fromHeight(58),
                   child: Column(
                     children: [
-                      // 1. Search Bar
+                      // Search Bar
                       Padding(
                         padding: const EdgeInsets.fromLTRB(16, 0, 16, 6),
                         child: TextField(
@@ -135,40 +124,6 @@ class _DirectoryPageState extends ConsumerState<DirectoryPage> {
                                   )
                                 : null,
                             contentPadding: const EdgeInsets.symmetric(vertical: 11),
-                          ),
-                        ),
-                      ),
-
-                      // 2. Location Area Filter Tabs (Default: Indian)
-                      Padding(
-                        padding: const EdgeInsets.fromLTRB(16, 0, 16, 8),
-                        child: SingleChildScrollView(
-                          scrollDirection: Axis.horizontal,
-                          physics: const BouncingScrollPhysics(),
-                          child: Row(
-                            children: [
-                              _LocationFilterChip(
-                                label: 'Indian Species (A–Z)',
-                                isSelected: activeLocation == 'Indian',
-                                emoji: '🇮🇳',
-                                isDefaultBadge: true,
-                                onTap: () => _onSelectLocation('Indian'),
-                              ),
-                              const SizedBox(width: 8),
-                              _LocationFilterChip(
-                                label: 'All Together (Indian First)',
-                                isSelected: activeLocation == 'All',
-                                icon: Icons.forest_rounded,
-                                onTap: () => _onSelectLocation('All'),
-                              ),
-                              const SizedBox(width: 8),
-                              _LocationFilterChip(
-                                label: 'Other Species (A–Z)',
-                                isSelected: activeLocation == 'Others',
-                                emoji: '🌍',
-                                onTap: () => _onSelectLocation('Others'),
-                              ),
-                            ],
                           ),
                         ),
                       ),
@@ -236,85 +191,34 @@ class _DirectoryPageState extends ConsumerState<DirectoryPage> {
                       Text(
                         searchQuery.isNotEmpty
                             ? 'No species found matching "$searchQuery"'
-                            : 'No species found in this section',
+                            : 'No species found',
                         style: const TextStyle(fontWeight: FontWeight.w600, color: AppColors.textMedium),
                       ),
                     ],
                   ),
                 )
-              else ...[
-                // ── Part 1: Indian Native Plants & Trees (Alphabetical A-Z) ──────
-                if (indianList.isNotEmpty) ...[
-                  SliverToBoxAdapter(
-                    child: _SectionHeader(
-                      emoji: '🇮🇳',
-                      title: activeLocation == 'All'
-                          ? 'Indian Native Species (Part 1)'
-                          : 'Indian Native Plants & Trees',
-                      subtitle: 'Native to the Indian subcontinent & Himalayas (A–Z)',
-                      badgeCount: indianList.length,
-                      badgeColor: AppColors.forestGreen,
+              else
+                SliverPadding(
+                  padding: const EdgeInsets.fromLTRB(16, 12, 16, 20),
+                  sliver: SliverGrid(
+                    gridDelegate: const SliverGridDelegateWithMaxCrossAxisExtent(
+                      maxCrossAxisExtent: 220,
+                      mainAxisSpacing: 12,
+                      crossAxisSpacing: 12,
+                      childAspectRatio: 0.78,
+                    ),
+                    delegate: SliverChildBuilderDelegate(
+                      (_, i) => _SpeciesCard(
+                        species: list[i],
+                        animateEntrance: i < 8,
+                        index: i,
+                      ),
+                      childCount: list.length,
+                      addAutomaticKeepAlives: true,
+                      addRepaintBoundaries: true,
                     ),
                   ),
-                  SliverPadding(
-                    padding: const EdgeInsets.fromLTRB(16, 4, 16, 20),
-                    sliver: SliverGrid(
-                      gridDelegate: const SliverGridDelegateWithMaxCrossAxisExtent(
-                        maxCrossAxisExtent: 220,
-                        mainAxisSpacing: 12,
-                        crossAxisSpacing: 12,
-                        childAspectRatio: 0.78,
-                      ),
-                      delegate: SliverChildBuilderDelegate(
-                        (_, i) => _SpeciesCard(
-                          species: indianList[i],
-                          animateEntrance: i < 8,
-                          index: i,
-                        ),
-                        childCount: indianList.length,
-                        addAutomaticKeepAlives: true,
-                        addRepaintBoundaries: true,
-                      ),
-                    ),
-                  ),
-                ],
-
-                // ── Part 2: Other Worldwide Plants & Trees (Alphabetical A-Z) ────
-                if (othersList.isNotEmpty) ...[
-                  SliverToBoxAdapter(
-                    child: _SectionHeader(
-                      emoji: '🌍',
-                      title: activeLocation == 'All'
-                          ? 'Other Global Species (Part 2)'
-                          : 'Other Global Plants & Trees',
-                      subtitle: 'Worldwide, tropical & exotic varieties (A–Z)',
-                      badgeCount: othersList.length,
-                      badgeColor: AppColors.slateBlue,
-                    ),
-                  ),
-                  SliverPadding(
-                    padding: const EdgeInsets.fromLTRB(16, 4, 16, 20),
-                    sliver: SliverGrid(
-                      gridDelegate: const SliverGridDelegateWithMaxCrossAxisExtent(
-                        maxCrossAxisExtent: 220,
-                        mainAxisSpacing: 12,
-                        crossAxisSpacing: 12,
-                        childAspectRatio: 0.78,
-                      ),
-                      delegate: SliverChildBuilderDelegate(
-                        (_, i) => _SpeciesCard(
-                          species: othersList[i],
-                          animateEntrance: indianList.isEmpty && i < 8,
-                          index: i,
-                        ),
-                        childCount: othersList.length,
-                        addAutomaticKeepAlives: true,
-                        addRepaintBoundaries: true,
-                      ),
-                    ),
-                  ),
-                ],
-              ],
+                ),
 
               // Bottom Loader for infinite pagination
               if (isFetchingMore)
@@ -337,154 +241,6 @@ class _DirectoryPageState extends ConsumerState<DirectoryPage> {
             ],
           ),
         ),
-      ),
-    );
-  }
-}
-
-// ── Location Filter Chip Widget ─────────────────────────────────────────────
-
-class _LocationFilterChip extends StatelessWidget {
-  final String label;
-  final bool isSelected;
-  final IconData? icon;
-  final String? emoji;
-  final bool isDefaultBadge;
-  final VoidCallback onTap;
-
-  const _LocationFilterChip({
-    required this.label,
-    required this.isSelected,
-    this.icon,
-    this.emoji,
-    this.isDefaultBadge = false,
-    required this.onTap,
-  });
-
-  @override
-  Widget build(BuildContext context) {
-    return GestureDetector(
-      onTap: onTap,
-      child: AnimatedContainer(
-        duration: const Duration(milliseconds: 200),
-        curve: Curves.easeOutCubic,
-        padding: const EdgeInsets.symmetric(horizontal: 13, vertical: 7),
-        decoration: BoxDecoration(
-          color: isSelected ? AppColors.primaryBlue : AppColors.surfaceCard,
-          borderRadius: BorderRadius.circular(20),
-          border: Border.all(
-            color: isSelected ? AppColors.primaryBlue : AppColors.borderLight,
-            width: 1.2,
-          ),
-          boxShadow: isSelected
-              ? [
-                  BoxShadow(
-                    color: AppColors.primaryBlue.withAlpha(45),
-                    blurRadius: 8,
-                    offset: const Offset(0, 2),
-                  )
-                ]
-              : [
-                  BoxShadow(
-                    color: Colors.black.withAlpha(8),
-                    blurRadius: 4,
-                    offset: const Offset(0, 1),
-                  )
-                ],
-        ),
-        child: Row(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            if (emoji != null) ...[
-              Text(emoji!, style: const TextStyle(fontSize: 13)),
-              const SizedBox(width: 5),
-            ] else if (icon != null) ...[
-              Icon(
-                icon,
-                size: 15,
-                color: isSelected ? Colors.white : AppColors.textMedium,
-              ),
-              const SizedBox(width: 5),
-            ],
-            Text(
-              label,
-              style: TextStyle(
-                fontSize: 12,
-                fontWeight: isSelected ? FontWeight.w700 : FontWeight.w600,
-                color: isSelected ? Colors.white : AppColors.textDark,
-              ),
-            ),
-          ],
-        ),
-      ),
-    );
-  }
-}
-
-// ── Section Header Widget ───────────────────────────────────────────────────
-
-class _SectionHeader extends StatelessWidget {
-  final String emoji;
-  final String title;
-  final String subtitle;
-  final int badgeCount;
-  final Color badgeColor;
-
-  const _SectionHeader({
-    required this.emoji,
-    required this.title,
-    required this.subtitle,
-    required this.badgeCount,
-    required this.badgeColor,
-  });
-
-  @override
-  Widget build(BuildContext context) {
-    return Padding(
-      padding: const EdgeInsets.fromLTRB(16, 16, 16, 10),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Row(
-            children: [
-              Text(emoji, style: const TextStyle(fontSize: 18)),
-              const SizedBox(width: 8),
-              Expanded(
-                child: Text(
-                  title,
-                  style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                        fontWeight: FontWeight.w800,
-                        letterSpacing: -0.2,
-                      ),
-                ),
-              ),
-              Container(
-                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
-                decoration: BoxDecoration(
-                  color: badgeColor.withAlpha(25),
-                  borderRadius: BorderRadius.circular(10),
-                  border: Border.all(color: badgeColor.withAlpha(80), width: 0.8),
-                ),
-                child: Text(
-                  '$badgeCount species',
-                  style: TextStyle(
-                    fontSize: 11,
-                    fontWeight: FontWeight.w700,
-                    color: badgeColor,
-                  ),
-                ),
-              ),
-            ],
-          ),
-          const SizedBox(height: 2),
-          Text(
-            subtitle,
-            style: const TextStyle(
-              fontSize: 12,
-              color: AppColors.textMedium,
-            ),
-          ),
-        ],
       ),
     );
   }
@@ -516,63 +272,24 @@ class _SpeciesCard extends StatelessWidget {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            // Image with Indian Native Badge
+            // Genuine Botanical Image
             Expanded(
               flex: 3,
-              child: Stack(
-                fit: StackFit.expand,
-                children: [
-                  ClipRRect(
-                    borderRadius: const BorderRadius.vertical(top: Radius.circular(15)),
-                    child: species.thumbnailUrl != null
-                        ? CachedNetworkImage(
-                            imageUrl: species.thumbnailUrl!,
-                            width: double.infinity,
-                            fit: BoxFit.cover,
-                            memCacheWidth: 350,
-                            maxWidthDiskCache: 500,
-                            fadeInDuration: const Duration(milliseconds: 150),
-                            fadeOutDuration: const Duration(milliseconds: 80),
-                            placeholder: (_, _) => Container(color: AppColors.primaryBlue.withAlpha(10)),
-                            errorWidget: (_, _, _) => _PlaceholderImage(),
-                          )
-                        : _PlaceholderImage(),
-                  ),
-                  if (species.isIndian)
-                    Positioned(
-                      top: 6,
-                      right: 6,
-                      child: Container(
-                        padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
-                        decoration: BoxDecoration(
-                          color: AppColors.forestGreen,
-                          borderRadius: BorderRadius.circular(8),
-                          boxShadow: [
-                            BoxShadow(
-                              color: Colors.black.withAlpha(40),
-                              blurRadius: 4,
-                              offset: const Offset(0, 1),
-                            ),
-                          ],
-                        ),
-                        child: const Row(
-                          mainAxisSize: MainAxisSize.min,
-                          children: [
-                            Text('🇮🇳', style: TextStyle(fontSize: 9)),
-                            SizedBox(width: 3),
-                            Text(
-                              'Native',
-                              style: TextStyle(
-                                color: Colors.white,
-                                fontSize: 9,
-                                fontWeight: FontWeight.w700,
-                              ),
-                            ),
-                          ],
-                        ),
-                      ),
-                    ),
-                ],
+              child: ClipRRect(
+                borderRadius: const BorderRadius.vertical(top: Radius.circular(15)),
+                child: species.thumbnailUrl != null
+                    ? CachedNetworkImage(
+                        imageUrl: species.thumbnailUrl!,
+                        width: double.infinity,
+                        fit: BoxFit.cover,
+                        memCacheWidth: 350,
+                        maxWidthDiskCache: 500,
+                        fadeInDuration: const Duration(milliseconds: 150),
+                        fadeOutDuration: const Duration(milliseconds: 80),
+                        placeholder: (_, _) => Container(color: AppColors.primaryBlue.withAlpha(10)),
+                        errorWidget: (_, _, _) => _PlaceholderImage(),
+                      )
+                    : _PlaceholderImage(),
               ),
             ),
             // Info

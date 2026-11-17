@@ -10,4 +10,5 @@ class AppAssets {
 
   // Shared
   static const String bluedotSplashLogo = '$_base/shared/bluedot_splash_logo.png';
+  static const String bluedotIcon = '$_base/shared/bluedot_icon.png';
 }

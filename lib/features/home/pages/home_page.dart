@@ -1,6 +1,8 @@
 import 'dart:async';
+import 'dart:ui' as ui;
 import 'package:cached_network_image/cached_network_image.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_animate/flutter_animate.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
@@ -45,57 +47,64 @@ class _HomePageState extends ConsumerState<HomePage> {
     super.initState();
     WidgetsBinding.instance.addPostFrameCallback((_) {
       _checkPolicyConsent();
-      ref.read(pushNotificationServiceProvider).initialize(requestPermission: true);
-      ref.read(pushNotificationServiceProvider).processPendingNotification(context);
+      ref
+          .read(pushNotificationServiceProvider)
+          .initialize(requestPermission: true);
+      ref
+          .read(pushNotificationServiceProvider)
+          .processPendingNotification(context);
 
       _foregroundPushSub = ref
           .read(pushNotificationServiceProvider)
           .foregroundEvents
           .listen((data) {
-        if (!mounted) return;
-        ref.read(notificationsProvider.notifier).refresh();
-        final title = data['title']?.toString() ?? 'BlueDot Notification';
-        final body = data['body']?.toString() ?? '';
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            behavior: SnackBarBehavior.floating,
-            backgroundColor: AppColors.textDark,
-            content: Column(
-              mainAxisSize: MainAxisSize.min,
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  title,
-                  style: const TextStyle(
-                    fontWeight: FontWeight.w700,
-                    color: Colors.white,
-                  ),
+            if (!mounted) return;
+            ref.read(notificationsProvider.notifier).refresh();
+            final title = data['title']?.toString() ?? 'BlueDot Notification';
+            final body = data['body']?.toString() ?? '';
+            ScaffoldMessenger.of(context).showSnackBar(
+              SnackBar(
+                behavior: SnackBarBehavior.floating,
+                backgroundColor: AppColors.textDark,
+                content: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      title,
+                      style: const TextStyle(
+                        fontWeight: FontWeight.w700,
+                        color: Colors.white,
+                      ),
+                    ),
+                    if (body.isNotEmpty)
+                      Text(
+                        body,
+                        style: const TextStyle(
+                          fontSize: 12.5,
+                          color: Colors.white70,
+                        ),
+                        maxLines: 2,
+                        overflow: TextOverflow.ellipsis,
+                      ),
+                  ],
                 ),
-                if (body.isNotEmpty)
-                  Text(
-                    body,
-                    style: const TextStyle(fontSize: 12.5, color: Colors.white70),
-                    maxLines: 2,
-                    overflow: TextOverflow.ellipsis,
-                  ),
-              ],
-            ),
-            duration: const Duration(seconds: 5),
-            action: SnackBarAction(
-              label: 'View',
-              textColor: AppColors.primaryYellow,
-              onPressed: () {
-                RouteDispatcher.dispatch(
-                  context,
-                  route: data['route']?.toString(),
-                  type: data['type']?.toString(),
-                  data: data,
-                );
-              },
-            ),
-          ),
-        );
-      });
+                duration: const Duration(seconds: 5),
+                action: SnackBarAction(
+                  label: 'View',
+                  textColor: AppColors.primaryYellow,
+                  onPressed: () {
+                    RouteDispatcher.dispatch(
+                      context,
+                      route: data['route']?.toString(),
+                      type: data['type']?.toString(),
+                      data: data,
+                    );
+                  },
+                ),
+              ),
+            );
+          });
     });
   }
 
@@ -127,7 +136,8 @@ class _HomePageState extends ConsumerState<HomePage> {
     final blogs = ref.watch(blogsProvider);
 
     return Scaffold(
-      backgroundColor: const Color(0xFFF9F7F2), // Refined warm organic background
+      backgroundColor:
+          AppColors.backgroundCream, // Refined clean organic background
       body: RefreshIndicator(
         onRefresh: () async {
           ref.invalidate(homeFeedProvider);
@@ -137,7 +147,7 @@ class _HomePageState extends ConsumerState<HomePage> {
             ref.read(blogsProvider.future),
           ]);
         },
-        color: AppColors.forestGreen,
+        color: AppColors.primaryBlue,
         backgroundColor: Colors.white,
         child: CustomScrollView(
           controller: _scroll,
@@ -145,52 +155,101 @@ class _HomePageState extends ConsumerState<HomePage> {
             parent: BouncingScrollPhysics(),
           ),
           slivers: [
-            // ── 1. Modern Header & App Bar ─────────────────────────────────
+            // ── 1. Clean Modern Brand Top Bar (Rich Blue) ─────────────────
             SliverAppBar(
-              pinned: false,
-              floating: true,
-              snap: true,
-              expandedHeight: 74,
-              collapsedHeight: 74,
-              backgroundColor: Colors.transparent,
+              pinned: true,
+              floating: false,
+              backgroundColor: AppColors.primaryBlue,
+              systemOverlayStyle: SystemUiOverlayStyle.light,
               elevation: 0,
+              scrolledUnderElevation: 2,
               shape: const RoundedRectangleBorder(
-                borderRadius: BorderRadius.vertical(bottom: Radius.circular(28)),
+                borderRadius: BorderRadius.vertical(
+                  bottom: Radius.circular(24),
+                ),
               ),
               flexibleSpace: ClipRRect(
-                borderRadius: const BorderRadius.vertical(bottom: Radius.circular(28)),
+                borderRadius: const BorderRadius.vertical(
+                  bottom: Radius.circular(24),
+                ),
                 child: Container(
                   decoration: const BoxDecoration(
                     gradient: LinearGradient(
                       begin: Alignment.topLeft,
                       end: Alignment.bottomRight,
-                      colors: [
-                        AppColors.primaryBlue,
-                        Color(0xFF28367F),
-                      ],
+                      colors: [AppColors.primaryBlue, Color(0xFF28367F)],
                     ),
                   ),
                 ),
               ),
-              titleSpacing: 16,
+              titleSpacing: 18,
               title: Row(
                 children: [
-                  // Profile Avatar
+                  // BlueDot Conservation Logo & Branding
+                  Image.asset(
+                    AppAssets.bluedotIcon,
+                    width: 34,
+                    height: 34,
+                    fit: BoxFit.contain,
+                    errorBuilder: (_, __, ___) => Container(
+                      width: 34,
+                      height: 34,
+                      decoration: const BoxDecoration(
+                        color: Colors.white,
+                        shape: BoxShape.circle,
+                      ),
+                      child: const Icon(
+                        Icons.eco_rounded,
+                        color: AppColors.primaryBlue,
+                        size: 20,
+                      ),
+                    ),
+                  ),
+                  const SizedBox(width: 9),
+                  Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    mainAxisSize: MainAxisSize.min,
+                    children: const [
+                      Text(
+                        'BlueDot',
+                        style: TextStyle(
+                          color: Colors.white,
+                          fontSize: 18.5,
+                          fontWeight: FontWeight.w800,
+                          letterSpacing: -0.3,
+                          height: 1.1,
+                        ),
+                      ),
+                      Text(
+                        'CONSERVATION',
+                        style: TextStyle(
+                          color: Colors.white70,
+                          fontSize: 9.5,
+                          fontWeight: FontWeight.w700,
+                          letterSpacing: 1.8,
+                        ),
+                      ),
+                    ],
+                  ),
+                  const Spacer(),
+                  const _NotificationBell(isDarkHeader: true),
+                  const SizedBox(width: 6),
+                  // User Avatar
                   GestureDetector(
                     onTap: () => context.go('/profile'),
                     child: Container(
-                      width: 42,
-                      height: 42,
+                      width: 36,
+                      height: 36,
                       decoration: BoxDecoration(
                         shape: BoxShape.circle,
                         border: Border.all(
                           color: AppColors.primaryYellow,
-                          width: 2,
+                          width: 1.8,
                         ),
                         boxShadow: [
                           BoxShadow(
-                            color: Colors.black.withOpacity(0.15),
-                            blurRadius: 6,
+                            color: Colors.black.withOpacity(0.18),
+                            blurRadius: 4,
                             offset: const Offset(0, 2),
                           ),
                         ],
@@ -199,25 +258,32 @@ class _HomePageState extends ConsumerState<HomePage> {
                         child: user?.avatarUrl != null
                             ? CachedNetworkImage(
                                 imageUrl: user!.avatarUrl!,
-                                width: 42,
-                                height: 42,
+                                width: 36,
+                                height: 36,
                                 fit: BoxFit.cover,
                                 placeholder: (context, url) => Container(
                                   color: AppColors.primaryBlue,
                                   child: const Center(
                                     child: SizedBox(
-                                      width: 14,
-                                      height: 14,
+                                      width: 12,
+                                      height: 12,
                                       child: CircularProgressIndicator(
                                         strokeWidth: 2,
-                                        valueColor: AlwaysStoppedAnimation<Color>(Colors.white70),
+                                        valueColor:
+                                            AlwaysStoppedAnimation<Color>(
+                                              Colors.white70,
+                                            ),
                                       ),
                                     ),
                                   ),
                                 ),
                                 errorWidget: (context, url, error) => Container(
                                   color: AppColors.primaryBlue,
-                                  child: const Icon(Icons.person, color: Colors.white, size: 24),
+                                  child: const Icon(
+                                    Icons.person,
+                                    color: Colors.white,
+                                    size: 20,
+                                  ),
                                 ),
                               )
                             : Container(
@@ -230,78 +296,62 @@ class _HomePageState extends ConsumerState<HomePage> {
                                   style: const TextStyle(
                                     color: AppColors.textDark,
                                     fontWeight: FontWeight.bold,
-                                    fontSize: 18,
+                                    fontSize: 15,
                                   ),
                                 ),
                               ),
                       ),
                     ),
                   ),
-                  const SizedBox(width: 12),
-                  // Personalized Greeting
-                  Expanded(
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      mainAxisSize: MainAxisSize.min,
-                      children: [
-                        Row(
-                          children: [
-                            Text(
-                              '${_getTimeGreeting()},',
-                              style: const TextStyle(
-                                color: Colors.white70,
-                                fontSize: 12,
-                                fontWeight: FontWeight.w500,
-                                letterSpacing: 0.2,
-                              ),
-                            ),
-                            const SizedBox(width: 4),
-                            const Text(
-                              '🌱',
-                              style: TextStyle(fontSize: 12),
-                            ),
-                          ],
-                        ),
-                        const SizedBox(height: 2),
-                        Text(
-                          user?.fullName ?? 'Eco Warrior',
-                          style: const TextStyle(
-                            color: Colors.white,
-                            fontSize: 16,
-                            fontWeight: FontWeight.w700,
-                            letterSpacing: -0.3,
-                          ),
-                          maxLines: 1,
-                          overflow: TextOverflow.ellipsis,
-                        ),
-                      ],
-                    ),
-                  ),
-                  const _NotificationBell(),
                 ],
               ),
             ),
 
-            // ── 2. Green Lens Scanner (Dedicated Clean Action) ─────────────
+            // ── 2. Greeting & Status Row ───────────────────────────────────
             SliverToBoxAdapter(
-              child: homeFeedAsync.maybeWhen(
-                data: (feed) => _GreenLensCard(tagline: feed.tagline),
-                orElse: () => const _GreenLensCard(),
-              )
+              child:
+                  _GreetingRow(
+                        greeting: _getTimeGreeting(),
+                        userName: user?.fullName,
+                      )
+                      .animate()
+                      .fadeIn(duration: 350.ms)
+                      .slideY(begin: 0.04, end: 0, curve: Curves.easeOut),
+            ),
+
+            // ── 3. Canopy Health Status Bar ────────────────────────────────
+            SliverToBoxAdapter(
+              child: const _CanopyHealthBar()
                   .animate()
-                  .fadeIn(duration: 350.ms)
+                  .fadeIn(delay: 50.ms, duration: 350.ms)
                   .slideY(begin: 0.04, end: 0, curve: Curves.easeOut),
             ),
 
-            // ── 3. Quick Action Hub (4-Pillar Grid) ─────────────────────────
+            // ── 4. "Protect The Canopy" Hero Card ──────────────────────────
             SliverToBoxAdapter(
-              child: const _HomeQuickActions()
+              child: const _ProtectCanopyHeroCard()
                   .animate()
                   .fadeIn(delay: 100.ms, duration: 400.ms)
-                  .slideY(begin: 0.08, end: 0, curve: Curves.easeOutCubic),
+                  .slideY(begin: 0.06, end: 0, curve: Curves.easeOutCubic),
             ),
 
-            // ── 4. Promo Banners Carousel (Graceful Adaptive Layout) ──────
+            // ── 5. Direct Action / Daily Impact (3-Card Row) ───────────────
+            SliverToBoxAdapter(
+              child: const _DirectActionsRow()
+                  .animate()
+                  .fadeIn(delay: 150.ms, duration: 400.ms)
+                  .slideY(begin: 0.06, end: 0, curve: Curves.easeOutCubic),
+            ),
+
+            // ── 6. Instant Flora Scanner (Field Bio-Intelligence) ──────────
+            SliverToBoxAdapter(
+              child: const _InstantFloraScannerCard()
+                  .animate()
+                  .fadeIn(delay: 200.ms, duration: 400.ms)
+                  .slideY(begin: 0.06, end: 0, curve: Curves.easeOutCubic),
+            ),
+
+            // ── 7. Promo Banners Carousel (Graceful Adaptive Layout) ──────
             if (homeFeedAsync.maybeWhen(
               data: (feed) => feed.banners.isNotEmpty,
               orElse: () => false,
@@ -309,16 +359,17 @@ class _HomePageState extends ConsumerState<HomePage> {
               SliverToBoxAdapter(
                 child: Padding(
                   padding: const EdgeInsets.fromLTRB(16, 8, 16, 4),
-                  child: PromoBannerCarousel(
-                    banners: homeFeedAsync.asData!.value.banners,
-                  )
-                      .animate()
-                      .fadeIn(duration: 350.ms)
-                      .slideY(begin: 0.04, end: 0, curve: Curves.easeOut),
+                  child:
+                      PromoBannerCarousel(
+                            banners: homeFeedAsync.asData!.value.banners,
+                          )
+                          .animate()
+                          .fadeIn(duration: 350.ms)
+                          .slideY(begin: 0.04, end: 0, curve: Curves.easeOut),
                 ),
               ),
 
-            // ── 5. Upcoming Events Section ─────────────────────────────────
+            // ── 8. Upcoming Events Section ─────────────────────────────────
             SliverToBoxAdapter(
               child: _SectionHeader(
                 title: 'Upcoming Drives',
@@ -335,18 +386,25 @@ class _HomePageState extends ConsumerState<HomePage> {
                         message: 'No upcoming plantation drives scheduled yet.',
                       )
                     : SizedBox(
-                        height: 240,
-                        child: ListView.builder(
-                          scrollDirection: Axis.horizontal,
-                          physics: const BouncingScrollPhysics(),
-                          padding: const EdgeInsets.symmetric(horizontal: 16),
-                          itemCount: feed.events.length,
-                          itemBuilder: (_, i) => _HomeEventCard(event: feed.events[i]),
-                        ),
-                      )
+                            height: 240,
+                            child: ListView.builder(
+                              scrollDirection: Axis.horizontal,
+                              physics: const BouncingScrollPhysics(),
+                              padding: const EdgeInsets.symmetric(
+                                horizontal: 16,
+                              ),
+                              itemCount: feed.events.length,
+                              itemBuilder: (_, i) =>
+                                  _HomeEventCard(event: feed.events[i]),
+                            ),
+                          )
                           .animate()
                           .fadeIn(duration: 350.ms)
-                          .slideX(begin: 0.04, end: 0, curve: Curves.easeOutCubic),
+                          .slideX(
+                            begin: 0.04,
+                            end: 0,
+                            curve: Curves.easeOutCubic,
+                          ),
                 loading: () => const SkeletonCardList(
                   count: 2,
                   height: 220,
@@ -370,21 +428,30 @@ class _HomePageState extends ConsumerState<HomePage> {
                 data: (feed) => feed.campaigns.isEmpty
                     ? const _EmptySectionCard(
                         icon: Icons.campaign_outlined,
-                        message: 'No active fundraising campaigns at the moment.',
+                        message:
+                            'No active fundraising campaigns at the moment.',
                       )
                     : SizedBox(
-                        height: 242,
-                        child: ListView.builder(
-                          scrollDirection: Axis.horizontal,
-                          physics: const BouncingScrollPhysics(),
-                          padding: const EdgeInsets.symmetric(horizontal: 16),
-                          itemCount: feed.campaigns.length,
-                          itemBuilder: (_, i) => _HomeCampaignCard(campaign: feed.campaigns[i]),
-                        ),
-                      )
+                            height: 242,
+                            child: ListView.builder(
+                              scrollDirection: Axis.horizontal,
+                              physics: const BouncingScrollPhysics(),
+                              padding: const EdgeInsets.symmetric(
+                                horizontal: 16,
+                              ),
+                              itemCount: feed.campaigns.length,
+                              itemBuilder: (_, i) => _HomeCampaignCard(
+                                campaign: feed.campaigns[i],
+                              ),
+                            ),
+                          )
                           .animate()
                           .fadeIn(duration: 350.ms)
-                          .slideX(begin: 0.04, end: 0, curve: Curves.easeOutCubic),
+                          .slideX(
+                            begin: 0.04,
+                            end: 0,
+                            curve: Curves.easeOutCubic,
+                          ),
                 loading: () => const SkeletonCardList(
                   count: 2,
                   height: 220,
@@ -441,173 +508,97 @@ class _HomePageState extends ConsumerState<HomePage> {
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
-// GREEN LENS SCANNER (CLEAN, FUNCTIONAL ACTION CARD)
+// GREETING & ECO-INDEX ROW
 // ─────────────────────────────────────────────────────────────────────────────
 
-class _GreenLensCard extends StatelessWidget {
-  final String? tagline;
-  const _GreenLensCard({this.tagline});
+class _GreetingRow extends StatelessWidget {
+  final String greeting;
+  final String? userName;
+
+  const _GreetingRow({required this.greeting, this.userName});
 
   @override
   Widget build(BuildContext context) {
     return Padding(
-      padding: const EdgeInsets.fromLTRB(16, 12, 16, 6),
-      child: Material(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(16),
-        child: InkWell(
-          onTap: () => context.push('/scanner'),
-          borderRadius: BorderRadius.circular(16),
-          splashColor: AppColors.forestGreen.withOpacity(0.08),
-          highlightColor: AppColors.forestGreen.withOpacity(0.04),
-          child: Container(
-            padding: const EdgeInsets.all(16),
-            decoration: BoxDecoration(
-              color: Colors.white,
-              borderRadius: BorderRadius.circular(16),
-              border: Border.all(color: AppColors.borderLight),
-              boxShadow: [
-                BoxShadow(
-                  color: Colors.black.withOpacity(0.03),
-                  blurRadius: 10,
-                  offset: const Offset(0, 3),
+      padding: const EdgeInsets.fromLTRB(18, 14, 18, 6),
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Row(
+                  children: [
+                    Text(
+                      '$greeting,',
+                      style: const TextStyle(
+                        fontSize: 22,
+                        fontWeight: FontWeight.w700,
+                        color: AppColors.textDark,
+                        letterSpacing: -0.3,
+                      ),
+                    ),
+                    const SizedBox(width: 6),
+                    const Text('🌱', style: TextStyle(fontSize: 18)),
+                  ],
+                ),
+                Text(
+                  userName?.isNotEmpty == true ? userName! : 'Elena',
+                  style: const TextStyle(
+                    fontSize: 26,
+                    fontWeight: FontWeight.w800,
+                    color: AppColors.textDark,
+                    letterSpacing: -0.6,
+                    height: 1.15,
+                  ),
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                ),
+                const SizedBox(height: 4),
+                const Text(
+                  "Let's nurture our living planet together today.",
+                  style: TextStyle(
+                    fontSize: 13,
+                    color: AppColors.textMedium,
+                    height: 1.3,
+                  ),
                 ),
               ],
+            ),
+          ),
+          const SizedBox(width: 8),
+          Container(
+            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 7),
+            decoration: BoxDecoration(
+              color: AppColors.ecoIndexBg,
+              borderRadius: BorderRadius.circular(20),
+              border: Border.all(color: AppColors.ecoIndexBorder),
             ),
             child: Row(
+              mainAxisSize: MainAxisSize.min,
               children: [
-                // Real Brand Asset / Circular Lens Button
                 Container(
-                  width: 50,
-                  height: 50,
-                  decoration: BoxDecoration(
-                    color: AppColors.forestGreen,
+                  width: 7,
+                  height: 7,
+                  decoration: const BoxDecoration(
+                    color: AppColors.ecoIndexDot,
                     shape: BoxShape.circle,
-                    boxShadow: [
-                      BoxShadow(
-                        color: AppColors.forestGreen.withOpacity(0.2),
-                        blurRadius: 8,
-                        offset: const Offset(0, 2),
-                      ),
-                    ],
-                  ),
-                  padding: const EdgeInsets.all(9),
-                  child: Image.asset(
-                    AppAssets.greenLensButton,
-                    fit: BoxFit.contain,
-                    errorBuilder: (_, __, ___) => const Icon(
-                      Icons.qr_code_scanner_rounded,
-                      color: Colors.white,
-                      size: 26,
-                    ),
                   ),
                 ),
-                const SizedBox(width: 14),
-                // Text info
-                Expanded(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    mainAxisSize: MainAxisSize.min,
-                    children: [
-                      const Text(
-                        'Green Lens Scanner',
-                        style: TextStyle(
-                          fontSize: 15,
-                          fontWeight: FontWeight.w700,
-                          color: AppColors.textDark,
-                          letterSpacing: -0.2,
-                        ),
-                      ),
-                      const SizedBox(height: 3),
-                      Text(
-                        tagline?.isNotEmpty == true
-                            ? tagline!
-                            : 'Scan tree QR tags or photograph leaves & bark',
-                        style: const TextStyle(
-                          fontSize: 12,
-                          color: AppColors.textMedium,
-                          height: 1.3,
-                        ),
-                        maxLines: 2,
-                        overflow: TextOverflow.ellipsis,
-                      ),
-                    ],
-                  ),
-                ),
-                const SizedBox(width: 8),
-                // Clean Action Trigger
-                Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
-                  decoration: BoxDecoration(
-                    color: AppColors.forestGreen,
-                    borderRadius: BorderRadius.circular(10),
-                  ),
-                  child: const Row(
-                    mainAxisSize: MainAxisSize.min,
-                    children: [
-                      Icon(Icons.camera_alt_outlined, size: 14, color: Colors.white),
-                      SizedBox(width: 6),
-                      Text(
-                        'Scan',
-                        style: TextStyle(
-                          color: Colors.white,
-                          fontSize: 12,
-                          fontWeight: FontWeight.w700,
-                        ),
-                      ),
-                    ],
+                const SizedBox(width: 6),
+                const Text(
+                  'ECO-INDEX 92%',
+                  style: TextStyle(
+                    color: AppColors.ecoIndexText,
+                    fontSize: 11,
+                    fontWeight: FontWeight.w800,
+                    letterSpacing: 0.4,
                   ),
                 ),
               ],
             ),
-          ),
-        ),
-      ),
-    );
-  }
-}
-
-// ─────────────────────────────────────────────────────────────────────────────
-// QUICK ACTION TILES (4-PILLAR SHORTCUTS)
-// ─────────────────────────────────────────────────────────────────────────────
-
-class _HomeQuickActions extends StatelessWidget {
-  const _HomeQuickActions();
-
-  @override
-  Widget build(BuildContext context) {
-    return Padding(
-      padding: const EdgeInsets.fromLTRB(16, 12, 16, 8),
-      child: Row(
-        mainAxisAlignment: MainAxisAlignment.spaceBetween,
-        children: [
-          _QuickActionTile(
-            icon: Icons.map_rounded,
-            label: 'Eco Garden',
-            subLabel: 'Live Map',
-            color: AppColors.forestGreen,
-            onTap: () => context.push('/map'),
-          ),
-          _QuickActionTile(
-            icon: Icons.leaderboard_rounded,
-            label: 'Rankings',
-            subLabel: 'Top Warriors',
-            color: AppColors.primaryBlue,
-            onTap: () => context.push('/profile/leaderboard'),
-          ),
-          _QuickActionTile(
-            icon: Icons.add_location_alt_rounded,
-            label: 'Suggest Site',
-            subLabel: 'New Land',
-            color: AppColors.terracotta,
-            onTap: () => context.push('/action-hub/suggest-site'),
-          ),
-          _QuickActionTile(
-            icon: Icons.park_rounded,
-            label: 'Directory',
-            subLabel: 'Species',
-            color: AppColors.sageGreen,
-            onTap: () => context.go('/directory'),
           ),
         ],
       ),
@@ -615,92 +606,679 @@ class _HomeQuickActions extends StatelessWidget {
   }
 }
 
-class _QuickActionTile extends StatelessWidget {
-  final IconData icon;
-  final String label;
-  final String subLabel;
-  final Color color;
-  final VoidCallback onTap;
+// ─────────────────────────────────────────────────────────────────────────────
+// CANOPY HEALTH STATUS BAR
+// ─────────────────────────────────────────────────────────────────────────────
 
-  const _QuickActionTile({
-    required this.icon,
-    required this.label,
-    required this.subLabel,
-    required this.color,
-    required this.onTap,
+class _CanopyHealthBar extends StatelessWidget {
+  final String status;
+  final String zone;
+
+  const _CanopyHealthBar({
+    this.status = 'Optimal',
+    this.zone = 'Cascadia Zone',
   });
 
   @override
   Widget build(BuildContext context) {
-    return Expanded(
-      child: Container(
-        margin: const EdgeInsets.symmetric(horizontal: 4),
-        child: Material(
-          color: Colors.white,
+    return Padding(
+      padding: const EdgeInsets.fromLTRB(16, 6, 16, 8),
+      child: Material(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(16),
+        child: InkWell(
+          onTap: () => context.push('/map'),
           borderRadius: BorderRadius.circular(16),
-          child: InkWell(
-            onTap: onTap,
-            borderRadius: BorderRadius.circular(16),
-            splashColor: color.withOpacity(0.12),
-            highlightColor: color.withOpacity(0.06),
-            child: Container(
-              padding: const EdgeInsets.symmetric(vertical: 14, horizontal: 4),
-              decoration: BoxDecoration(
-                borderRadius: BorderRadius.circular(16),
-                border: Border.all(color: AppColors.borderLight.withOpacity(0.7)),
-                boxShadow: [
-                  BoxShadow(
-                    color: Colors.black.withOpacity(0.025),
-                    blurRadius: 10,
-                    offset: const Offset(0, 4),
+          splashColor: AppColors.primaryBlue.withOpacity(0.06),
+          child: Container(
+            padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+            decoration: BoxDecoration(
+              color: Colors.white,
+              borderRadius: BorderRadius.circular(16),
+              border: Border.all(color: AppColors.borderLight),
+              boxShadow: [
+                BoxShadow(
+                  color: Colors.black.withOpacity(0.025),
+                  blurRadius: 10,
+                  offset: const Offset(0, 3),
+                ),
+              ],
+            ),
+            child: Row(
+              children: [
+                Container(
+                  width: 32,
+                  height: 32,
+                  decoration: BoxDecoration(
+                    color: const Color(0xFFEAF3EB),
+                    borderRadius: BorderRadius.circular(8),
                   ),
-                ],
-              ),
-              child: Column(
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  Container(
-                    width: 44,
-                    height: 44,
-                    decoration: BoxDecoration(
-                      color: color.withOpacity(0.12),
-                      shape: BoxShape.circle,
+                  child: const Icon(
+                    Icons.eco_rounded,
+                    color: Color(0xFF386641),
+                    size: 18,
+                  ),
+                ),
+                const SizedBox(width: 10),
+                Expanded(
+                  child: RichText(
+                    text: TextSpan(
+                      text: 'Canopy Health: ',
+                      style: const TextStyle(
+                        fontSize: 13.5,
+                        color: AppColors.textDark,
+                        fontWeight: FontWeight.w500,
+                      ),
+                      children: [
+                        TextSpan(
+                          text: status,
+                          style: const TextStyle(
+                            fontWeight: FontWeight.w800,
+                            color: Color(0xFF2E5A36),
+                          ),
+                        ),
+                      ],
                     ),
-                    child: Icon(icon, color: color, size: 22),
                   ),
-                  const SizedBox(height: 8),
-                  Text(
-                    label,
-                    textAlign: TextAlign.center,
-                    style: const TextStyle(
-                      fontWeight: FontWeight.w700,
-                      color: AppColors.textDark,
-                      fontSize: 12,
-                      letterSpacing: -0.2,
-                    ),
-                    maxLines: 1,
-                    overflow: TextOverflow.ellipsis,
+                ),
+                Text(
+                  zone,
+                  style: const TextStyle(
+                    fontSize: 13,
+                    color: AppColors.textMedium,
+                    fontWeight: FontWeight.w500,
                   ),
-                  const SizedBox(height: 2),
-                  Text(
-                    subLabel,
-                    textAlign: TextAlign.center,
-                    style: const TextStyle(
-                      fontWeight: FontWeight.w500,
-                      color: AppColors.textLight,
-                      fontSize: 9.5,
-                    ),
-                    maxLines: 1,
-                    overflow: TextOverflow.ellipsis,
-                  ),
-                ],
-              ),
+                ),
+                const SizedBox(width: 2),
+                const Icon(
+                  Icons.chevron_right_rounded,
+                  size: 18,
+                  color: AppColors.textMedium,
+                ),
+              ],
             ),
           ),
         ),
       ),
     );
   }
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// "PROTECT THE CANOPY" HERO CARD
+// ─────────────────────────────────────────────────────────────────────────────
+
+class _ProtectCanopyHeroCard extends StatelessWidget {
+  const _ProtectCanopyHeroCard();
+
+  @override
+  Widget build(BuildContext context) {
+    return Padding(
+      padding: const EdgeInsets.fromLTRB(16, 6, 16, 10),
+      child: Container(
+        padding: const EdgeInsets.all(20),
+        decoration: BoxDecoration(
+          borderRadius: BorderRadius.circular(24),
+          gradient: const LinearGradient(
+            begin: Alignment.topLeft,
+            end: Alignment.bottomRight,
+            colors: [Color(0xFF5D7566), Color(0xFF384E40)],
+          ),
+          boxShadow: [
+            BoxShadow(
+              color: const Color(0xFF384E40).withOpacity(0.28),
+              blurRadius: 16,
+              offset: const Offset(0, 8),
+            ),
+          ],
+        ),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            // Top pills
+            Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              children: [
+                Container(
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 14,
+                    vertical: 6,
+                  ),
+                  decoration: BoxDecoration(
+                    color: Colors.white,
+                    borderRadius: BorderRadius.circular(20),
+                  ),
+                  child: const Text(
+                    'BlueDot Initiative 2025',
+                    style: TextStyle(
+                      color: Color(0xFF1B2B20),
+                      fontSize: 11.5,
+                      fontWeight: FontWeight.w700,
+                    ),
+                  ),
+                ),
+                Container(
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 14,
+                    vertical: 6,
+                  ),
+                  decoration: BoxDecoration(
+                    color: AppColors.primaryYellow,
+                    borderRadius: BorderRadius.circular(20),
+                  ),
+                  child: const Text(
+                    '100,000 Acres',
+                    style: TextStyle(
+                      color: Color(0xFF2E2005),
+                      fontSize: 11.5,
+                      fontWeight: FontWeight.w800,
+                    ),
+                  ),
+                ),
+              ],
+            ),
+            const SizedBox(height: 28),
+            // Headline
+            const Text(
+              'Protect The Canopy',
+              style: TextStyle(
+                color: Colors.white,
+                fontSize: 26,
+                fontWeight: FontWeight.w800,
+                letterSpacing: -0.5,
+              ),
+            ),
+            const SizedBox(height: 8),
+            // Subtitle
+            Text(
+              'Preserving ancient old-growth ecosystems from fragmentation. Join our community-backed land trust.',
+              style: TextStyle(
+                color: Colors.white.withOpacity(0.88),
+                fontSize: 13,
+                height: 1.4,
+              ),
+            ),
+            const SizedBox(height: 20),
+            // Bottom row: CTA Button & Goal Badge
+            Row(
+              children: [
+                Material(
+                  color: Colors.transparent,
+                  child: InkWell(
+                    onTap: () => context.go('/action-hub?tab=0'),
+                    borderRadius: BorderRadius.circular(22),
+                    child: Container(
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 18,
+                        vertical: 10,
+                      ),
+                      decoration: BoxDecoration(
+                        color: AppColors.primaryYellow,
+                        borderRadius: BorderRadius.circular(22),
+                        boxShadow: [
+                          BoxShadow(
+                            color: Colors.black.withOpacity(0.14),
+                            blurRadius: 6,
+                            offset: const Offset(0, 2),
+                          ),
+                        ],
+                      ),
+                      child: const Row(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          Text(
+                            'Learn More',
+                            style: TextStyle(
+                              color: Color(0xFF2E2005),
+                              fontSize: 12.5,
+                              fontWeight: FontWeight.w800,
+                            ),
+                          ),
+                          SizedBox(width: 6),
+                          Icon(
+                            Icons.arrow_forward_rounded,
+                            size: 15,
+                            color: Color(0xFF2E2005),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ),
+                ),
+                const SizedBox(width: 12),
+                Container(
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 14,
+                    vertical: 10,
+                  ),
+                  decoration: BoxDecoration(
+                    color: Colors.black.withOpacity(0.35),
+                    borderRadius: BorderRadius.circular(22),
+                    border: Border.all(
+                      color: Colors.white.withOpacity(0.18),
+                      width: 1,
+                    ),
+                  ),
+                  child: const Text(
+                    'Goal: 68% secured',
+                    style: TextStyle(
+                      color: Colors.white,
+                      fontSize: 12,
+                      fontWeight: FontWeight.w600,
+                    ),
+                  ),
+                ),
+              ],
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// DIRECT ACTION / DAILY IMPACT (3-CARD ROW)
+// ─────────────────────────────────────────────────────────────────────────────
+
+class _DirectActionsRow extends StatelessWidget {
+  const _DirectActionsRow();
+
+  @override
+  Widget build(BuildContext context) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Padding(
+          padding: const EdgeInsets.fromLTRB(20, 16, 20, 10),
+          child: Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: const [
+              Text(
+                'Direct Action',
+                style: TextStyle(
+                  fontSize: 18,
+                  fontWeight: FontWeight.w800,
+                  color: AppColors.textDark,
+                  letterSpacing: -0.3,
+                ),
+              ),
+              Text(
+                'Daily Impact',
+                style: TextStyle(
+                  fontSize: 12.5,
+                  fontWeight: FontWeight.w600,
+                  color: AppColors.textMedium,
+                ),
+              ),
+            ],
+          ),
+        ),
+        Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 16),
+          child: Row(
+            children: [
+              Expanded(
+                child: _DirectActionCard(
+                  icon: Icons.park_rounded,
+                  iconColor: const Color(0xFF386641),
+                  iconBg: const Color(0xFFEAF3EB),
+                  title: 'Plant a\nTree',
+                  tag: 'Native',
+                  tagColor: AppColors.primaryBlue,
+                  onTap: () => context.go('/action-hub?tab=0'),
+                ),
+              ),
+              const SizedBox(width: 10),
+              Expanded(
+                child: _DirectActionCard(
+                  icon: Icons.travel_explore_rounded,
+                  iconColor: const Color(0xFFD4931A),
+                  iconBg: const Color(0xFFFEF4E2),
+                  title: 'Log\nFind',
+                  tag: 'Bio-census',
+                  tagColor: AppColors.textMedium,
+                  onTap: () => context.go('/directory'),
+                ),
+              ),
+              const SizedBox(width: 10),
+              Expanded(
+                child: _DirectActionCard(
+                  icon: Icons.volunteer_activism_rounded,
+                  iconColor: AppColors.primaryBlue,
+                  iconBg: const Color(0xFFEEF1FD),
+                  title: 'Support\nWild',
+                  tag: 'Micro-pledge',
+                  tagColor: AppColors.textMedium,
+                  onTap: () => context.go('/action-hub?tab=0'),
+                ),
+              ),
+            ],
+          ),
+        ),
+      ],
+    );
+  }
+}
+
+class _DirectActionCard extends StatelessWidget {
+  final IconData icon;
+  final Color iconColor;
+  final Color iconBg;
+  final String title;
+  final String tag;
+  final Color tagColor;
+  final VoidCallback onTap;
+
+  const _DirectActionCard({
+    required this.icon,
+    required this.iconColor,
+    required this.iconBg,
+    required this.title,
+    required this.tag,
+    required this.tagColor,
+    required this.onTap,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return Material(
+      color: Colors.white,
+      borderRadius: BorderRadius.circular(18),
+      child: InkWell(
+        onTap: onTap,
+        borderRadius: BorderRadius.circular(18),
+        splashColor: iconColor.withOpacity(0.08),
+        child: Container(
+          padding: const EdgeInsets.symmetric(vertical: 14, horizontal: 8),
+          decoration: BoxDecoration(
+            color: Colors.white,
+            borderRadius: BorderRadius.circular(18),
+            border: Border.all(color: AppColors.borderLight),
+            boxShadow: [
+              BoxShadow(
+                color: Colors.black.withOpacity(0.025),
+                blurRadius: 10,
+                offset: const Offset(0, 3),
+              ),
+            ],
+          ),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Container(
+                width: 46,
+                height: 46,
+                decoration: BoxDecoration(
+                  color: iconBg,
+                  shape: BoxShape.circle,
+                ),
+                child: Icon(icon, color: iconColor, size: 23),
+              ),
+              const SizedBox(height: 10),
+              Text(
+                title,
+                textAlign: TextAlign.center,
+                style: const TextStyle(
+                  fontWeight: FontWeight.w700,
+                  color: AppColors.textDark,
+                  fontSize: 12.5,
+                  height: 1.2,
+                ),
+              ),
+              const SizedBox(height: 4),
+              Text(
+                tag,
+                textAlign: TextAlign.center,
+                style: TextStyle(
+                  fontWeight: FontWeight.w600,
+                  color: tagColor,
+                  fontSize: 11,
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// INSTANT FLORA SCANNER (FIELD BIO-INTELLIGENCE)
+// ─────────────────────────────────────────────────────────────────────────────
+
+class _InstantFloraScannerCard extends StatelessWidget {
+  const _InstantFloraScannerCard();
+
+  @override
+  Widget build(BuildContext context) {
+    return Padding(
+      padding: const EdgeInsets.fromLTRB(16, 14, 16, 10),
+      child: Material(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(20),
+        child: InkWell(
+          onTap: () => context.push('/scanner'),
+          borderRadius: BorderRadius.circular(20),
+          splashColor: AppColors.primaryBlue.withOpacity(0.08),
+          child: Container(
+            padding: const EdgeInsets.all(16),
+            decoration: BoxDecoration(
+              color: Colors.white,
+              borderRadius: BorderRadius.circular(20),
+              border: Border.all(color: AppColors.borderLight),
+              boxShadow: [
+                BoxShadow(
+                  color: Colors.black.withOpacity(0.03),
+                  blurRadius: 12,
+                  offset: const Offset(0, 4),
+                ),
+              ],
+            ),
+            child: Column(
+              children: [
+                // Header row
+                Row(
+                  children: [
+                    Container(
+                      width: 38,
+                      height: 38,
+                      decoration: BoxDecoration(
+                        color: AppColors.primaryBlue,
+                        borderRadius: BorderRadius.circular(12),
+                      ),
+                      child: const Icon(
+                        Icons.camera_alt_rounded,
+                        color: Colors.white,
+                        size: 20,
+                      ),
+                    ),
+                    const SizedBox(width: 10),
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: const [
+                          Text(
+                            'Instant Flora Scanner',
+                            style: TextStyle(
+                              fontSize: 15,
+                              fontWeight: FontWeight.w800,
+                              color: AppColors.textDark,
+                            ),
+                          ),
+                          SizedBox(height: 2),
+                          Text(
+                            'FIELD BIO-INTELLIGENCE',
+                            style: TextStyle(
+                              fontSize: 9.5,
+                              fontWeight: FontWeight.w700,
+                              letterSpacing: 1.2,
+                              color: AppColors.primaryBlue,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                    Container(
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 10,
+                        vertical: 5,
+                      ),
+                      decoration: BoxDecoration(
+                        color: AppColors.ecoIndexBg,
+                        borderRadius: BorderRadius.circular(16),
+                        border: Border.all(color: AppColors.ecoIndexBorder),
+                      ),
+                      child: const Row(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          Icon(
+                            Icons.bolt_rounded,
+                            color: Color(0xFFC2851B),
+                            size: 14,
+                          ),
+                          SizedBox(width: 3),
+                          Text(
+                            'AI-Powered',
+                            style: TextStyle(
+                              color: Color(0xFFB87814),
+                              fontSize: 11,
+                              fontWeight: FontWeight.w700,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ],
+                ),
+                const SizedBox(height: 14),
+                // Viewfinder frame
+                Container(
+                  height: 180,
+                  width: double.infinity,
+                  decoration: BoxDecoration(
+                    borderRadius: BorderRadius.circular(16),
+                    gradient: const LinearGradient(
+                      begin: Alignment.topLeft,
+                      end: Alignment.bottomRight,
+                      colors: [Color(0xFF4A5F52), Color(0xFF2C3E33)],
+                    ),
+                  ),
+                  child: Stack(
+                    alignment: Alignment.center,
+                    children: [
+                      // Central dashed viewfinder reticle
+                      CustomPaint(
+                        size: const Size(100, 100),
+                        painter: const _DashedRectPainter(
+                          color: AppColors.primaryYellow,
+                          strokeWidth: 2,
+                          gap: 6,
+                        ),
+                      ),
+                      // Bottom detected pill
+                      Positioned(
+                        bottom: 12,
+                        child: Container(
+                          padding: const EdgeInsets.symmetric(
+                            horizontal: 12,
+                            vertical: 6,
+                          ),
+                          decoration: BoxDecoration(
+                            color: Colors.black.withOpacity(0.65),
+                            borderRadius: BorderRadius.circular(20),
+                            border: Border.all(
+                              color: Colors.white.withOpacity(0.18),
+                              width: 1,
+                            ),
+                          ),
+                          child: Row(
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                              Container(
+                                width: 7,
+                                height: 7,
+                                decoration: const BoxDecoration(
+                                  color: Color(0xFF4C75E6),
+                                  shape: BoxShape.circle,
+                                ),
+                              ),
+                              const SizedBox(width: 6),
+                              const Text(
+                                'Detected: Quercus Robur (Oak)',
+                                style: TextStyle(
+                                  color: Colors.white,
+                                  fontSize: 11.5,
+                                  fontWeight: FontWeight.w600,
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+class _DashedRectPainter extends CustomPainter {
+  final Color color;
+  final double strokeWidth;
+  final double gap;
+
+  const _DashedRectPainter({
+    required this.color,
+    this.strokeWidth = 2.0,
+    this.gap = 6.0,
+  });
+
+  @override
+  void paint(Canvas canvas, Size size) {
+    final Paint paint = Paint()
+      ..color = color
+      ..strokeWidth = strokeWidth
+      ..style = PaintingStyle.stroke;
+
+    final RRect rrect = RRect.fromRectAndRadius(
+      Rect.fromLTWH(0, 0, size.width, size.height),
+      const Radius.circular(16),
+    );
+
+    final Path path = Path()..addRRect(rrect);
+    final Path dashPath = Path();
+
+    for (final ui.PathMetric metric in path.computeMetrics()) {
+      double distance = 0.0;
+      bool draw = true;
+      while (distance < metric.length) {
+        final double length = draw ? gap * 1.5 : gap;
+        if (draw) {
+          dashPath.addPath(
+            metric.extractPath(distance, distance + length),
+            Offset.zero,
+          );
+        }
+        distance += length;
+        draw = !draw;
+      }
+    }
+
+    canvas.drawPath(dashPath, paint);
+  }
+
+  @override
+  bool shouldRepaint(covariant _DashedRectPainter oldDelegate) =>
+      color != oldDelegate.color ||
+      strokeWidth != oldDelegate.strokeWidth ||
+      gap != oldDelegate.gap;
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -750,7 +1328,10 @@ class _SectionHeader extends StatelessWidget {
               style: TextButton.styleFrom(
                 foregroundColor: AppColors.primaryBlue,
                 visualDensity: VisualDensity.compact,
-                padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 10,
+                  vertical: 4,
+                ),
               ),
               child: Row(
                 mainAxisSize: MainAxisSize.min,
@@ -820,7 +1401,11 @@ class _HomeEventCard extends StatelessWidget {
                     errorWidget: (_, _, _) => Container(
                       height: 118,
                       color: AppColors.forestGreen.withOpacity(0.12),
-                      child: const Icon(Icons.park, color: AppColors.forestGreen, size: 36),
+                      child: const Icon(
+                        Icons.park,
+                        color: AppColors.forestGreen,
+                        size: 36,
+                      ),
                     ),
                   )
                 else
@@ -835,7 +1420,11 @@ class _HomeEventCard extends StatelessWidget {
                       ),
                     ),
                     child: const Center(
-                      child: Icon(Icons.park, color: AppColors.forestGreen, size: 36),
+                      child: Icon(
+                        Icons.park,
+                        color: AppColors.forestGreen,
+                        size: 36,
+                      ),
                     ),
                   ),
 
@@ -844,7 +1433,10 @@ class _HomeEventCard extends StatelessWidget {
                   top: 10,
                   left: 10,
                   child: Container(
-                    padding: const EdgeInsets.symmetric(horizontal: 9, vertical: 4),
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 9,
+                      vertical: 4,
+                    ),
                     decoration: BoxDecoration(
                       color: Colors.black.withOpacity(0.68),
                       borderRadius: BorderRadius.circular(8),
@@ -876,7 +1468,10 @@ class _HomeEventCard extends StatelessWidget {
                   top: 10,
                   right: 10,
                   child: Container(
-                    padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 8,
+                      vertical: 4,
+                    ),
                     decoration: BoxDecoration(
                       color: event.isPlantationDrive
                           ? AppColors.forestGreen
@@ -884,7 +1479,9 @@ class _HomeEventCard extends StatelessWidget {
                       borderRadius: BorderRadius.circular(8),
                     ),
                     child: Text(
-                      event.isPlantationDrive ? 'Drive' : (event.eventStatus ?? 'Upcoming'),
+                      event.isPlantationDrive
+                          ? 'Drive'
+                          : (event.eventStatus ?? 'Upcoming'),
                       style: const TextStyle(
                         color: Colors.white,
                         fontSize: 9.5,
@@ -943,7 +1540,10 @@ class _HomeEventCard extends StatelessWidget {
                     mainAxisAlignment: MainAxisAlignment.spaceBetween,
                     children: [
                       Container(
-                        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: 8,
+                          vertical: 3,
+                        ),
                         decoration: BoxDecoration(
                           color: AppColors.primaryBlue.withOpacity(0.08),
                           borderRadius: BorderRadius.circular(6),
@@ -1036,7 +1636,11 @@ class _HomeCampaignCard extends StatelessWidget {
                     errorWidget: (_, _, _) => Container(
                       height: 118,
                       color: AppColors.primaryBlue.withOpacity(0.12),
-                      child: const Icon(Icons.campaign, color: AppColors.primaryBlue, size: 36),
+                      child: const Icon(
+                        Icons.campaign,
+                        color: AppColors.primaryBlue,
+                        size: 36,
+                      ),
                     ),
                   )
                 else
@@ -1051,7 +1655,11 @@ class _HomeCampaignCard extends StatelessWidget {
                       ),
                     ),
                     child: const Center(
-                      child: Icon(Icons.campaign, color: AppColors.primaryBlue, size: 36),
+                      child: Icon(
+                        Icons.campaign,
+                        color: AppColors.primaryBlue,
+                        size: 36,
+                      ),
                     ),
                   ),
 
@@ -1060,7 +1668,10 @@ class _HomeCampaignCard extends StatelessWidget {
                   top: 10,
                   right: 10,
                   child: Container(
-                    padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 8,
+                      vertical: 4,
+                    ),
                     decoration: BoxDecoration(
                       color: AppColors.primaryYellow,
                       borderRadius: BorderRadius.circular(8),
@@ -1141,7 +1752,10 @@ class _HomeCampaignCard extends StatelessWidget {
                         ),
                       ),
                       Container(
-                        padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: 6,
+                          vertical: 2,
+                        ),
                         decoration: BoxDecoration(
                           color: AppColors.forestGreen.withOpacity(0.1),
                           borderRadius: BorderRadius.circular(6),
@@ -1220,18 +1834,24 @@ class _BlogCard extends StatelessWidget {
               children: [
                 if (blog.thumbnailUrl != null)
                   ClipRRect(
-                    borderRadius: const BorderRadius.horizontal(left: Radius.circular(17)),
+                    borderRadius: const BorderRadius.horizontal(
+                      left: Radius.circular(17),
+                    ),
                     child: CachedNetworkImage(
                       imageUrl: blog.thumbnailUrl!,
                       width: 104,
                       height: 104,
                       fit: BoxFit.cover,
-                      placeholder: (_, _) => Container(color: AppColors.borderLight),
+                      placeholder: (_, _) =>
+                          Container(color: AppColors.borderLight),
                       errorWidget: (_, _, _) => Container(
                         width: 104,
                         height: 104,
                         color: AppColors.primaryBlue.withOpacity(0.1),
-                        child: const Icon(Icons.article_rounded, color: AppColors.primaryBlue),
+                        child: const Icon(
+                          Icons.article_rounded,
+                          color: AppColors.primaryBlue,
+                        ),
                       ),
                     ),
                   )
@@ -1241,7 +1861,9 @@ class _BlogCard extends StatelessWidget {
                     height: 104,
                     decoration: const BoxDecoration(
                       color: Color(0xFFEDF1F7),
-                      borderRadius: BorderRadius.horizontal(left: Radius.circular(17)),
+                      borderRadius: BorderRadius.horizontal(
+                        left: Radius.circular(17),
+                      ),
                     ),
                     child: const Icon(
                       Icons.article_rounded,
@@ -1255,7 +1877,10 @@ class _BlogCard extends StatelessWidget {
                     bottom: 6,
                     left: 6,
                     child: Container(
-                      padding: const EdgeInsets.symmetric(horizontal: 5, vertical: 2),
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 5,
+                        vertical: 2,
+                      ),
                       decoration: BoxDecoration(
                         color: Colors.black.withOpacity(0.7),
                         borderRadius: BorderRadius.circular(6),
@@ -1263,7 +1888,11 @@ class _BlogCard extends StatelessWidget {
                       child: Row(
                         mainAxisSize: MainAxisSize.min,
                         children: [
-                          const Icon(Icons.photo_library_rounded, size: 9, color: Colors.white),
+                          const Icon(
+                            Icons.photo_library_rounded,
+                            size: 9,
+                            color: Colors.white,
+                          ),
                           const SizedBox(width: 3),
                           Text(
                             '${blog.mediaUrls.length}',
@@ -1358,7 +1987,8 @@ class _BlogCard extends StatelessWidget {
 // ─────────────────────────────────────────────────────────────────────────────
 
 class _NotificationBell extends ConsumerWidget {
-  const _NotificationBell();
+  final bool isDarkHeader;
+  const _NotificationBell({this.isDarkHeader = false});
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
@@ -1367,10 +1997,10 @@ class _NotificationBell extends ConsumerWidget {
       clipBehavior: Clip.none,
       children: [
         IconButton(
-          icon: const Icon(
-            Icons.notifications_outlined,
-            color: Colors.white,
-            size: 24,
+          icon: Icon(
+            Icons.notifications_none_rounded,
+            color: isDarkHeader ? Colors.white : AppColors.textDark,
+            size: 26,
           ),
           tooltip: 'Notifications',
           onPressed: () => context.push('/notifications'),
@@ -1381,19 +2011,39 @@ class _NotificationBell extends ConsumerWidget {
             top: 8,
             child: Container(
               padding: const EdgeInsets.symmetric(horizontal: 5, vertical: 1.5),
-              constraints: const BoxConstraints(minWidth: 17, minHeight: 17),
+              constraints: const BoxConstraints(minWidth: 16, minHeight: 16),
               decoration: BoxDecoration(
-                color: AppColors.terracotta,
+                color: AppColors.primaryYellow,
                 shape: BoxShape.circle,
-                border: Border.all(color: Colors.white, width: 1.5),
+                border: Border.all(
+                  color: isDarkHeader ? AppColors.primaryBlue : Colors.white,
+                  width: 1.5,
+                ),
               ),
               child: Text(
                 unread > 9 ? '9+' : '$unread',
                 textAlign: TextAlign.center,
                 style: const TextStyle(
-                  color: Colors.white,
+                  color: Color(0xFF2E2005),
                   fontSize: 9,
                   fontWeight: FontWeight.w900,
+                ),
+              ),
+            ),
+          )
+        else
+          Positioned(
+            right: 12,
+            top: 10,
+            child: Container(
+              width: 8,
+              height: 8,
+              decoration: BoxDecoration(
+                color: AppColors.primaryYellow,
+                shape: BoxShape.circle,
+                border: Border.all(
+                  color: isDarkHeader ? AppColors.primaryBlue : Colors.white,
+                  width: 1.5,
                 ),
               ),
             ),
@@ -1411,10 +2061,7 @@ class _EmptySectionCard extends StatelessWidget {
   final IconData icon;
   final String message;
 
-  const _EmptySectionCard({
-    required this.icon,
-    required this.message,
-  });
+  const _EmptySectionCard({required this.icon, required this.message});
 
   @override
   Widget build(BuildContext context) {
@@ -1454,7 +2101,20 @@ class _EmptySectionCard extends StatelessWidget {
 String _formatDateShort(String iso) {
   try {
     final dt = DateTime.parse(iso);
-    const months = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+    const months = [
+      'Jan',
+      'Feb',
+      'Mar',
+      'Apr',
+      'May',
+      'Jun',
+      'Jul',
+      'Aug',
+      'Sep',
+      'Oct',
+      'Nov',
+      'Dec',
+    ];
     return '${dt.day} ${months[dt.month - 1]}';
   } catch (_) {
     return '';

@@ -18,21 +18,19 @@ class CapsuleNavItem {
   });
 }
 
-/// A high-polish, floating expanding-capsule bottom navigation bar.
+/// A high-polish, floating capsule bottom navigation bar inspired by modern conservation UI.
 ///
-/// Engineering & Design Highlights:
-/// - Floating rounded dock with multi-layer ambient shadow and subtle hairline border.
-/// - Inactive tabs display clean, minimalist charcoal outline icons.
-/// - Active tab smoothly expands into a warm amber-cream capsule pill.
-/// - Pure compositor-driven [AnimatedBuilder] + [Align(widthFactor)] animation:
-///   guarantees 60/120 FPS buttery-smooth frame rates with zero layout stutter.
-/// - Simultaneous color, scale, and width interpolation via [Color.lerp].
-/// - Tactile haptic feedback on tab change.
-/// - Circular avatar thumbnail support with [ClipOval].
+/// Features:
+/// - Floating rounded dock with soft ambient shadow and hairline border.
+/// - Active tab expands into a comfortable soft blue or tinted pill.
+/// - Inactive tabs display clean, minimalist icons with label below.
+/// - Optional center elevated action button (e.g. Green Lens camera scanner).
+/// - Tactile haptic feedback on tab changes and action triggers.
 class CapsuleNavBar extends StatelessWidget {
   final int currentIndex;
   final ValueChanged<int> onTap;
   final List<CapsuleNavItem> items;
+  final VoidCallback? onCenterTap;
 
   /// Background color of the floating bar.
   final Color backgroundColor;
@@ -43,7 +41,7 @@ class CapsuleNavBar extends StatelessWidget {
   /// Foreground icon & text color for the active tab.
   final Color activeColor;
 
-  /// Icon color for inactive tabs.
+  /// Icon & text color for inactive tabs.
   final Color inactiveColor;
 
   const CapsuleNavBar({
@@ -51,10 +49,11 @@ class CapsuleNavBar extends StatelessWidget {
     required this.currentIndex,
     required this.onTap,
     required this.items,
-    this.backgroundColor = Colors.white,
-    this.activeCapsuleColor = const Color(0xFFFFF6E5), // Warm sunny vanilla cream
-    this.activeColor = const Color(0xFFB88212),        // Deep ecological warm gold
-    this.inactiveColor = const Color(0xFF4A5568),      // Neutral charcoal/slate
+    this.onCenterTap,
+    this.backgroundColor = AppColors.primaryBlue,
+    this.activeCapsuleColor = const Color(0xFF26377B),
+    this.activeColor = Colors.white,
+    this.inactiveColor = const Color(0xB3FFFFFF),
   });
 
   @override
@@ -63,49 +62,100 @@ class CapsuleNavBar extends StatelessWidget {
     return SafeArea(
       top: false,
       child: Container(
-        margin: const EdgeInsets.fromLTRB(16, 0, 16, 14),
-        padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
+        margin: const EdgeInsets.fromLTRB(16, 0, 16, 12),
+        padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
         decoration: BoxDecoration(
           color: backgroundColor,
-          borderRadius: BorderRadius.circular(36),
+          borderRadius: BorderRadius.circular(38),
           border: Border.all(
             color: isDark
-                ? Colors.white.withOpacity(0.12)
-                : Colors.white.withOpacity(0.45),
+                ? Colors.white.withOpacity(0.18)
+                : AppColors.borderLight,
             width: 1.2,
           ),
           boxShadow: [
             BoxShadow(
-              color: const Color(0xFF1E2833).withOpacity(isDark ? 0.28 : 0.08),
-              blurRadius: 26,
-              offset: const Offset(0, 8),
+              color: isDark
+                  ? const Color(0xFF162354).withOpacity(0.35)
+                  : Colors.black.withOpacity(0.06),
+              blurRadius: 20,
+              offset: const Offset(0, 6),
             ),
             BoxShadow(
-              color: backgroundColor.withOpacity(isDark ? 0.2 : 0.3),
-              blurRadius: 12,
-              offset: const Offset(0, 4),
+              color: isDark
+                  ? Colors.black.withOpacity(0.15)
+                  : Colors.black.withOpacity(0.02),
+              blurRadius: 6,
+              offset: const Offset(0, 2),
             ),
           ],
         ),
         child: Row(
-          mainAxisAlignment: MainAxisAlignment.spaceBetween,
-          children: List.generate(items.length, (index) {
-            final isSelected = index == currentIndex;
-            return _CapsuleTabItem(
-              key: ValueKey('capsule-tab-$index'),
-              item: items[index],
-              isSelected: isSelected,
-              activeCapsuleColor: activeCapsuleColor,
-              activeColor: activeColor,
-              inactiveColor: inactiveColor,
-              onTap: () {
-                if (!isSelected) {
-                  HapticFeedback.selectionClick();
-                  onTap(index);
-                }
-              },
-            );
-          }),
+          mainAxisAlignment: MainAxisAlignment.spaceAround,
+          children: _buildNavChildren(context),
+        ),
+      ),
+    );
+  }
+
+  List<Widget> _buildNavChildren(BuildContext context) {
+    final children = <Widget>[];
+
+    for (int i = 0; i < items.length; i++) {
+      // If onCenterTap is provided and we reached the halfway point (after tab 1), insert Center Action Button
+      if (onCenterTap != null && i == 2) {
+        children.add(_buildCenterActionButton(context));
+      }
+
+      final isSelected = i == currentIndex;
+      children.add(
+        _CapsuleTabItem(
+          key: ValueKey('capsule-tab-$i'),
+          item: items[i],
+          isSelected: isSelected,
+          activeCapsuleColor: activeCapsuleColor,
+          activeColor: activeColor,
+          inactiveColor: inactiveColor,
+          onTap: () {
+            if (!isSelected) {
+              HapticFeedback.selectionClick();
+              onTap(i);
+            }
+          },
+        ),
+      );
+    }
+
+    return children;
+  }
+
+  Widget _buildCenterActionButton(BuildContext context) {
+    return GestureDetector(
+      onTap: () {
+        HapticFeedback.heavyImpact();
+        onCenterTap?.call();
+      },
+      child: Container(
+        width: 52,
+        height: 52,
+        decoration: BoxDecoration(
+          color: const Color(0xFF22316E),
+          shape: BoxShape.circle,
+          border: Border.all(color: Colors.white, width: 2.5),
+          boxShadow: [
+            BoxShadow(
+              color: Colors.black.withOpacity(0.3),
+              blurRadius: 10,
+              offset: const Offset(0, 4),
+            ),
+          ],
+        ),
+        child: const Center(
+          child: Icon(
+            Icons.camera_alt_outlined,
+            color: AppColors.primaryYellow,
+            size: 24,
+          ),
         ),
       ),
     );
@@ -144,7 +194,7 @@ class _CapsuleTabItemState extends State<_CapsuleTabItem>
     super.initState();
     _controller = AnimationController(
       vsync: this,
-      duration: const Duration(milliseconds: 300),
+      duration: const Duration(milliseconds: 250),
       value: widget.isSelected ? 1.0 : 0.0,
     );
     _animation = CurvedAnimation(
@@ -183,14 +233,9 @@ class _CapsuleTabItemState extends State<_CapsuleTabItem>
           widget.activeCapsuleColor,
           t,
         )!;
-        final iconColor = Color.lerp(
+        final contentColor = Color.lerp(
           widget.inactiveColor,
           widget.activeColor,
-          t,
-        )!;
-        final borderColor = Color.lerp(
-          Colors.transparent,
-          widget.activeColor.withOpacity(0.25),
           t,
         )!;
 
@@ -198,49 +243,28 @@ class _CapsuleTabItemState extends State<_CapsuleTabItem>
           color: Colors.transparent,
           child: InkWell(
             onTap: widget.onTap,
-            borderRadius: BorderRadius.circular(30),
+            borderRadius: BorderRadius.circular(18),
             splashColor: widget.activeColor.withOpacity(0.08),
-            highlightColor: Colors.transparent,
             child: Container(
-              padding: EdgeInsets.symmetric(
-                horizontal: 12 + (6 * t),
-                vertical: 9,
-              ),
+              padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 6),
               decoration: BoxDecoration(
                 color: capsuleBg,
-                borderRadius: BorderRadius.circular(30),
-                border: Border.all(color: borderColor, width: 1),
+                borderRadius: BorderRadius.circular(18),
               ),
-              child: Row(
+              child: Column(
                 mainAxisSize: MainAxisSize.min,
                 crossAxisAlignment: CrossAxisAlignment.center,
                 children: [
-                  _buildIcon(iconColor, t),
-                  ClipRect(
-                    child: Align(
-                      alignment: Alignment.centerLeft,
-                      heightFactor: 1.0,
-                      widthFactor: t,
-                      child: Opacity(
-                        opacity: t.clamp(0.0, 1.0),
-                        child: Row(
-                          mainAxisSize: MainAxisSize.min,
-                          children: [
-                            const SizedBox(width: 8),
-                            Text(
-                              widget.item.label,
-                              style: TextStyle(
-                                color: widget.activeColor,
-                                fontSize: 13,
-                                fontWeight: FontWeight.w700,
-                                letterSpacing: -0.3,
-                              ),
-                              maxLines: 1,
-                              softWrap: false,
-                            ),
-                          ],
-                        ),
-                      ),
+                  _buildIcon(contentColor, widget.isSelected),
+                  const SizedBox(height: 3),
+                  Text(
+                    widget.item.label,
+                    style: TextStyle(
+                      color: contentColor,
+                      fontSize: 11,
+                      fontWeight:
+                          widget.isSelected ? FontWeight.w700 : FontWeight.w500,
+                      letterSpacing: -0.2,
                     ),
                   ),
                 ],
@@ -252,52 +276,41 @@ class _CapsuleTabItemState extends State<_CapsuleTabItem>
     );
   }
 
-  Widget _buildIcon(Color color, double t) {
-    // Subtle scale feedback when active
-    final scale = 1.0 + (0.06 * t);
-
-    // Profile Avatar
+  Widget _buildIcon(Color color, bool isSelected) {
     if (widget.item.avatarUrl != null && widget.item.avatarUrl!.isNotEmpty) {
-      return Transform.scale(
-        scale: scale,
-        child: Container(
-          width: 24,
-          height: 24,
-          decoration: BoxDecoration(
-            shape: BoxShape.circle,
-            border: Border.all(
-              color: color.withOpacity(widget.isSelected ? 1.0 : 0.5),
-              width: 1.5,
-            ),
+      return Container(
+        width: 22,
+        height: 22,
+        decoration: BoxDecoration(
+          shape: BoxShape.circle,
+          border: Border.all(
+            color: isSelected ? color : color.withOpacity(0.5),
+            width: 1.5,
           ),
-          child: ClipOval(
-            child: CachedNetworkImage(
-              imageUrl: widget.item.avatarUrl!,
-              fit: BoxFit.cover,
-              placeholder: (_, _) => Container(color: AppColors.borderLight),
-              errorWidget: (_, _, _) => Icon(
-                widget.item.icon,
-                size: 16,
-                color: color,
-              ),
+        ),
+        child: ClipOval(
+          child: CachedNetworkImage(
+            imageUrl: widget.item.avatarUrl!,
+            fit: BoxFit.cover,
+            placeholder: (_, _) => Container(color: AppColors.borderLight),
+            errorWidget: (_, _, _) => Icon(
+              widget.item.icon,
+              size: 15,
+              color: color,
             ),
           ),
         ),
       );
     }
 
-    // Default icon
-    final iconData = (widget.isSelected && widget.item.activeIcon != null)
+    final iconData = (isSelected && widget.item.activeIcon != null)
         ? widget.item.activeIcon!
         : widget.item.icon;
 
-    return Transform.scale(
-      scale: scale,
-      child: Icon(
-        iconData,
-        size: 22,
-        color: color,
-      ),
+    return Icon(
+      iconData,
+      size: 22,
+      color: color,
     );
   }
 }
