@@ -123,7 +123,7 @@ class _DirectoryPageState extends ConsumerState<DirectoryPage> {
                           controller: _searchController,
                           onChanged: _onSearchChanged,
                           decoration: InputDecoration(
-                            hintText: 'Search 1,000+ plants (e.g. Neem, Peepal, Rose...)',
+                            hintText: 'Search 1,500+ Indian plants (e.g. Neem, Peepal, Arjun...)',
                             prefixIcon: const Icon(Icons.search_rounded, color: AppColors.textLight),
                             suffixIcon: _searchController.text.isNotEmpty
                                 ? IconButton(
