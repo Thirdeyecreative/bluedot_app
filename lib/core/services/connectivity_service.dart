@@ -2,6 +2,7 @@ import 'dart:async';
 import 'dart:io';
 import 'package:connectivity_plus/connectivity_plus.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import '../config/api_config.dart';
 
 class ConnectivityNotifier extends Notifier<bool> {
   Connectivity? _connectivity;
@@ -48,9 +49,24 @@ class ConnectivityNotifier extends Notifier<bool> {
       }
 
       // Verify real throughput with quick DNS lookup
-      final hostResult = await InternetAddress.lookup('google.com')
-          .timeout(const Duration(milliseconds: 3500));
-      final online = hostResult.isNotEmpty && hostResult[0].rawAddress.isNotEmpty;
+      bool online = false;
+      try {
+        final hostResult = await InternetAddress.lookup('google.com')
+            .timeout(const Duration(milliseconds: 3500));
+        online = hostResult.isNotEmpty && hostResult[0].rawAddress.isNotEmpty;
+      } catch (_) {
+        online = false;
+      }
+
+      // Fallback: if general internet DNS is restricted or slow, check if our target backend server is reachable!
+      if (!online) {
+        try {
+          final health = await ApiConfig.checkServerHealth();
+          online = health.isHealthy;
+        } catch (_) {
+          online = false;
+        }
+      }
 
       if (updateState) {
         // If we are currently offline (gated by NoInternetPage), do NOT automatically un-gate

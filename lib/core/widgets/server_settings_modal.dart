@@ -7,7 +7,14 @@ import '../../features/home/providers/home_provider.dart';
 /// Interactive modal allowing developers and testers to inspect, test,
 /// and switch the backend server target at runtime without recompilation.
 class ServerSettingsModal extends ConsumerStatefulWidget {
-  const ServerSettingsModal({super.key});
+  final VoidCallback? onClose;
+  final ValueChanged<String>? onApplied;
+
+  const ServerSettingsModal({
+    super.key,
+    this.onClose,
+    this.onApplied,
+  });
 
   static Future<void> show(BuildContext context) {
     return showModalBottomSheet(
@@ -89,6 +96,14 @@ class _ServerSettingsModalState extends ConsumerState<ServerSettingsModal> {
     });
   }
 
+  void _close() {
+    if (widget.onClose != null) {
+      widget.onClose!();
+    } else if (Navigator.of(context).canPop()) {
+      Navigator.of(context).pop();
+    }
+  }
+
   Future<void> _applyAndSave() async {
     final finalUrl = _selectedUrl.trim();
     await ApiConfig.setRuntimeBaseUrl(finalUrl);
@@ -98,7 +113,11 @@ class _ServerSettingsModalState extends ConsumerState<ServerSettingsModal> {
     ref.invalidate(blogsProvider);
 
     if (!mounted) return;
-    Navigator.of(context).pop();
+    _close();
+
+    if (widget.onApplied != null) {
+      widget.onApplied!(finalUrl);
+    }
 
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(
@@ -174,7 +193,7 @@ class _ServerSettingsModalState extends ConsumerState<ServerSettingsModal> {
                 ),
               ),
               IconButton(
-                onPressed: () => Navigator.of(context).pop(),
+                onPressed: _close,
                 icon: const Icon(Icons.close_rounded, color: AppColors.textLight),
               ),
             ],
