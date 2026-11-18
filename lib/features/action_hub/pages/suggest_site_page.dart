@@ -33,6 +33,18 @@ class _SuggestSitePageState extends ConsumerState<SuggestSitePage> {
   void initState() {
     super.initState();
     _getLocation();
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      _showHowItWorksSheet();
+    });
+  }
+
+  void _showHowItWorksSheet() {
+    showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: Colors.transparent,
+      builder: (_) => const _SiteSuggestionGuideSheet(),
+    );
   }
 
   @override
@@ -139,6 +151,13 @@ class _SuggestSitePageState extends ConsumerState<SuggestSitePage> {
       appBar: AppBar(
         title: const Text('Suggest a Restoration Site'),
         leading: const BackButton(),
+        actions: [
+          IconButton(
+            icon: const Icon(Icons.help_outline_rounded),
+            tooltip: 'How it works',
+            onPressed: _showHowItWorksSheet,
+          ),
+        ],
       ),
       body: SingleChildScrollView(
         // Bottom padding clears the floating nav bar.
@@ -148,25 +167,30 @@ class _SuggestSitePageState extends ConsumerState<SuggestSitePage> {
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              // Info banner
-              Container(
-                padding: const EdgeInsets.all(16),
-                decoration: BoxDecoration(
-                  color: AppColors.forestGreen.withAlpha(20),
-                  borderRadius: BorderRadius.circular(14),
-                  border: Border.all(color: AppColors.forestGreen.withAlpha(60)),
-                ),
-                child: const Row(
-                  children: [
-                    Icon(Icons.info_outline_rounded, color: AppColors.forestGreen, size: 20),
-                    SizedBox(width: 10),
-                    Expanded(
-                      child: Text(
-                        'Spotted a dry lake, empty plot, or degraded land? Suggest it for a future plantation drive — earn 5 XP now and 20 XP when approved!',
-                        style: TextStyle(color: AppColors.forestGreen, fontSize: 13, height: 1.4),
+              // Info banner (tappable to view detailed guide)
+              GestureDetector(
+                onTap: _showHowItWorksSheet,
+                child: Container(
+                  padding: const EdgeInsets.all(16),
+                  decoration: BoxDecoration(
+                    color: AppColors.forestGreen.withAlpha(20),
+                    borderRadius: BorderRadius.circular(14),
+                    border: Border.all(color: AppColors.forestGreen.withAlpha(60)),
+                  ),
+                  child: Row(
+                    children: [
+                      const Icon(Icons.info_outline_rounded, color: AppColors.forestGreen, size: 20),
+                      const SizedBox(width: 10),
+                      const Expanded(
+                        child: Text(
+                          'Spotted a dry lake, empty plot, or degraded land? Suggest it for a future plantation drive — earn 5 XP now and 20 XP when approved!',
+                          style: TextStyle(color: AppColors.forestGreen, fontSize: 13, height: 1.4),
+                        ),
                       ),
-                    ),
-                  ],
+                      const SizedBox(width: 6),
+                      Icon(Icons.chevron_right_rounded, color: AppColors.forestGreen.withAlpha(150), size: 20),
+                    ],
+                  ),
                 ),
               ),
               const SizedBox(height: 24),
@@ -444,6 +468,291 @@ class _LocationSearchDialogState extends State<_LocationSearchDialog> {
           ],
         ),
       ),
+    );
+  }
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// HOW IT WORKS & PURPOSE BOTTOM SHEET
+// ─────────────────────────────────────────────────────────────────────────────
+
+class _SiteSuggestionGuideSheet extends StatelessWidget {
+  const _SiteSuggestionGuideSheet();
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      constraints: BoxConstraints(
+        maxHeight: MediaQuery.of(context).size.height * 0.85,
+      ),
+      decoration: const BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.vertical(top: Radius.circular(28)),
+      ),
+      padding: EdgeInsets.fromLTRB(
+        24,
+        12,
+        24,
+        MediaQuery.of(context).padding.bottom + 20,
+      ),
+      child: SingleChildScrollView(
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            // Drag handle
+            Center(
+              child: Container(
+                width: 44,
+                height: 4,
+                decoration: BoxDecoration(
+                  color: AppColors.borderMedium,
+                  borderRadius: BorderRadius.circular(2),
+                ),
+              ),
+            ),
+            const SizedBox(height: 18),
+
+            // Header with icon badge
+            Row(
+              children: [
+                Container(
+                  width: 46,
+                  height: 46,
+                  decoration: BoxDecoration(
+                    color: const Color(0xFFEAF3EB),
+                    borderRadius: BorderRadius.circular(14),
+                  ),
+                  child: const Icon(
+                    Icons.add_location_alt_rounded,
+                    color: Color(0xFF386641),
+                    size: 26,
+                  ),
+                ),
+                const SizedBox(width: 14),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: const [
+                      Text(
+                        'Suggest a Restoration Site',
+                        style: TextStyle(
+                          fontSize: 18.5,
+                          fontWeight: FontWeight.w800,
+                          color: AppColors.textDark,
+                          letterSpacing: -0.3,
+                        ),
+                      ),
+                      SizedBox(height: 2),
+                      Text(
+                        'How community land spotting works',
+                        style: TextStyle(
+                          fontSize: 12.5,
+                          color: AppColors.textMedium,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ],
+            ),
+            const SizedBox(height: 18),
+
+            // Purpose / What this page does
+            Container(
+              padding: const EdgeInsets.all(14),
+              decoration: BoxDecoration(
+                color: const Color(0xFFF7FAF7),
+                borderRadius: BorderRadius.circular(16),
+                border: Border.all(color: AppColors.borderLight),
+              ),
+              child: Row(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: const [
+                  Icon(
+                    Icons.eco_rounded,
+                    color: Color(0xFF386641),
+                    size: 20,
+                  ),
+                  SizedBox(width: 10),
+                  Expanded(
+                    child: Text(
+                      'Spotted an empty plot, dry lake bed, or degraded barren land? '
+                      'By submitting its location and photos, you flag it for BlueDot arborists to evaluate, verify feasibility, and organize community tree plantation drives!',
+                      style: TextStyle(
+                        fontSize: 13,
+                        color: AppColors.textDark,
+                        height: 1.4,
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+            const SizedBox(height: 20),
+
+            const Text(
+              'How It Works (4 Simple Steps)',
+              style: TextStyle(
+                fontSize: 15,
+                fontWeight: FontWeight.w800,
+                color: AppColors.textDark,
+              ),
+            ),
+            const SizedBox(height: 14),
+
+            // Step 1
+            _buildStepItem(
+              icon: Icons.camera_alt_rounded,
+              iconColor: AppColors.primaryBlue,
+              iconBg: const Color(0xFFEEF1FD),
+              stepNumber: '1',
+              title: 'Take 1 to 5 Ground Photos',
+              description: 'Capture soil condition, open space, and surroundings to help us assess viability.',
+            ),
+            const SizedBox(height: 14),
+
+            // Step 2
+            _buildStepItem(
+              icon: Icons.my_location_rounded,
+              iconColor: const Color(0xFFD4931A),
+              iconBg: const Color(0xFFFEF4E2),
+              stepNumber: '2',
+              title: 'Verify GPS Coordinates',
+              description: 'We auto-pin your spot, or you can search and refine the exact location on the map.',
+            ),
+            const SizedBox(height: 14),
+
+            // Step 3
+            _buildStepItem(
+              icon: Icons.edit_note_rounded,
+              iconColor: const Color(0xFFC76D4D),
+              iconBg: const Color(0xFFFDF0EC),
+              stepNumber: '3',
+              title: 'Describe Land & Water Access',
+              description: 'Mention nearby water sources, fencing, public access, or soil conditions.',
+            ),
+            const SizedBox(height: 14),
+
+            // Step 4
+            _buildStepItem(
+              icon: Icons.volunteer_activism_rounded,
+              iconColor: const Color(0xFF386641),
+              iconBg: const Color(0xFFEAF3EB),
+              stepNumber: '4',
+              title: 'Verification & Plantation Drive',
+              description: 'Our forestry team validates the site. Approved sites host community plantation drives where you earn XP!',
+            ),
+            const SizedBox(height: 18),
+
+            // XP Bonus Card
+            Container(
+              padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
+              decoration: BoxDecoration(
+                color: AppColors.ecoIndexBg,
+                borderRadius: BorderRadius.circular(14),
+                border: Border.all(color: AppColors.ecoIndexBorder),
+              ),
+              child: const Row(
+                children: [
+                  Icon(
+                    Icons.stars_rounded,
+                    color: Color(0xFFC2851B),
+                    size: 22,
+                  ),
+                  SizedBox(width: 10),
+                  Expanded(
+                    child: Text(
+                      'Earn +5 XP immediately upon submission, and +20 XP when your site is approved!',
+                      style: TextStyle(
+                        fontSize: 12,
+                        fontWeight: FontWeight.w700,
+                        color: Color(0xFF634D21),
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+            const SizedBox(height: 20),
+
+            // Action Button
+            SizedBox(
+              width: double.infinity,
+              height: 50,
+              child: ElevatedButton(
+                onPressed: () => Navigator.of(context).pop(),
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: AppColors.primaryBlue,
+                  foregroundColor: Colors.white,
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(14),
+                  ),
+                  elevation: 0,
+                ),
+                child: const Text(
+                  'Got It, Let\'s Suggest a Site',
+                  style: TextStyle(
+                    fontSize: 15,
+                    fontWeight: FontWeight.w700,
+                  ),
+                ),
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  static Widget _buildStepItem({
+    required IconData icon,
+    required Color iconColor,
+    required Color iconBg,
+    required String stepNumber,
+    required String title,
+    required String description,
+  }) {
+    return Row(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Container(
+          width: 38,
+          height: 38,
+          decoration: BoxDecoration(
+            color: iconBg,
+            shape: BoxShape.circle,
+          ),
+          child: Center(
+            child: Icon(icon, color: iconColor, size: 19),
+          ),
+        ),
+        const SizedBox(width: 12),
+        Expanded(
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(
+                title,
+                style: const TextStyle(
+                  fontSize: 13.5,
+                  fontWeight: FontWeight.w700,
+                  color: AppColors.textDark,
+                ),
+              ),
+              const SizedBox(height: 2),
+              Text(
+                description,
+                style: const TextStyle(
+                  fontSize: 12,
+                  color: AppColors.textMedium,
+                  height: 1.3,
+                ),
+              ),
+            ],
+          ),
+        ),
+      ],
     );
   }
 }

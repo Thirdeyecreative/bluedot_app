@@ -282,7 +282,10 @@ class _NoInternetPageState extends ConsumerState<NoInternetPage> {
                       width: double.infinity,
                       height: 48,
                       child: OutlinedButton.icon(
-                        onPressed: () => setState(() => _showServerSettings = true),
+                        onPressed: () async {
+                          await ServerSettingsModal.show(context);
+                          _handleRetry();
+                        },
                         icon: const Icon(Icons.dns_rounded, size: 18),
                         label: Text(
                           'Server Settings (${ApiConfig.baseUrl})',

@@ -10,6 +10,7 @@ import 'package:go_router/go_router.dart';
 import '../../../core/constants/app_assets.dart';
 import '../../../core/constants/app_colors.dart';
 import '../../../core/widgets/skeletons.dart';
+import '../../../core/widgets/server_settings_modal.dart';
 import '../../action_hub/models/event_model.dart';
 import '../models/campaign_model.dart';
 import '../models/blog_model.dart';
@@ -185,51 +186,60 @@ class _HomePageState extends ConsumerState<HomePage> {
               titleSpacing: 18,
               title: Row(
                 children: [
-                  // BlueDot Conservation Logo & Branding
-                  Image.asset(
-                    AppAssets.bluedotIcon,
-                    width: 34,
-                    height: 34,
-                    fit: BoxFit.contain,
-                    errorBuilder: (_, __, ___) => Container(
-                      width: 34,
-                      height: 34,
-                      decoration: const BoxDecoration(
-                        color: Colors.white,
-                        shape: BoxShape.circle,
-                      ),
-                      child: const Icon(
-                        Icons.eco_rounded,
-                        color: AppColors.primaryBlue,
-                        size: 20,
-                      ),
+                  // BlueDot Conservation Logo & Branding (Long-press to open Server Settings)
+                  GestureDetector(
+                    behavior: HitTestBehavior.opaque,
+                    onLongPress: () => ServerSettingsModal.show(context),
+                    child: Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        Image.asset(
+                          AppAssets.bluedotIcon,
+                          width: 34,
+                          height: 34,
+                          fit: BoxFit.contain,
+                          errorBuilder: (_, __, ___) => Container(
+                            width: 34,
+                            height: 34,
+                            decoration: const BoxDecoration(
+                              color: Colors.white,
+                              shape: BoxShape.circle,
+                            ),
+                            child: const Icon(
+                              Icons.eco_rounded,
+                              color: AppColors.primaryBlue,
+                              size: 20,
+                            ),
+                          ),
+                        ),
+                        const SizedBox(width: 9),
+                        Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          mainAxisSize: MainAxisSize.min,
+                          children: const [
+                            Text(
+                              'BlueDot',
+                              style: TextStyle(
+                                color: Colors.white,
+                                fontSize: 18.5,
+                                fontWeight: FontWeight.w800,
+                                letterSpacing: -0.3,
+                                height: 1.1,
+                              ),
+                            ),
+                            Text(
+                              'CONSERVATION',
+                              style: TextStyle(
+                                color: Colors.white70,
+                                fontSize: 9.5,
+                                fontWeight: FontWeight.w700,
+                                letterSpacing: 1.8,
+                              ),
+                            ),
+                          ],
+                        ),
+                      ],
                     ),
-                  ),
-                  const SizedBox(width: 9),
-                  Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    mainAxisSize: MainAxisSize.min,
-                    children: const [
-                      Text(
-                        'BlueDot',
-                        style: TextStyle(
-                          color: Colors.white,
-                          fontSize: 18.5,
-                          fontWeight: FontWeight.w800,
-                          letterSpacing: -0.3,
-                          height: 1.1,
-                        ),
-                      ),
-                      Text(
-                        'CONSERVATION',
-                        style: TextStyle(
-                          color: Colors.white70,
-                          fontSize: 9.5,
-                          fontWeight: FontWeight.w700,
-                          letterSpacing: 1.8,
-                        ),
-                      ),
-                    ],
                   ),
                   const Spacer(),
                   const _NotificationBell(isDarkHeader: true),
@@ -895,7 +905,7 @@ class _DirectActionsRow extends StatelessWidget {
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: const [
               Text(
-                'Direct Action',
+                'Direct Access',
                 style: TextStyle(
                   fontSize: 18,
                   fontWeight: FontWeight.w800,
@@ -904,7 +914,7 @@ class _DirectActionsRow extends StatelessWidget {
                 ),
               ),
               Text(
-                'Daily Impact',
+                'Quick Explore',
                 style: TextStyle(
                   fontSize: 12.5,
                   fontWeight: FontWeight.w600,
@@ -920,37 +930,37 @@ class _DirectActionsRow extends StatelessWidget {
             children: [
               Expanded(
                 child: _DirectActionCard(
-                  icon: Icons.park_rounded,
-                  iconColor: const Color(0xFF386641),
-                  iconBg: const Color(0xFFEAF3EB),
-                  title: 'Plant a\nTree',
-                  tag: 'Native',
-                  tagColor: AppColors.primaryBlue,
-                  onTap: () => context.go('/action-hub?tab=0'),
-                ),
-              ),
-              const SizedBox(width: 10),
-              Expanded(
-                child: _DirectActionCard(
-                  icon: Icons.travel_explore_rounded,
-                  iconColor: const Color(0xFFD4931A),
-                  iconBg: const Color(0xFFFEF4E2),
-                  title: 'Log\nFind',
-                  tag: 'Bio-census',
-                  tagColor: AppColors.textMedium,
-                  onTap: () => context.go('/directory'),
-                ),
-              ),
-              const SizedBox(width: 10),
-              Expanded(
-                child: _DirectActionCard(
-                  icon: Icons.volunteer_activism_rounded,
+                  icon: Icons.leaderboard_rounded,
                   iconColor: AppColors.primaryBlue,
                   iconBg: const Color(0xFFEEF1FD),
-                  title: 'Support\nWild',
-                  tag: 'Micro-pledge',
-                  tagColor: AppColors.textMedium,
-                  onTap: () => context.go('/action-hub?tab=0'),
+                  title: 'Leaderboard',
+                  tag: 'Rankings',
+                  tagColor: AppColors.primaryBlue,
+                  onTap: () => context.push('/profile/leaderboard'),
+                ),
+              ),
+              const SizedBox(width: 10),
+              Expanded(
+                child: _DirectActionCard(
+                  icon: Icons.map_rounded,
+                  iconColor: const Color(0xFF386641),
+                  iconBg: const Color(0xFFEAF3EB),
+                  title: 'Map View',
+                  tag: 'Eco Garden',
+                  tagColor: const Color(0xFF386641),
+                  onTap: () => context.push('/map'),
+                ),
+              ),
+              const SizedBox(width: 10),
+              Expanded(
+                child: _DirectActionCard(
+                  icon: Icons.add_location_alt_rounded,
+                  iconColor: const Color(0xFFC76D4D),
+                  iconBg: const Color(0xFFFDF0EC),
+                  title: 'Suggest Site',
+                  tag: 'New Land',
+                  tagColor: const Color(0xFFC76D4D),
+                  onTap: () => context.push('/action-hub/suggest-site'),
                 ),
               ),
             ],
