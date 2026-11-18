@@ -5,6 +5,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import '../../../core/constants/app_colors.dart';
 import '../../../core/services/cashfree_payment_service.dart';
+import '../../../core/services/payment_state_sync.dart';
 import '../../../core/widgets/app_feedback.dart';
 import '../../../core/widgets/media_carousel.dart';
 import '../../../core/widgets/skeletons.dart';
@@ -64,7 +65,18 @@ class _EventDetailPageState extends ConsumerState<EventDetailPage> {
       backgroundColor: Colors.white,
       body: eventAsync.when(
         data: (e) => RefreshIndicator(
-          onRefresh: () => ref.refresh(eventDetailProvider(widget.eventId).future),
+          onRefresh: () async {
+            await Future.wait([
+              ref.refresh(eventDetailProvider(widget.eventId).future),
+              ref.refresh(eventsProvider.future),
+              ref.read(authNotifierProvider.notifier).refreshProfile(),
+            ]);
+            final updated = ref.read(eventDetailProvider(widget.eventId));
+            updated.whenData((latest) {
+              ref.read(rsvpStateProvider.notifier).seed(latest.isUserRsvped);
+              ref.read(volunteerStateProvider.notifier).seed(latest.isUserVolunteered);
+            });
+          },
           color: AppColors.primaryBlue,
           backgroundColor: AppColors.surfaceCard,
           child: CustomScrollView(
@@ -250,8 +262,9 @@ class _EventDetailPageState extends ConsumerState<EventDetailPage> {
       // ── Bottom action bar ──────────────────────────────────────────────────
       bottomNavigationBar: eventAsync.maybeWhen(
         data: (e) => SafeArea(
+          top: false,
           child: Padding(
-            padding: const EdgeInsets.fromLTRB(16, 8, 16, 32),
+            padding: const EdgeInsets.fromLTRB(16, 6, 16, 16),
             child: _ActionBar(
               event: e,
               isRsvped: isRsvped,
@@ -393,8 +406,8 @@ class _ActionBar extends StatelessWidget {
                 : Text(event.isAttendeeFull ? 'Full' : 'RSVP', style: const TextStyle(fontSize: 13, fontWeight: FontWeight.w700)),
           ),
         ),
-        const SizedBox(width: 90), // Leaves space for the Pulsing Camera
-        if (needsVolunteers)
+        if (needsVolunteers) ...[
+          const SizedBox(width: 12),
           Expanded(
             child: ElevatedButton(
               onPressed: event.isVolunteerFull || volunteerLoading ? null : onVolunteer,
@@ -406,9 +419,8 @@ class _ActionBar extends StatelessWidget {
                   ? const SizedBox(width: 16, height: 16, child: CircularProgressIndicator(color: Colors.white, strokeWidth: 2))
                   : Text(event.isVolunteerFull ? 'Full' : 'Volunteer', style: const TextStyle(fontSize: 13, fontWeight: FontWeight.w700)),
             ),
-          )
-        else
-          const Expanded(child: SizedBox.shrink()),
+          ),
+        ],
       ],
     );
   }
@@ -692,14 +704,7 @@ class _DonationTileState extends State<_DonationTile> {
 
           if (settledOnRetry == true) {
             // Succeeded on manual retry!
-            final refreshFuture = Future.wait([
-              ref.read(authNotifierProvider.notifier).refreshProfile(),
-              ref.refresh(donationsProvider.future),
-              ref.refresh(eventDetailProvider(widget.eventId).future),
-              ref.refresh(eventsProvider.future),
-              ref.refresh(homeFeedProvider.future),
-              ref.read(notificationsProvider.notifier).refresh(),
-            ]).catchError((e) => <dynamic>[]);
+            final refreshFuture = syncAppStateAfterPayment(ref, eventId: widget.eventId);
 
             if (!context.mounted) return;
             await AppFeedback.showThankYou(
@@ -734,18 +739,8 @@ class _DonationTileState extends State<_DonationTile> {
       }
       final xp = verifyRes['xp_awarded'] ?? (100 + (amount ~/ 10));
 
-      // Trigger eager background sync for Event, Events list, Home feed, Profile XP, and 80G Tax Vault
-      final refreshFuture = Future.wait([
-        ref.read(authNotifierProvider.notifier).refreshProfile(),
-        ref.refresh(donationsProvider.future),
-        ref.refresh(eventDetailProvider(widget.eventId).future),
-        ref.refresh(eventsProvider.future),
-        ref.refresh(homeFeedProvider.future),
-        ref.read(notificationsProvider.notifier).refresh(),
-      ]).catchError((e) {
-        debugPrint('[EventDonationSync] Background refresh error: $e');
-        return <dynamic>[];
-      });
+      // Trigger eager background sync for all impacted providers across the app
+      final refreshFuture = syncAppStateAfterPayment(ref, eventId: widget.eventId);
 
       if (!context.mounted) return;
 

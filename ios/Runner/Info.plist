@@ -57,5 +57,7 @@
 		<key>NSAllowsLocalNetworking</key>
 		<true/>
 	</dict>
+	<key>NSMicrophoneUsageDescription</key>
+	<string>BlueDot uses the microphone to measure ambient acoustic tranquility and urban noise levels near trees.</string>
 </dict>
 </plist>

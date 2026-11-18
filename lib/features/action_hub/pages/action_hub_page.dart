@@ -4,6 +4,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import '../../../core/constants/app_colors.dart';
 import '../../../core/services/cashfree_payment_service.dart';
+import '../../../core/services/payment_state_sync.dart';
 import '../../../core/widgets/app_feedback.dart';
 import '../../../core/widgets/media_carousel.dart';
 import '../../../core/widgets/skeletons.dart';
@@ -127,7 +128,13 @@ class _DrivesTab extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final events = ref.watch(eventsProvider);
     return RefreshIndicator(
-      onRefresh: () => ref.refresh(eventsProvider.future),
+      onRefresh: () async {
+        await Future.wait([
+          ref.refresh(eventsProvider.future),
+          ref.refresh(homeFeedProvider.future),
+          ref.read(authNotifierProvider.notifier).refreshProfile(),
+        ]);
+      },
       color: AppColors.primaryBlue,
       backgroundColor: AppColors.surfaceCard,
       child: events.when(
@@ -347,7 +354,13 @@ class _CampaignsTab extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final campaigns = ref.watch(campaignsProvider);
     return RefreshIndicator(
-      onRefresh: () => ref.refresh(campaignsProvider.future),
+      onRefresh: () async {
+        await Future.wait([
+          ref.refresh(campaignsProvider.future),
+          ref.refresh(homeFeedProvider.future),
+          ref.read(authNotifierProvider.notifier).refreshProfile(),
+        ]);
+      },
       color: AppColors.primaryBlue,
       backgroundColor: AppColors.surfaceCard,
       child: campaigns.when(
@@ -763,13 +776,7 @@ class _DonationSheetState extends ConsumerState<DonationSheet> {
             // Succeeded on manual retry!
             if (!mounted) return;
             Navigator.pop(context);
-            final refreshFuture = Future.wait([
-              ref.read(authNotifierProvider.notifier).refreshProfile(),
-              ref.refresh(campaignsProvider.future),
-              ref.refresh(homeFeedProvider.future),
-              ref.refresh(donationsProvider.future),
-              ref.read(notificationsProvider.notifier).refresh(),
-            ]).catchError((e) => <dynamic>[]);
+            final refreshFuture = syncAppStateAfterPayment(ref, campaignId: widget.campaign.id);
 
             await AppFeedback.showThankYou(
               context,
@@ -812,18 +819,9 @@ class _DonationSheetState extends ConsumerState<DonationSheet> {
       if (!mounted) return;
       Navigator.pop(context);
 
-      // Trigger immediate background sync for all impacted providers:
-      // Campaign progress, Home feed activity, User Profile XP, and 80G Tax Vault
-      final refreshFuture = Future.wait([
-        ref.read(authNotifierProvider.notifier).refreshProfile(),
-        ref.refresh(campaignsProvider.future),
-        ref.refresh(homeFeedProvider.future),
-        ref.refresh(donationsProvider.future),
-        ref.read(notificationsProvider.notifier).refresh(),
-      ]).catchError((e) {
-        debugPrint('[DonationSync] Background refresh error: $e');
-        return <dynamic>[];
-      });
+      // Trigger immediate background sync for all impacted providers across the app:
+      // Campaign progress, Home feed activity, User Profile XP, 80G Tax Vault, Badges & Leaderboard
+      final refreshFuture = syncAppStateAfterPayment(ref, campaignId: widget.campaign.id);
 
       // Show the celebratory Thank You popup.
       // While this popup is visible, the background page re-renders with updated numbers!

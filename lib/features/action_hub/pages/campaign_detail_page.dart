@@ -4,6 +4,7 @@ import 'package:go_router/go_router.dart';
 import '../../../core/constants/app_colors.dart';
 import '../../../core/widgets/app_html_view.dart';
 import '../../../core/widgets/media_carousel.dart';
+import '../../auth/providers/auth_provider.dart';
 import '../../home/models/campaign_model.dart';
 import '../../home/providers/home_provider.dart';
 import 'action_hub_page.dart'; // To reuse DonationSheet
@@ -26,7 +27,30 @@ class CampaignDetailPage extends ConsumerWidget {
           );
 
           if (campaign.id.isEmpty) {
-            return const Center(child: Text('Campaign not found.'));
+            return RefreshIndicator(
+              onRefresh: () async {
+                await Future.wait([
+                  ref.refresh(campaignsProvider.future),
+                  ref.refresh(homeFeedProvider.future),
+                  ref.read(authNotifierProvider.notifier).refreshProfile(),
+                ]);
+              },
+              color: AppColors.primaryBlue,
+              backgroundColor: Colors.white,
+              child: ListView(
+                physics: const AlwaysScrollableScrollPhysics(),
+                children: [
+                  SizedBox(height: MediaQuery.of(context).size.height * 0.35),
+                  const Center(
+                    child: Text(
+                      'Campaign not found.\nDrag down to reload.',
+                      textAlign: TextAlign.center,
+                      style: TextStyle(color: AppColors.textMedium, fontSize: 15),
+                    ),
+                  ),
+                ],
+              ),
+            );
           }
 
           final pct = campaign.progressPercent;
@@ -34,164 +58,182 @@ class CampaignDetailPage extends ConsumerWidget {
 
           return Stack(
             children: [
-              CustomScrollView(
-                slivers: [
-                  SliverAppBar(
-                    expandedHeight: 280,
-                    pinned: true,
-                    leadingWidth: 64,
-                    leading: Padding(
-                      padding: const EdgeInsets.only(left: 16.0, top: 8.0, bottom: 8.0),
-                      child: GestureDetector(
-                        onTap: () => context.pop(),
-                        child: Container(
-                          decoration: BoxDecoration(
-                            color: AppColors.primaryYellow,
-                            shape: BoxShape.circle,
-                            boxShadow: [BoxShadow(color: Colors.black.withAlpha(20), blurRadius: 8)],
+              RefreshIndicator(
+                onRefresh: () async {
+                  await Future.wait([
+                    ref.refresh(campaignsProvider.future),
+                    ref.refresh(homeFeedProvider.future),
+                    ref.read(authNotifierProvider.notifier).refreshProfile(),
+                  ]);
+                },
+                color: AppColors.primaryBlue,
+                backgroundColor: Colors.white,
+                child: CustomScrollView(
+                  physics: const AlwaysScrollableScrollPhysics(),
+                  slivers: [
+                    SliverAppBar(
+                      expandedHeight: 280,
+                      pinned: true,
+                      leadingWidth: 64,
+                      leading: Padding(
+                        padding: const EdgeInsets.only(left: 16.0, top: 8.0, bottom: 8.0),
+                        child: GestureDetector(
+                          onTap: () => context.pop(),
+                          child: Container(
+                            decoration: BoxDecoration(
+                              color: AppColors.primaryYellow,
+                              shape: BoxShape.circle,
+                              boxShadow: [BoxShadow(color: Colors.black.withAlpha(20), blurRadius: 8)],
+                            ),
+                            child: const Icon(Icons.arrow_back_rounded, color: AppColors.textDark, size: 20),
                           ),
-                          child: const Icon(Icons.arrow_back_rounded, color: AppColors.textDark, size: 20),
+                        ),
+                      ),
+                      backgroundColor: AppColors.primaryBlue,
+                      iconTheme: const IconThemeData(color: Colors.white),
+                      flexibleSpace: FlexibleSpaceBar(
+                        background: Stack(
+                          fit: StackFit.expand,
+                          children: [
+                            if (campaign.mediaUrls.isNotEmpty)
+                              MediaCarousel(
+                                mediaUrls: campaign.mediaUrls,
+                                height: 280,
+                                autoPlayVideo: true,
+                              )
+                            else
+                              Container(
+                                color: AppColors.primaryBlue.withAlpha(20),
+                                child: const Icon(Icons.volunteer_activism_rounded, color: Colors.white, size: 60),
+                              ),
+                            // Gradient overlay for text readability
+                            Container(
+                              decoration: const BoxDecoration(
+                                gradient: LinearGradient(
+                                  colors: [Colors.transparent, Colors.black87],
+                                  begin: Alignment.topCenter,
+                                  end: Alignment.bottomCenter,
+                                  stops: [0.5, 1.0],
+                                ),
+                              ),
+                            ),
+                          ],
                         ),
                       ),
                     ),
-                    backgroundColor: AppColors.primaryBlue,
-                    iconTheme: const IconThemeData(color: Colors.white),
-                    flexibleSpace: FlexibleSpaceBar(
-                      background: Stack(
-                        fit: StackFit.expand,
-                        children: [
-                          if (campaign.mediaUrls.isNotEmpty)
-                            MediaCarousel(
-                              mediaUrls: campaign.mediaUrls,
-                              height: 280,
-                              autoPlayVideo: true,
-                            )
-                          else
-                            Container(
-                              color: AppColors.primaryBlue.withAlpha(20),
-                              child: const Icon(Icons.volunteer_activism_rounded, color: Colors.white, size: 60),
-                            ),
-                          // Gradient overlay for text readability
-                          Container(
-                            decoration: const BoxDecoration(
-                              gradient: LinearGradient(
-                                colors: [Colors.transparent, Colors.black87],
-                                begin: Alignment.topCenter,
-                                end: Alignment.bottomCenter,
-                                stops: [0.5, 1.0],
-                              ),
-                            ),
-                          ),
-                        ],
-                      ),
-                    ),
-                  ),
-                  SliverToBoxAdapter(
-                    child: Padding(
-                      padding: const EdgeInsets.fromLTRB(20, 20, 20, 160), // Space to clear the floating button + bottom nav bar
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Row(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: [
-                              Expanded(
-                                child: Text(
-                                  campaign.title,
-                                  style: Theme.of(context).textTheme.headlineSmall?.copyWith(fontWeight: FontWeight.w800),
-                                ),
-                              ),
-                              if (isNearlyFunded) ...[
-                                const SizedBox(width: 8),
-                                Container(
-                                  padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
-                                  decoration: BoxDecoration(color: AppColors.terracotta.withAlpha(20), borderRadius: BorderRadius.circular(8)),
-                                  child: const Text('Nearly Funded', style: TextStyle(color: AppColors.terracotta, fontSize: 11, fontWeight: FontWeight.w700)),
-                                ),
-                              ],
-                            ],
-                          ),
-                          const SizedBox(height: 24),
-                          // Progress Section
-                          Container(
-                            padding: const EdgeInsets.all(24),
-                            decoration: BoxDecoration(
-                              color: Colors.white,
-                              borderRadius: BorderRadius.circular(24),
-                              border: Border.all(color: AppColors.borderLight),
-                            ),
-                            child: Column(
+                    SliverToBoxAdapter(
+                      child: Padding(
+                        padding: const EdgeInsets.fromLTRB(20, 20, 20, 80), // Space to clear the floating button
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Row(
+                              crossAxisAlignment: CrossAxisAlignment.start,
                               children: [
-                                Row(
-                                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                                  children: [
-                                    Column(
-                                      crossAxisAlignment: CrossAxisAlignment.start,
-                                      children: [
-                                        Text('₹${_fmt(campaign.currentAmountRaised)} raised',
-                                            style: const TextStyle(fontWeight: FontWeight.w800, fontSize: 20, color: AppColors.primaryBlue)),
-                                        Text('of ₹${_fmt(campaign.targetAmount)} goal', style: const TextStyle(color: AppColors.textMedium, fontSize: 13)),
-                                      ],
-                                    ),
-                                    Text('${(pct * 100).toInt()}%',
-                                        style: TextStyle(fontWeight: FontWeight.w800, fontSize: 26, color: isNearlyFunded ? AppColors.terracotta : AppColors.primaryYellow)),
-                                  ],
+                                Expanded(
+                                  child: Text(
+                                    campaign.title,
+                                    style: Theme.of(context).textTheme.headlineSmall?.copyWith(fontWeight: FontWeight.w800),
+                                  ),
                                 ),
-                                const SizedBox(height: 14),
-                                ClipRRect(
-                                  borderRadius: BorderRadius.circular(8),
-                                  child: LinearProgressIndicator(value: pct.clamp(0, 1), backgroundColor: AppColors.borderLight, color: AppColors.primaryYellow, minHeight: 12),
-                                ),
+                                if (isNearlyFunded) ...[
+                                  const SizedBox(width: 8),
+                                  Container(
+                                    padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                                    decoration: BoxDecoration(color: AppColors.terracotta.withAlpha(20), borderRadius: BorderRadius.circular(8)),
+                                    child: const Text('Nearly Funded', style: TextStyle(color: AppColors.terracotta, fontSize: 11, fontWeight: FontWeight.w700)),
+                                  ),
+                                ],
                               ],
                             ),
-                          ),
-                          const SizedBox(height: 24),
-                          Text('About this Campaign', style: Theme.of(context).textTheme.titleMedium?.copyWith(fontWeight: FontWeight.w700)),
-                          const SizedBox(height: 12),
-                          // App-side WYSIWYG HTML rendering
-                          AppHtmlView(
-                            html: campaign.description,
-                            fallbackText: 'No detailed description available.',
-                          ),
-                        ],
+                            const SizedBox(height: 24),
+                            // Progress Section
+                            Container(
+                              padding: const EdgeInsets.all(24),
+                              decoration: BoxDecoration(
+                                color: Colors.white,
+                                borderRadius: BorderRadius.circular(24),
+                                border: Border.all(color: AppColors.borderLight),
+                              ),
+                              child: Column(
+                                children: [
+                                  Row(
+                                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                                    children: [
+                                      Column(
+                                        crossAxisAlignment: CrossAxisAlignment.start,
+                                        children: [
+                                          Text('₹${_fmt(campaign.currentAmountRaised)} raised',
+                                              style: const TextStyle(fontWeight: FontWeight.w800, fontSize: 20, color: AppColors.primaryBlue)),
+                                          Text('of ₹${_fmt(campaign.targetAmount)} goal', style: const TextStyle(color: AppColors.textMedium, fontSize: 13)),
+                                        ],
+                                      ),
+                                      Text('${(pct * 100).toInt()}%',
+                                          style: TextStyle(fontWeight: FontWeight.w800, fontSize: 26, color: isNearlyFunded ? AppColors.terracotta : AppColors.primaryYellow)),
+                                    ],
+                                  ),
+                                  const SizedBox(height: 14),
+                                  ClipRRect(
+                                    borderRadius: BorderRadius.circular(8),
+                                    child: LinearProgressIndicator(value: pct.clamp(0, 1), backgroundColor: AppColors.borderLight, color: AppColors.primaryYellow, minHeight: 12),
+                                  ),
+                                ],
+                              ),
+                            ),
+                            const SizedBox(height: 24),
+                            Text('About this Campaign', style: Theme.of(context).textTheme.titleMedium?.copyWith(fontWeight: FontWeight.w700)),
+                            const SizedBox(height: 12),
+                            // App-side WYSIWYG HTML rendering
+                            AppHtmlView(
+                              html: campaign.description,
+                              fallbackText: 'No detailed description available.',
+                            ),
+                          ],
+                        ),
                       ),
                     ),
-                  ),
-                ],
+                  ],
+                ),
               ),
 
-              // Pinned Floating Donate Button Just Above the Bottom Navigation Bar (74px + 12px margin = 86px)
+              // Pinned Floating Donate Button positioned 16px above the bottom of the phone
               Positioned(
                 left: 16,
                 right: 16,
-                bottom: 86,
-                child: Container(
-                  decoration: BoxDecoration(
-                    borderRadius: BorderRadius.circular(16),
-                    boxShadow: [
-                      BoxShadow(
-                        color: AppColors.primaryBlue.withAlpha(60),
-                        blurRadius: 16,
-                        offset: const Offset(0, 4),
+                bottom: 0,
+                child: SafeArea(
+                  top: false,
+                  child: Padding(
+                    padding: const EdgeInsets.only(bottom: 16),
+                    child: Container(
+                      decoration: BoxDecoration(
+                        borderRadius: BorderRadius.circular(16),
+                        boxShadow: [
+                          BoxShadow(
+                            color: AppColors.primaryBlue.withAlpha(60),
+                            blurRadius: 16,
+                            offset: const Offset(0, 4),
+                          ),
+                        ],
                       ),
-                    ],
-                  ),
-                  child: ElevatedButton(
-                    onPressed: () => _openDonationSheet(context, campaign),
-                    style: ElevatedButton.styleFrom(
-                      backgroundColor: AppColors.primaryBlue,
-                      foregroundColor: Colors.white,
-                      minimumSize: const Size(double.infinity, 54),
-                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-                      elevation: 0,
-                    ),
-                    child: const Row(
-                      mainAxisAlignment: MainAxisAlignment.center,
-                      children: [
-                        Icon(Icons.volunteer_activism_rounded, color: Colors.white, size: 20),
-                        SizedBox(width: 8),
-                        Text('Donate Now', style: TextStyle(fontSize: 16, fontWeight: FontWeight.w700)),
-                      ],
+                      child: ElevatedButton(
+                        onPressed: () => _openDonationSheet(context, campaign),
+                        style: ElevatedButton.styleFrom(
+                          backgroundColor: AppColors.primaryBlue,
+                          foregroundColor: Colors.white,
+                          minimumSize: const Size(double.infinity, 54),
+                          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+                          elevation: 0,
+                        ),
+                        child: const Row(
+                          mainAxisAlignment: MainAxisAlignment.center,
+                          children: [
+                            Icon(Icons.volunteer_activism_rounded, color: Colors.white, size: 20),
+                            SizedBox(width: 8),
+                            Text('Donate Now', style: TextStyle(fontSize: 16, fontWeight: FontWeight.w700)),
+                          ],
+                        ),
+                      ),
                     ),
                   ),
                 ),
@@ -200,7 +242,33 @@ class CampaignDetailPage extends ConsumerWidget {
           );
         },
         loading: () => const Center(child: CircularProgressIndicator(color: AppColors.primaryBlue)),
-        error: (e, _) => Center(child: Text('Error: $e')),
+        error: (e, _) => RefreshIndicator(
+          onRefresh: () async {
+            await Future.wait([
+              ref.refresh(campaignsProvider.future),
+              ref.refresh(homeFeedProvider.future),
+              ref.read(authNotifierProvider.notifier).refreshProfile(),
+            ]);
+          },
+          color: AppColors.primaryBlue,
+          backgroundColor: Colors.white,
+          child: ListView(
+            physics: const AlwaysScrollableScrollPhysics(),
+            children: [
+              SizedBox(height: MediaQuery.of(context).size.height * 0.35),
+              Center(
+                child: Padding(
+                  padding: const EdgeInsets.symmetric(horizontal: 24),
+                  child: Text(
+                    'Could not load campaign.\nDrag down to reload.',
+                    textAlign: TextAlign.center,
+                    style: const TextStyle(color: AppColors.textMedium, fontSize: 15),
+                  ),
+                ),
+              ),
+            ],
+          ),
+        ),
       ),
     );
   }

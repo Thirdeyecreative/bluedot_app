@@ -8,6 +8,18 @@ final scannerRepositoryProvider = Provider<ScannerRepository>((ref) {
   return ScannerRepository(ref.watch(apiClientProvider));
 });
 
+class MapTreesResult {
+  final List<ScanHistoryItem> trees;
+  final int totalCount;
+  final int userTreesCount;
+
+  const MapTreesResult({
+    required this.trees,
+    required this.totalCount,
+    this.userTreesCount = 0,
+  });
+}
+
 class ScannerRepository {
   final ApiClient _api;
   ScannerRepository(this._api);
@@ -41,6 +53,50 @@ class ScannerRepository {
         .toList();
   }
 
+  /// Fetches trees within a bounding box, along with platform-wide total tree counts.
+  Future<MapTreesResult> fetchMapTreesWithStats({
+    double? minLat,
+    double? minLng,
+    double? maxLat,
+    double? maxLng,
+    String? userId,
+  }) async {
+    final queryParams = <String, String>{};
+    if (minLat != null && minLng != null && maxLat != null && maxLng != null) {
+      queryParams['min_lat'] = minLat.toString();
+      queryParams['min_lng'] = minLng.toString();
+      queryParams['max_lat'] = maxLat.toString();
+      queryParams['max_lng'] = maxLng.toString();
+    }
+    if (userId != null && userId.isNotEmpty) {
+      queryParams['user_id'] = userId;
+    }
+
+    final json = await _api.get(
+      ApiConfig.mapData,
+      requireAuth: false,
+      query: queryParams.isNotEmpty ? queryParams : null,
+    );
+
+    final raw = json as Map<String, dynamic>;
+    final data = raw['data'] as List<dynamic>? ?? [];
+    final totalCount = (raw['total_count'] as num?)?.toInt() ??
+        (raw['count'] as num?)?.toInt() ??
+        data.length;
+    final userTreesCount = (raw['user_trees_count'] as num?)?.toInt() ?? 0;
+
+    final trees = data
+        .map((e) => ScanHistoryItem.fromJson(e as Map<String, dynamic>))
+        .where((item) => item.hasLocation)
+        .toList();
+
+    return MapTreesResult(
+      trees: trees,
+      totalCount: totalCount,
+      userTreesCount: userTreesCount,
+    );
+  }
+
   /// All community-tagged trees within a bounding box, for the map view.
   Future<List<ScanHistoryItem>> fetchMapTrees({
     required double minLat,
@@ -48,20 +104,12 @@ class ScannerRepository {
     required double maxLat,
     required double maxLng,
   }) async {
-    final json = await _api.get(
-      ApiConfig.mapData,
-      requireAuth: false,
-      query: {
-        'min_lat': minLat.toString(),
-        'min_lng': minLng.toString(),
-        'max_lat': maxLat.toString(),
-        'max_lng': maxLng.toString(),
-      },
+    final result = await fetchMapTreesWithStats(
+      minLat: minLat,
+      minLng: minLng,
+      maxLat: maxLat,
+      maxLng: maxLng,
     );
-    final data = (json as Map<String, dynamic>)['data'] as List<dynamic>? ?? [];
-    return data
-        .map((e) => ScanHistoryItem.fromJson(e as Map<String, dynamic>))
-        .where((item) => item.hasLocation)
-        .toList();
+    return result.trees;
   }
 }

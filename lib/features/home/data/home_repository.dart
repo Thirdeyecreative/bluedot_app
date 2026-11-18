@@ -8,6 +8,7 @@ import '../../../core/services/api_client.dart';
 import '../models/banner_model.dart';
 import '../models/blog_model.dart';
 import '../models/campaign_model.dart';
+import '../models/eco_vitals_model.dart';
 import '../../action_hub/models/event_model.dart';
 
 class HomeFeedData {
@@ -150,5 +151,28 @@ class HomeRepository {
       // Fallback to demo data on error
     }
     return DemoData.campaigns;
+  }
+
+  /// Fetches live eco vitals (AQI, UV, Climate & Canopy metrics) from BlueDot backend API.
+  /// Backend serves this from Redis with a 45-minute TTL per 10km grid cell.
+  Future<CityAqiData> fetchEcoVitals({
+    required double latitude,
+    required double longitude,
+    String? city,
+  }) async {
+    try {
+      final queryParams = {
+        'latitude': latitude.toString(),
+        'longitude': longitude.toString(),
+        if (city != null && city.trim().isNotEmpty) 'city': city.trim(),
+      };
+
+      final uri = Uri.parse(ApiConfig.ecoVitals).replace(queryParameters: queryParams);
+      final json = await _api.get(uri.toString(), requireAuth: false) as Map<String, dynamic>;
+      return CityAqiData.fromJson(json, defaultCity: city);
+    } catch (e, stackTrace) {
+      debugPrint('Error fetching eco vitals from backend: $e\n$stackTrace');
+      rethrow;
+    }
   }
 }

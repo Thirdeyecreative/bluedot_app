@@ -4,6 +4,7 @@ class AppColors {
   // Brand Primary
   static const Color primaryBlue = Color(0xFF3B54A6);
   static const Color primaryYellow = Color(0xFFE8B84B);
+  static const Color primaryGreen = Color(0xFF2E5A36); // Vibrant brand ecological green
 
   // Backgrounds
   static const Color backgroundCream = Color(0xFFF7FAF7); // Clean airy eco tint

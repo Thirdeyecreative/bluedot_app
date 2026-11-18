@@ -201,6 +201,7 @@ class ApiConfig {
 
   // App Data
   static String get homeFeed => '$_app/home-feed';
+  static String get ecoVitals => '$_app/eco-vitals';
   static String get campaigns => '$_app/campaigns';
   static String get donations => '$_app/donations';
   static String get initiateDonation => '$_app/donations/initiate';
