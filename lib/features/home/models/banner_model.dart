@@ -31,6 +31,9 @@ class AppBanner {
   /// Linked campaign ID for [actionType] == `campaign`.
   final String? linkedCampaignId;
 
+  /// Linked event ID for [actionType] == `event`.
+  final String? linkedEventId;
+
   /// Optional copy kept for semantics / accessibility — not rendered.
   final String? title;
   final String? subtitle;
@@ -45,6 +48,7 @@ class AppBanner {
     this.actionTarget,
     this.linkUrl,
     this.linkedCampaignId,
+    this.linkedEventId,
     this.title,
     this.subtitle,
   });
@@ -57,9 +61,13 @@ class AppBanner {
 
   bool get hasLink => linkUrl != null && linkUrl!.trim().isNotEmpty;
   bool get isCampaign =>
-      actionType == 'campaign' || (linkedCampaignId != null && linkedCampaignId!.trim().isNotEmpty);
+      actionType == 'campaign' ||
+      (linkedCampaignId != null && linkedCampaignId!.trim().isNotEmpty);
+  bool get isEvent =>
+      actionType == 'event' ||
+      (linkedEventId != null && linkedEventId!.trim().isNotEmpty);
   bool get isRoute =>
-      (actionType == 'route' || isCampaign) &&
+      (actionType == 'route' || isCampaign || isEvent) &&
       (effectiveActionTarget?.trim().isNotEmpty ?? false);
   bool get isScan => actionType == 'scan';
 
@@ -67,11 +75,31 @@ class AppBanner {
   /// If it is a campaign action, resolves to `/action-hub/campaign/$id`.
   String? get effectiveActionTarget {
     if (isCampaign) {
-      final cid = (linkedCampaignId != null && linkedCampaignId!.trim().isNotEmpty)
+      final cid =
+          (linkedCampaignId != null && linkedCampaignId!.trim().isNotEmpty)
           ? linkedCampaignId!.trim()
-          : (actionTarget != null ? actionTarget!.replaceFirst('/action-hub/campaign/', '').replaceAll('/', '').trim() : '');
+          : (actionTarget != null
+                ? actionTarget!
+                      .replaceFirst('/action-hub/campaign/', '')
+                      .replaceAll('/', '')
+                      .trim()
+                : '');
       if (cid.isNotEmpty) {
         return '/action-hub/campaign/$cid';
+      }
+    }
+    if (isEvent) {
+      final eventId =
+          (linkedEventId != null && linkedEventId!.trim().isNotEmpty)
+          ? linkedEventId!.trim()
+          : (actionTarget != null
+                ? actionTarget!
+                      .replaceFirst('/action-hub/event/', '')
+                      .replaceAll('/', '')
+                      .trim()
+                : '');
+      if (eventId.isNotEmpty) {
+        return '/action-hub/event/$eventId';
       }
     }
     return actionTarget;
@@ -92,30 +120,44 @@ class AppBanner {
     final rawDuration = (json['duration_seconds'] as num?)?.toInt();
     final rawTarget = (json['action_target'] as String?)?.trim();
     final rawCampaignId = (json['linked_campaign_id'] as String?)?.trim();
+    final rawEventId = (json['linked_event_id'] as String?)?.trim();
     final mediaUrl =
         ((json['media_url'] ?? json['image']) as String?)?.trim() ?? '';
-    final actionType = (json['action_type'] as String?)?.trim().toLowerCase() ?? 'none';
+    final actionType =
+        (json['action_type'] as String?)?.trim().toLowerCase() ?? 'none';
 
     String? resolvedTarget = (rawTarget == null || rawTarget.isEmpty)
         ? null
         : (rawTarget.startsWith('/') ? rawTarget : '/$rawTarget');
-    if ((actionType == 'campaign' || (rawCampaignId != null && rawCampaignId.isNotEmpty)) &&
+    if ((actionType == 'campaign' ||
+            (rawCampaignId != null && rawCampaignId.isNotEmpty)) &&
         (resolvedTarget == null || resolvedTarget.isEmpty)) {
       if (rawCampaignId != null && rawCampaignId.isNotEmpty) {
         resolvedTarget = '/action-hub/campaign/$rawCampaignId';
+      }
+    }
+    if ((actionType == 'event' ||
+            (rawEventId != null && rawEventId.isNotEmpty)) &&
+        (resolvedTarget == null || resolvedTarget.isEmpty)) {
+      if (rawEventId != null && rawEventId.isNotEmpty) {
+        resolvedTarget = '/action-hub/event/$rawEventId';
       }
     }
 
     return AppBanner(
       id: (json['id'] ?? '').toString(),
       mediaUrl: mediaUrl,
-      mediaType: (json['media_type'] as String?)?.trim().toLowerCase() ?? 'image',
+      mediaType:
+          (json['media_type'] as String?)?.trim().toLowerCase() ?? 'image',
       priority: (json['priority'] as num?)?.toInt() ?? 0,
-      durationSeconds: (rawDuration != null && rawDuration > 0) ? rawDuration : null,
+      durationSeconds: (rawDuration != null && rawDuration > 0)
+          ? rawDuration
+          : null,
       actionType: actionType,
       actionTarget: resolvedTarget,
       linkUrl: (json['link_url'] as String?)?.trim(),
       linkedCampaignId: rawCampaignId,
+      linkedEventId: rawEventId,
       title: json['title'] as String?,
       subtitle: json['subtitle'] as String?,
     );
@@ -142,7 +184,9 @@ class AppBanner {
       final aUnset = a.priority <= 0, bUnset = b.priority <= 0;
       if (aUnset != bUnset) return aUnset ? 1 : -1; // unset/0 -> last
       final byPriority = a.priority.compareTo(b.priority); // ascending
-      return byPriority != 0 ? byPriority : b.id.compareTo(a.id); // tie -> newest
+      return byPriority != 0
+          ? byPriority
+          : b.id.compareTo(a.id); // tie -> newest
     });
   }
 }

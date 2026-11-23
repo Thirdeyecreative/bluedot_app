@@ -14,8 +14,10 @@ void main() {
       expect(banner.isCampaign, isTrue);
       expect(banner.isRoute, isTrue);
       expect(banner.isTappable, isTrue);
-      expect(banner.effectiveActionTarget,
-          equals('/action-hub/campaign/550e8400-e29b-41d4-a716-446655440000'));
+      expect(
+        banner.effectiveActionTarget,
+        equals('/action-hub/campaign/550e8400-e29b-41d4-a716-446655440000'),
+      );
     });
 
     test('Campaign action with action_target already formatted', () {
@@ -29,24 +31,31 @@ void main() {
       expect(banner.isCampaign, isTrue);
       expect(banner.isRoute, isTrue);
       expect(banner.isTappable, isTrue);
-      expect(banner.effectiveActionTarget,
-          equals('/action-hub/campaign/custom-campaign-id'));
+      expect(
+        banner.effectiveActionTarget,
+        equals('/action-hub/campaign/custom-campaign-id'),
+      );
     });
 
-    test('Banner with linked_campaign_id even if action_type is missing/none', () {
-      final banner = AppBanner.fromJson({
-        'id': 'banner-3',
-        'media_url': 'https://example.com/banner.jpg',
-        'action_type': 'none',
-        'linked_campaign_id': 'campaign-xyz',
-      });
+    test(
+      'Banner with linked_campaign_id even if action_type is missing/none',
+      () {
+        final banner = AppBanner.fromJson({
+          'id': 'banner-3',
+          'media_url': 'https://example.com/banner.jpg',
+          'action_type': 'none',
+          'linked_campaign_id': 'campaign-xyz',
+        });
 
-      expect(banner.isCampaign, isTrue);
-      expect(banner.isRoute, isTrue);
-      expect(banner.isTappable, isTrue);
-      expect(banner.effectiveActionTarget,
-          equals('/action-hub/campaign/campaign-xyz'));
-    });
+        expect(banner.isCampaign, isTrue);
+        expect(banner.isRoute, isTrue);
+        expect(banner.isTappable, isTrue);
+        expect(
+          banner.effectiveActionTarget,
+          equals('/action-hub/campaign/campaign-xyz'),
+        );
+      },
+    );
 
     test('Standard route banner works as expected', () {
       final banner = AppBanner.fromJson({
@@ -60,6 +69,23 @@ void main() {
       expect(banner.isRoute, isTrue);
       expect(banner.isTappable, isTrue);
       expect(banner.effectiveActionTarget, equals('/map'));
+    });
+
+    test('Event action with linked_event_id opens the event detail page', () {
+      final banner = AppBanner.fromJson({
+        'id': 'banner-event',
+        'media_url': 'https://example.com/event.jpg',
+        'action_type': 'event',
+        'linked_event_id': '550e8400-e29b-41d4-a716-446655440001',
+      });
+
+      expect(banner.isEvent, isTrue);
+      expect(banner.isRoute, isTrue);
+      expect(banner.isTappable, isTrue);
+      expect(
+        banner.effectiveActionTarget,
+        equals('/action-hub/event/550e8400-e29b-41d4-a716-446655440001'),
+      );
     });
 
     test('Link banner works as expected', () {
