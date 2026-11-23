@@ -7,6 +7,7 @@ import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import 'package:media_kit/media_kit.dart';
+import 'core/config/api_config.dart';
 import 'core/router/app_router.dart';
 import 'core/services/fcm_push_adapter.dart';
 import 'core/theme/app_theme.dart';
@@ -28,6 +29,7 @@ Future<void> main() async {
   };
 
   MediaKit.ensureInitialized();
+  await ApiConfig.init();
 
   await Supabase.initialize(
     url: 'https://luklinptoewincftfpse.supabase.co',

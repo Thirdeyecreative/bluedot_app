@@ -9,6 +9,7 @@ import '../../../core/services/api_client.dart';
 import '../../../core/services/app_update_service.dart';
 import '../../../core/services/push_notification_service.dart';
 import '../../../core/config/api_config.dart';
+import '../../../core/widgets/server_settings_modal.dart';
 import '../../auth/providers/auth_provider.dart';
 import '../../auth/data/auth_repository.dart';
 import '../../home/data/notifications_repository.dart';
@@ -388,6 +389,22 @@ class SettingsPage extends ConsumerWidget {
             label: 'Export My Data (DPDP Act)',
             trailing: const Icon(Icons.chevron_right_rounded, color: AppColors.textLight),
             onTap: () => _handleExportData(context, ref),
+          ),
+
+          // ── Server & Environment ──────────────────────────────────────
+          _SectionHeader('Server & Backend'),
+          _SettingsTile(
+            icon: Icons.dns_outlined,
+            label: 'Backend Server',
+            subtitle: ApiConfig.baseUrl,
+            iconColor: AppColors.primaryBlue,
+            trailing: const Icon(Icons.chevron_right_rounded, color: AppColors.textLight),
+            onTap: () async {
+              await ServerSettingsModal.show(context);
+              if (context.mounted) {
+                (context as Element).markNeedsBuild();
+              }
+            },
           ),
 
           // ── Danger zone ───────────────────────────────────────────────
