@@ -7,10 +7,10 @@ import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import 'package:media_kit/media_kit.dart';
-import 'core/config/api_config.dart';
 import 'core/router/app_router.dart';
 import 'core/services/fcm_push_adapter.dart';
 import 'core/theme/app_theme.dart';
+import 'core/widgets/app_update_prompt.dart';
 import 'core/widgets/connectivity_gate.dart';
 import 'firebase_options.dart';
 
@@ -28,8 +28,7 @@ Future<void> main() async {
   };
 
   MediaKit.ensureInitialized();
-  await ApiConfig.init();
-  
+
   await Supabase.initialize(
     url: 'https://luklinptoewincftfpse.supabase.co',
     publishableKey: 'sb_publishable_x29m8ohDHQAZEF-2VR62NA_vPFhHtS4',
@@ -52,7 +51,10 @@ class BlueDotApp extends ConsumerWidget {
       theme: AppTheme.lightTheme,
       routerConfig: router,
       builder: (context, child) => ConnectivityGate(
-        child: child ?? const SizedBox.shrink(),
+        child: AppUpdatePrompt(
+          router: router,
+          child: child ?? const SizedBox.shrink(),
+        ),
       ),
     );
   }

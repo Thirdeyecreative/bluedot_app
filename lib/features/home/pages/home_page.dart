@@ -10,7 +10,6 @@ import 'package:go_router/go_router.dart';
 import '../../../core/constants/app_assets.dart';
 import '../../../core/constants/app_colors.dart';
 import '../../../core/widgets/skeletons.dart';
-import '../../../core/widgets/server_settings_modal.dart';
 import '../../action_hub/models/event_model.dart';
 import '../models/campaign_model.dart';
 import '../models/blog_model.dart';
@@ -187,60 +186,56 @@ class _HomePageState extends ConsumerState<HomePage> {
               titleSpacing: 18,
               title: Row(
                 children: [
-                  // BlueDot Conservation Logo & Branding (Long-press to open Server Settings)
-                  GestureDetector(
-                    behavior: HitTestBehavior.opaque,
-                    onLongPress: () => ServerSettingsModal.show(context),
-                    child: Row(
-                      mainAxisSize: MainAxisSize.min,
-                      children: [
-                        Image.asset(
-                          AppAssets.bluedotIcon,
+                  // BlueDot Conservation logo and branding.
+                  Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      Image.asset(
+                        AppAssets.bluedotIcon,
+                        width: 34,
+                        height: 34,
+                        fit: BoxFit.contain,
+                        errorBuilder: (_, __, ___) => Container(
                           width: 34,
                           height: 34,
-                          fit: BoxFit.contain,
-                          errorBuilder: (_, __, ___) => Container(
-                            width: 34,
-                            height: 34,
-                            decoration: const BoxDecoration(
-                              color: Colors.white,
-                              shape: BoxShape.circle,
-                            ),
-                            child: const Icon(
-                              Icons.eco_rounded,
-                              color: AppColors.primaryBlue,
-                              size: 20,
-                            ),
+                          decoration: const BoxDecoration(
+                            color: Colors.white,
+                            shape: BoxShape.circle,
+                          ),
+                          child: const Icon(
+                            Icons.eco_rounded,
+                            color: AppColors.primaryBlue,
+                            size: 20,
                           ),
                         ),
-                        const SizedBox(width: 9),
-                        Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          mainAxisSize: MainAxisSize.min,
-                          children: const [
-                            Text(
-                              'BlueDot',
-                              style: TextStyle(
-                                color: Colors.white,
-                                fontSize: 18.5,
-                                fontWeight: FontWeight.w800,
-                                letterSpacing: -0.3,
-                                height: 1.1,
-                              ),
+                      ),
+                      const SizedBox(width: 9),
+                      Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        mainAxisSize: MainAxisSize.min,
+                        children: const [
+                          Text(
+                            'BlueDot',
+                            style: TextStyle(
+                              color: Colors.white,
+                              fontSize: 18.5,
+                              fontWeight: FontWeight.w800,
+                              letterSpacing: -0.3,
+                              height: 1.1,
                             ),
-                            Text(
-                              'CONSERVATION',
-                              style: TextStyle(
-                                color: Colors.white70,
-                                fontSize: 9.5,
-                                fontWeight: FontWeight.w700,
-                                letterSpacing: 1.8,
-                              ),
+                          ),
+                          Text(
+                            'CONSERVATION',
+                            style: TextStyle(
+                              color: Colors.white70,
+                              fontSize: 9.5,
+                              fontWeight: FontWeight.w700,
+                              letterSpacing: 1.8,
                             ),
-                          ],
-                        ),
-                      ],
-                    ),
+                          ),
+                        ],
+                      ),
+                    ],
                   ),
                   const Spacer(),
                   const _NotificationBell(isDarkHeader: true),

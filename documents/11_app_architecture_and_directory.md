@@ -16,16 +16,16 @@ The BlueDot Flutter application follows a strictly modular **feature-first archi
 
 ```text
 lib/
-├── main.dart                       // Entry point: Supabase init, MediaKit engine, ApiConfig.init()
+├── main.dart                       // Entry point: Firebase, Supabase, MediaKit, app shell
 ├── core/                           // Shared application infrastructure
 │   ├── config/                     // Environment config, health checks, endpoints (api_config.dart)
 │   ├── constants/                  // Colors (app_colors.dart), assets, typography
 │   ├── demo/                       // Fallback visual mocks (demo_data.dart)
 │   ├── router/                     // GoRouter configuration, redirect guards (app_router.dart)
-│   ├── services/                   // ApiClient, StorageService, Connectivity monitoring
+│   ├── services/                   // API client, storage, connectivity, app update checks
 │   ├── theme/                      // Custom ThemeData & color schemes (app_theme.dart)
 │   └── widgets/                    // Shared UI (media_carousel.dart, in_app_camera_page.dart,
-│                                   //  no_internet_page.dart, server_settings_modal.dart, skeletons.dart)
+│                                   //  no_internet_page.dart, app_update_sheet.dart, skeletons.dart)
 └── features/                       // Feature modules
     ├── action_hub/                 // Drives, Campaigns, RSVPs, Volunteering, QR Check-ins, Site Suggestions
     ├── auth/                       // Native Supabase OTP, Profile Completion, User model & Notifiers
@@ -67,13 +67,10 @@ Every folder inside `features/` adheres to a strict separation of concerns:
   - Fully authenticated users $\to$ `/home` (preventing access back to auth routes)
   - Public exemptions for `/splash`, `/terms`, `/privacy`, and `/no-internet`.
 
-### 3. Dynamic Networking & Environment Selection (`ApiConfig`)
-- `ApiConfig` supports seamless environment switching:
-  - **Local:** Automatically detects platform to route to `127.0.0.1` (desktop/web) or the developer machine LAN IP (`192.168.1.49` on physical mobile devices).
-  - **Staging:** Google Cloud Run staging container.
-  - **Production:** Google Cloud Run production container.
-  - **Runtime Override:** Allows QA and developers to override endpoints and run active latency health checks directly from the app's Settings screen.
-- Persisted to `SharedPreferences` across app restarts.
+### 3. Build-Time Environment Selection (`ApiConfig`)
+- Set `--dart-define=ENV=local|staging|production` when building the app. Release builds default to production and other builds default to local.
+- For local development, desktop/web builds use `127.0.0.1`. Android uses `127.0.0.1` through `adb reverse tcp:8000 tcp:8000` and iOS uses the configured Wi-Fi host. Override the host with `--dart-define=API_HOST=...`, or the entire endpoint with `--dart-define=BASE_URL=...`.
+- The connectivity service can fall back to the configured endpoint's `/health` route.
 
 ### 4. Resilient HTTP Client (`ApiClient`)
 - Centralized `ApiClient` wraps `package:http`.

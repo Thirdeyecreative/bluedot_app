@@ -60,12 +60,7 @@ class ConnectivityNotifier extends Notifier<bool> {
 
       // Fallback: if general internet DNS is restricted or slow, check if our target backend server is reachable!
       if (!online) {
-        try {
-          final health = await ApiConfig.checkServerHealth();
-          online = health.isHealthy;
-        } catch (_) {
-          online = false;
-        }
+        online = await ApiConfig.checkServerHealth();
       }
 
       if (updateState) {

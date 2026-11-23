@@ -16,7 +16,7 @@ The Profile module manages user identity, gamification levels, impact statistics
 - `pages/leaderboard_page.dart` — Real-time paginated global leaderboard with podium rankings.
 - `pages/certificates_page.dart` — Volunteer achievement certificates list and download viewer.
 - `pages/edit_profile_page.dart` — Full name, email, and city editing form.
-- `pages/settings_page.dart` — Account settings, notification preferences (push & email), PAN management, 80G Tax Vault, privacy data export, and developer server settings.
+- `pages/settings_page.dart` — Account settings, notification preferences (push & email), PAN management, 80G Tax Vault, privacy data export, and app updates.
 - `pages/legal_page.dart` — In-app terms and privacy viewer (`TermsPage`, `PrivacyPage`).
 - `providers/profile_provider.dart` — Providers for badges, certificates, and profile operations.
 - `data/profile_repository.dart` — Network repository calling `ApiClient` for profile resources.
@@ -83,14 +83,11 @@ All user data displayed across the profile header and impact stats is **100% REA
 - Directly opens the **80G Tax Vault** (`TaxVaultPage` at `/profile/settings/tax-vault`), backed by `GET /api/v1/app/donations`.
 - Displays all historical donations with 80G receipt numbers, generation status, and one-click PDF receipt downloads for Indian Income Tax deductions.
 
-### 4. Developer / Server Settings Modal
-- Accessible via the "Server Settings" tile in developer/debug builds.
-- Allows live switching between backend environments:
-  - **Local Backend:** Auto-resolves to developer machine LAN IP (`192.168.1.49:8000`) or emulator localhost.
-  - **Staging Cloud Run:** `https://bluedot-backend-staging-426166329141.asia-south1.run.app`
-  - **Production Cloud Run:** `https://bluedot-backend-426166329141.asia-south1.run.app`
-  - **Custom Base URL:** Allows entering an arbitrary URL and saves to `SharedPreferences`.
-- Includes an active **Server Health Check** button that pings `/health` and reports round-trip latency in milliseconds.
+### 4. App Updates
+- BlueDot checks for updates on launch, after returning to the foreground, and after reconnecting. When the store offers a newer version, BlueDot shows a dismissible update sheet once per release during the session. The **Update available** pill in Settings reopens it.
+- Android uses Google Play's in-app update flow with a Play Store listing fallback. iOS uses the App Store storefront for the app's bundle ID and presents the listing through StoreKit, with an App Store link as a fallback.
+- Ship an update-enabled baseline build first. For example, increase `version` in `pubspec.yaml` from `1.0.0+1` to `1.0.1+2` for the next release. To test Android, install the baseline through Google Play internal app sharing and make the higher build available to the same account with the same application ID and signing key. [Google Play testing guide](https://developer.android.com/guide/playcore/in-app-updates/test)
+- To test iOS, use a physical iPhone with the baseline installed and a higher version published on the App Store under the same bundle ID.
 
 ### 5. Legal & Privacy Compliance
 - Navigation to `/terms` and `/privacy`.

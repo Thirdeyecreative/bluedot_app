@@ -41,4 +41,6 @@ The mobile client maintains a comprehensive documentation suite inside the **[`d
    flutter run
    ```
 
-*To connect a physical device over local Wi-Fi, `ApiConfig` automatically routes to the developer machine LAN IP (`192.168.1.49`). Environment can also be configured at build time via `--dart-define=ENV=local|staging|production`.*
+Android local builds use `127.0.0.1:8000`. With an Android phone connected over USB, run `adb reverse tcp:8000 tcp:8000` before launching Flutter. For the Android emulator without USB forwarding, pass `--dart-define=API_HOST=10.0.2.2`.
+
+Local iOS builds use the API server's Wi-Fi address (`192.168.1.44:8000`). To use another Wi-Fi address on either platform, pass `--dart-define=API_HOST=<your-machine-ip>`. Select a backend at build time with `--dart-define=ENV=local|staging|production`.

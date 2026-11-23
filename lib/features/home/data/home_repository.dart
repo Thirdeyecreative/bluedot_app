@@ -12,14 +12,12 @@ import '../models/eco_vitals_model.dart';
 import '../../action_hub/models/event_model.dart';
 
 class HomeFeedData {
-  final String tagline;
   final List<AppBanner> banners;
   final List<Campaign> campaigns;
   final List<PlantationEvent> events;
   final List<BlogPost> blogs;
 
   HomeFeedData({
-    required this.tagline,
     required this.banners,
     required this.campaigns,
     required this.events,
@@ -59,7 +57,6 @@ class HomeRepository {
       final blogs = blogsList.map((b) => BlogPost.fromJson(b as Map<String, dynamic>)).toList();
 
       return HomeFeedData(
-        tagline: json['tagline'] as String? ?? 'Every Scan Plants a Story.',
         banners: banners,
         campaigns: campaigns,
         events: events,
@@ -75,7 +72,6 @@ class HomeRepository {
       final demoBanners = List<AppBanner>.of(DemoData.banners);
       AppBanner.sortInPlace(demoBanners);
       return HomeFeedData(
-        tagline: 'Every Scan Plants a Story.',
         banners: demoBanners,
         campaigns: [],
         events: [],

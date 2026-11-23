@@ -6,16 +6,17 @@ import 'package:supabase_flutter/supabase_flutter.dart';
 import 'package:url_launcher/url_launcher.dart';
 import '../../../core/constants/app_colors.dart';
 import '../../../core/services/api_client.dart';
+import '../../../core/services/app_update_service.dart';
 import '../../../core/services/push_notification_service.dart';
 import '../../../core/services/storage_service.dart';
 import '../../../core/config/api_config.dart';
-import '../../../core/widgets/server_settings_modal.dart';
 import '../../auth/providers/auth_provider.dart';
 import '../../auth/data/auth_repository.dart';
 import '../../home/data/notifications_repository.dart';
 import '../../legal/services/legal_service.dart';
 import '../../action_hub/data/action_repository.dart';
 import '../../../core/widgets/app_feedback.dart';
+import '../../../core/widgets/app_update_sheet.dart';
 
 import 'package:permission_handler/permission_handler.dart';
 
@@ -219,6 +220,7 @@ class SettingsPage extends ConsumerWidget {
     final donationAlerts = ref.watch(_notifPrefProvider('donation_alerts'));
     final announcements = ref.watch(_notifPrefProvider('announcements'));
     final emailEnabled = ref.watch(_notifPrefProvider('email_enabled'));
+    final appUpdate = ref.watch(appUpdateProvider).value;
 
     return Scaffold(
       appBar: AppBar(
@@ -230,6 +232,20 @@ class SettingsPage extends ConsumerWidget {
         // floating bottom nav bar.
         padding: const EdgeInsets.fromLTRB(0, 8, 0, 120),
         children: [
+          if (appUpdate != null)
+            Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 16),
+              child: Align(
+                alignment: AlignmentDirectional.centerStart,
+                child: ActionChip(
+                  avatar: const Icon(Icons.system_update_rounded, size: 18),
+                  label: const Text('Update available'),
+                  shape: const StadiumBorder(),
+                  onPressed: () => AppUpdateSheet.show(context, appUpdate),
+                ),
+              ),
+            ),
+
           // ── Account ──────────────────────────────────────────────────
           _SectionHeader('Account'),
           _SettingsTile(
@@ -371,30 +387,6 @@ class SettingsPage extends ConsumerWidget {
             label: 'Export My Data (DPDP Act)',
             trailing: const Icon(Icons.chevron_right_rounded, color: AppColors.textLight),
             onTap: () => _handleExportData(context, ref),
-          ),
-
-          // ── Server & Environment ──────────────────────────────────────
-          _SectionHeader('Server & Backend'),
-          _SettingsTile(
-            icon: Icons.dns_outlined,
-            label: 'Backend Server',
-            subtitle: ApiConfig.baseUrl,
-            iconColor: AppColors.primaryBlue,
-            trailing: const Icon(Icons.chevron_right_rounded, color: AppColors.textLight),
-            onTap: () async {
-              await ServerSettingsModal.show(context);
-              if (context.mounted) {
-                (context as Element).markNeedsBuild();
-              }
-            },
-          ),
-
-          // ── About ─────────────────────────────────────────────────────
-          _SectionHeader('About'),
-          _SettingsTile(
-            icon: Icons.info_outline_rounded,
-            label: 'App Version',
-            trailing: const Text('1.0.0 (Demo)', style: TextStyle(color: AppColors.textLight, fontSize: 13)),
           ),
 
           // ── Danger zone ───────────────────────────────────────────────

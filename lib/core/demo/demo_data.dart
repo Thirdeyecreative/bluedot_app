@@ -66,7 +66,7 @@ class DemoData {
           'https://images.unsplash.com/photo-1513836279014-a89f7a76ae86?auto=format&fit=crop&w=1200&q=80',
       mediaType: 'image',
       actionType: 'none',
-      title: 'Every scan plants a story',
+      title: 'Explore the urban canopy',
     ),
   ];
 

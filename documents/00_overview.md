@@ -13,7 +13,7 @@ Every feature in the application has been verified against the live source code 
 | File | Feature | Live Backend Integration Status |
 |---|---|---|
 | [01_auth.md](01_auth.md) | **Auth, OTP & Splash** | **100% Real Backend.** Supabase Auth OTP + Passiton MSG91 DLT transactional SMS hook + FastAPI `GET/PUT /api/v1/app/profile` profile management. Reviewer bypass test suite (`+919999999999` / `558712`). |
-| [02_home.md](02_home.md) | **Home Feed & Dashboard** | **100% Real Backend.** Aggregated `GET /api/v1/app/home-feed` endpoint powering banners, upcoming drives, active campaigns, published blogs, and scan tagline. Dedicated `/home/blogs` list and `/home/blog/:slug` readers. |
+| [02_home.md](02_home.md) | **Home Feed & Dashboard** | **100% Real Backend.** Aggregated `GET /api/v1/app/home-feed` endpoint powering banners, upcoming drives, active campaigns, and published blogs. Dedicated `/home/blogs` list and `/home/blog/:slug` readers. |
 | [03_scanner_green_lens.md](03_scanner_green_lens.md) | **Green Lens AI Scanner** | **100% Real Backend.** Multi-photo in-app camera, `POST /api/v1/app/tags/scan` with Vertex AI / PlantNet, 5-meter PostGIS proximity deduplication (+50 new tag / +15 verified match), auto-publish for confidence $\ge 70\%$, and `GET /api/v1/app/tags/history`. |
 | [04_eco_garden_map.md](04_eco_garden_map.md) | **Eco Garden Map** | **100% Real Backend.** Bounding-box PostGIS query (`GET /api/v1/app/tags/map`) displaying community-wide trees, dynamic live GPS "Blue Dot", Bangalore center fallback, manual refresh with skeleton loader, and live personal vs. community stats. |
 | [05_profile.md](05_profile.md) | **Profile & Settings** | **100% Real Backend.** `GET/PUT /api/v1/app/profile`, avatar upload via CDN, dynamic level titles & XP progress, volunteer certificates (`GET /api/v1/app/profile/certificates`), 80G Tax Vault for donation receipts, push/email notification sync, and runtime environment switching. |
@@ -43,11 +43,11 @@ Every feature in the application has been verified against the live source code 
   - Branch 2: `/directory` (with `/directory/species/:id`)
   - Branch 3: `/profile` (with `/profile/badges`, `/profile/leaderboard`, `/profile/certificates`, `/profile/settings`)
 
-### API Configuration & Runtime Environment Switching (`ApiConfig`)
-- `lib/core/config/api_config.dart` manages endpoint URLs and runtime environment selection.
-- Supports compile-time flags (`--dart-define=ENV=production|staging|local`) and in-app runtime overrides.
-- Features automatic LAN IP detection (`192.168.1.49`) for seamless testing on physical Android and iOS devices over local Wi-Fi.
-- Includes built-in `/health` latency ping diagnostics and persistence via `SharedPreferences`.
+### API Configuration (`ApiConfig`)
+- Release builds default to production. Other builds default to local development.
+- Use `--dart-define=ENV=production|staging|local` to select an environment at build time, or `--dart-define=BASE_URL=...` to set a specific endpoint.
+- Local Android builds use `127.0.0.1:8000` through `adb reverse tcp:8000 tcp:8000`. Local iOS builds use the developer machine's Wi-Fi address. Use `--dart-define=API_HOST=...` to override the local host.
+- The connectivity monitor can use the configured backend's `/health` endpoint as a fallback when DNS resolution fails.
 
 ### HTTP Client (`ApiClient`)
 - Centralized wrapper in `lib/core/services/api_client.dart`.

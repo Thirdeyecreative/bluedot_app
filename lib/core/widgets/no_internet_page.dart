@@ -4,10 +4,8 @@ import 'package:flutter_animate/flutter_animate.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:go_router/go_router.dart';
-import '../config/api_config.dart';
 import '../constants/app_colors.dart';
 import '../services/connectivity_service.dart';
-import 'server_settings_modal.dart';
 
 import '../../features/auth/providers/auth_provider.dart';
 import '../../features/home/data/home_repository.dart';
@@ -29,7 +27,6 @@ class NoInternetPage extends ConsumerStatefulWidget {
 
 class _NoInternetPageState extends ConsumerState<NoInternetPage> {
   bool _isChecking = false;
-  bool _showServerSettings = false;
   String _statusText = 'Checking connection...';
 
   Future<void> _handleRetry() async {
@@ -55,7 +52,9 @@ class _NoInternetPageState extends ConsumerState<NoInternetPage> {
               children: [
                 Icon(Icons.wifi_off_rounded, color: Colors.white, size: 20),
                 SizedBox(width: 10),
-                Text('Still offline. Please check your network and try again.'),
+                Expanded(
+                  child: Text('Still offline. Please check your network and try again.'),
+                ),
               ],
             ),
             backgroundColor: AppColors.errorRed,
@@ -129,16 +128,16 @@ class _NoInternetPageState extends ConsumerState<NoInternetPage> {
       } else {
         throw Exception('Feed data was null');
       }
-    } catch (e) {
+    } catch (_) {
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
-          content: Row(
+          content: const Row(
             children: [
-              const Icon(Icons.error_outline_rounded, color: Colors.white, size: 20),
-              const SizedBox(width: 10),
+              Icon(Icons.error_outline_rounded, color: Colors.white, size: 20),
+              SizedBox(width: 10),
               Expanded(
-                child: Text('Device has internet, but cannot reach backend at ${ApiConfig.baseUrl}. Tap Server Settings below.'),
+                child: Text('Couldn’t load the latest content. Please try again.'),
               ),
             ],
           ),
@@ -161,197 +160,137 @@ class _NoInternetPageState extends ConsumerState<NoInternetPage> {
 
     return Scaffold(
       backgroundColor: AppColors.backgroundCream,
-      body: Stack(
-        children: [
-          SafeArea(
-            child: Center(
-              child: SingleChildScrollView(
-                physics: const BouncingScrollPhysics(),
-                padding: EdgeInsets.fromLTRB(28, 24, 28, 28 + bottomInset),
-                child: Column(
-                  mainAxisAlignment: MainAxisAlignment.center,
-                  crossAxisAlignment: CrossAxisAlignment.center,
-                  children: [
-                    // ── Animated Visual Hero ─────────────────────────────────────
-                    _buildHeroIllustration(),
+      body: SafeArea(
+        child: Center(
+          child: SingleChildScrollView(
+            physics: const BouncingScrollPhysics(),
+            padding: EdgeInsets.fromLTRB(28, 24, 28, 28 + bottomInset),
+            child: Column(
+              mainAxisAlignment: MainAxisAlignment.center,
+              crossAxisAlignment: CrossAxisAlignment.center,
+              children: [
+                // ── Animated Visual Hero ─────────────────────────────────────
+                _buildHeroIllustration(),
 
-                    const SizedBox(height: 36),
+                const SizedBox(height: 36),
 
-                    // ── Headline & Copy ──────────────────────────────────────────
-                    Text(
-                      "You're Offline",
-                      textAlign: TextAlign.center,
-                      style: GoogleFonts.outfit(
-                        fontSize: 28,
-                        fontWeight: FontWeight.w800,
-                        color: AppColors.textDark,
-                        letterSpacing: -0.5,
+                // ── Headline & Copy ──────────────────────────────────────────
+                Text(
+                  "You're Offline",
+                  textAlign: TextAlign.center,
+                  style: GoogleFonts.outfit(
+                    fontSize: 28,
+                    fontWeight: FontWeight.w800,
+                    color: AppColors.textDark,
+                    letterSpacing: -0.5,
+                  ),
+                )
+                    .animate()
+                    .fadeIn(duration: 400.ms, delay: 150.ms)
+                    .slideY(begin: 0.15, end: 0, curve: Curves.easeOutCubic),
+
+                const SizedBox(height: 12),
+
+                Text(
+                  "The trees are still growing, but your device has lost connection to the internet. Please check your Wi-Fi or mobile data to continue.",
+                  textAlign: TextAlign.center,
+                  style: TextStyle(
+                    fontSize: 15,
+                    color: AppColors.textMedium,
+                    height: 1.5,
+                  ),
+                )
+                    .animate()
+                    .fadeIn(duration: 400.ms, delay: 250.ms)
+                    .slideY(begin: 0.15, end: 0, curve: Curves.easeOutCubic),
+
+                const SizedBox(height: 32),
+
+                // ── Diagnostic Checklist Card ────────────────────────────────
+                _buildDiagnosticCard()
+                    .animate()
+                    .fadeIn(duration: 400.ms, delay: 350.ms)
+                    .scaleXY(begin: 0.95, end: 1.0, curve: Curves.easeOutBack),
+
+                const SizedBox(height: 36),
+
+                // ── Try Again CTA Button ─────────────────────────────────────
+                SizedBox(
+                  width: double.infinity,
+                  height: 54,
+                  child: ElevatedButton(
+                    onPressed: _isChecking ? null : _handleRetry,
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: AppColors.primaryBlue,
+                      foregroundColor: Colors.white,
+                      elevation: 0,
+                      shadowColor: Colors.transparent,
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(16),
                       ),
-                    )
-                        .animate()
-                        .fadeIn(duration: 400.ms, delay: 150.ms)
-                        .slideY(begin: 0.15, end: 0, curve: Curves.easeOutCubic),
-
-                    const SizedBox(height: 12),
-
-                    Text(
-                      "The trees are still growing, but your device has lost connection to the internet. Please check your Wi-Fi or mobile data to continue.",
-                      textAlign: TextAlign.center,
-                      style: TextStyle(
-                        fontSize: 15,
-                        color: AppColors.textMedium,
-                        height: 1.5,
-                      ),
-                    )
-                        .animate()
-                        .fadeIn(duration: 400.ms, delay: 250.ms)
-                        .slideY(begin: 0.15, end: 0, curve: Curves.easeOutCubic),
-
-                    const SizedBox(height: 32),
-
-                    // ── Diagnostic Checklist Card ────────────────────────────────
-                    _buildDiagnosticCard()
-                        .animate()
-                        .fadeIn(duration: 400.ms, delay: 350.ms)
-                        .scaleXY(begin: 0.95, end: 1.0, curve: Curves.easeOutBack),
-
-                    const SizedBox(height: 36),
-
-                    // ── Try Again CTA Button ─────────────────────────────────────
-                    SizedBox(
-                      width: double.infinity,
-                      height: 54,
-                      child: ElevatedButton(
-                        onPressed: _isChecking ? null : _handleRetry,
-                        style: ElevatedButton.styleFrom(
-                          backgroundColor: AppColors.primaryBlue,
-                          foregroundColor: Colors.white,
-                          elevation: 0,
-                          shadowColor: Colors.transparent,
-                          shape: RoundedRectangleBorder(
-                            borderRadius: BorderRadius.circular(16),
-                          ),
-                        ),
-                        child: _isChecking
-                            ? Row(
-                                mainAxisAlignment: MainAxisAlignment.center,
-                                children: [
-                                  const SizedBox(
-                                    width: 20,
-                                    height: 20,
-                                    child: CircularProgressIndicator(
-                                      strokeWidth: 2.5,
-                                      valueColor: AlwaysStoppedAnimation<Color>(Colors.white),
-                                    ),
-                                  ),
-                                  const SizedBox(width: 12),
-                                  Text(
-                                    _statusText,
-                                    style: const TextStyle(
-                                      fontSize: 16,
-                                      fontWeight: FontWeight.w600,
-                                    ),
-                                  ),
-                                ],
-                              )
-                            : Row(
-                                mainAxisAlignment: MainAxisAlignment.center,
-                                children: const [
-                                  Icon(Icons.refresh_rounded, size: 20),
-                                  SizedBox(width: 10),
-                                  Text(
-                                    "Try Again",
-                                    style: TextStyle(
-                                      fontSize: 16,
-                                      fontWeight: FontWeight.w700,
-                                      letterSpacing: 0.2,
-                                    ),
-                                  ),
-                                ],
+                    ),
+                    child: _isChecking
+                        ? Row(
+                            mainAxisAlignment: MainAxisAlignment.center,
+                            children: [
+                              const SizedBox(
+                                width: 20,
+                                height: 20,
+                                child: CircularProgressIndicator(
+                                  strokeWidth: 2.5,
+                                  valueColor: AlwaysStoppedAnimation<Color>(Colors.white),
+                                ),
                               ),
-                      ),
-                    )
-                        .animate()
-                        .fadeIn(duration: 400.ms, delay: 450.ms)
-                        .slideY(begin: 0.1, end: 0),
-
-                    const SizedBox(height: 12),
-
-                    // ── Server Settings CTA Button ───────────────────────────────
-                    SizedBox(
-                      width: double.infinity,
-                      height: 48,
-                      child: OutlinedButton.icon(
-                        onPressed: () async {
-                          await ServerSettingsModal.show(context);
-                          _handleRetry();
-                        },
-                        icon: const Icon(Icons.dns_rounded, size: 18),
-                        label: Text(
-                          'Server Settings (${ApiConfig.baseUrl})',
-                          maxLines: 1,
-                          overflow: TextOverflow.ellipsis,
-                          style: const TextStyle(
-                            fontSize: 13,
-                            fontWeight: FontWeight.w600,
+                              const SizedBox(width: 12),
+                              Text(
+                                _statusText,
+                                style: const TextStyle(
+                                  fontSize: 16,
+                                  fontWeight: FontWeight.w600,
+                                ),
+                              ),
+                            ],
+                          )
+                        : Row(
+                            mainAxisAlignment: MainAxisAlignment.center,
+                            children: const [
+                              Icon(Icons.refresh_rounded, size: 20),
+                              SizedBox(width: 10),
+                              Text(
+                                "Try Again",
+                                style: TextStyle(
+                                  fontSize: 16,
+                                  fontWeight: FontWeight.w700,
+                                  letterSpacing: 0.2,
+                                ),
+                              ),
+                            ],
                           ),
-                        ),
-                        style: OutlinedButton.styleFrom(
-                          foregroundColor: AppColors.primaryBlue,
-                          side: const BorderSide(color: AppColors.borderLight),
-                          shape: RoundedRectangleBorder(
-                            borderRadius: BorderRadius.circular(16),
-                          ),
-                        ),
-                      ),
-                    )
-                        .animate()
-                        .fadeIn(duration: 400.ms, delay: 500.ms)
-                        .slideY(begin: 0.1, end: 0),
+                  ),
+                )
+                    .animate()
+                    .fadeIn(duration: 400.ms, delay: 450.ms)
+                    .slideY(begin: 0.1, end: 0),
 
-                    // Optional Back button if routed as a subpage
-                    if (!widget.isOverlay && context.canPop()) ...[
-                      const SizedBox(height: 12),
-                      TextButton(
-                        onPressed: () => context.pop(),
-                        child: const Text(
-                          "Go Back",
-                          style: TextStyle(
-                            color: AppColors.slateBlue,
-                            fontWeight: FontWeight.w600,
-                            fontSize: 14,
-                          ),
-                        ),
+                // Optional Back button if routed as a subpage
+                if (!widget.isOverlay && context.canPop()) ...[
+                  const SizedBox(height: 12),
+                  TextButton(
+                    onPressed: () => context.pop(),
+                    child: const Text(
+                      "Go Back",
+                      style: TextStyle(
+                        color: AppColors.slateBlue,
+                        fontWeight: FontWeight.w600,
+                        fontSize: 14,
                       ),
-                    ],
-                  ],
-                ),
-              ),
-            ),
-          ),
-
-          // ── Built-in Server Settings Modal Overlay ──
-          if (_showServerSettings)
-            Positioned.fill(
-              child: GestureDetector(
-                onTap: () => setState(() => _showServerSettings = false),
-                child: Container(
-                  color: Colors.black54,
-                  alignment: Alignment.bottomCenter,
-                  child: GestureDetector(
-                    onTap: () {}, // Prevent taps inside modal from closing
-                    child: ServerSettingsModal(
-                      onClose: () => setState(() => _showServerSettings = false),
-                      onApplied: (newUrl) {
-                        setState(() => _showServerSettings = false);
-                        _handleRetry();
-                      },
                     ),
                   ),
-                ),
-              ),
+                ],
+              ],
             ),
-        ],
+          ),
+        ),
       ),
     );
   }
