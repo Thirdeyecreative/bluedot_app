@@ -1,6 +1,8 @@
 import 'dart:async';
 import 'dart:convert';
 import 'dart:io';
+import 'dart:typed_data';
+import '../config/api_config.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:http/http.dart' as http;
 import 'package:http_parser/http_parser.dart';
@@ -51,6 +53,32 @@ class ApiClient {
     return headers;
   }
 
+  Future<Uint8List> downloadApiPdf(String path) async {
+    final base = Uri.parse(ApiConfig.baseUrl);
+    final uri = base.resolve(path);
+    if (uri.origin != base.origin) {
+      throw const FormatException('Invalid PDF download URL');
+    }
+    final response = await _guard(() async {
+      final request = http.Request('GET', uri)..followRedirects = false;
+      request.headers.addAll(await _headers());
+      request.headers['Accept'] = 'application/pdf';
+      final client = http.Client();
+      try {
+        return await http.Response.fromStream(await client.send(request));
+      } finally {
+        client.close();
+      }
+    });
+    if (response.statusCode != 200 ||
+        !(response.headers['content-type']?.startsWith('application/pdf') ??
+            false) ||
+        response.bodyBytes.isEmpty) {
+      throw const FormatException('The server could not provide the PDF');
+    }
+    return response.bodyBytes;
+  }
+
   Future<dynamic> get(
     String url, {
     bool requireAuth = true,
@@ -58,7 +86,10 @@ class ApiClient {
   }) async {
     Uri uri = Uri.parse(url);
     if (query != null) uri = uri.replace(queryParameters: query);
-    final res = await _guard(() async => http.get(uri, headers: await _headers(requireAuth: requireAuth)));
+    final res = await _guard(
+      () async =>
+          http.get(uri, headers: await _headers(requireAuth: requireAuth)),
+    );
     return _handle(res);
   }
 
@@ -71,7 +102,8 @@ class ApiClient {
           Uri.parse(url),
           headers: await _headers(requireAuth: requireAuth),
           body: body != null ? jsonEncode(body) : null,
-        ));
+      ),
+    );
     return _handle(res);
   }
 
@@ -84,7 +116,8 @@ class ApiClient {
           Uri.parse(url),
           headers: await _headers(requireAuth: requireAuth),
           body: data != null ? jsonEncode(data) : null,
-        ));
+      ),
+    );
     return _handle(res);
   }
 
@@ -99,18 +132,17 @@ class ApiClient {
           Uri.parse(url),
           headers: await _headers(requireAuth: requireAuth),
           body: payload != null ? jsonEncode(payload) : null,
-        ));
+      ),
+    );
     return _handle(res);
   }
 
-  Future<dynamic> delete(
-    String url, {
-    bool requireAuth = true,
-  }) async {
+  Future<dynamic> delete(String url, {bool requireAuth = true}) async {
     final res = await _guard(() async => http.delete(
           Uri.parse(url),
           headers: await _headers(requireAuth: requireAuth),
-        ));
+      ),
+    );
     return _handle(res);
   }
 
@@ -136,7 +168,8 @@ class ApiClient {
           // MultipartFile defaults to application/octet-stream, which the API
           // rejects — label it with the real image MIME type from its extension.
           contentType: _imageMediaType(file.path),
-        ));
+          ),
+        );
       }
       final streamed = await request.send();
       return http.Response.fromStream(streamed);
@@ -146,7 +179,10 @@ class ApiClient {
 
   /// Runs a request, applying a timeout and converting connectivity failures
   /// into a friendly [ApiException] so callers never see raw socket errors.
-  Future<http.Response> _guard(Future<http.Response> Function() run, {Duration? timeout}) async {
+  Future<http.Response> _guard(
+    Future<http.Response> Function() run, {
+    Duration? timeout,
+  }) async {
     try {
       return await run().timeout(timeout ?? _timeout);
     } on SocketException {

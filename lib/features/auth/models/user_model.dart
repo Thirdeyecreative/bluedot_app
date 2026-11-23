@@ -6,6 +6,9 @@ class AppUser {
   final String? city;
   final int totalPoints;
   final int level;
+  final String? _levelTitle;
+  final int? levelStartXp;
+  final int? nextLevelXp;
   final double totalDonated;
   final int treesTagged;
   final String? avatarUrl;
@@ -20,12 +23,15 @@ class AppUser {
     this.city,
     this.totalPoints = 0,
     this.level = 1,
+    String? levelTitle,
+    this.levelStartXp,
+    this.nextLevelXp,
     this.totalDonated = 0,
     this.treesTagged = 0,
     this.avatarUrl,
     this.panNumber,
     this.preferences,
-  });
+  }) : _levelTitle = levelTitle;
 
   factory AppUser.fromJson(Map<String, dynamic> json) {
     // The backend stores '' for ghost users to satisfy NOT NULL.
@@ -40,8 +46,10 @@ class AppUser {
       return url;
     }
 
-    final points = json['total_impact_points'] as int? ?? json['total_points'] as int? ?? 0;
-    final fallbackLevel = (points ~/ 500) + 1;
+    final points =
+        json['total_impact_points'] as int? ??
+        json['total_points'] as int? ??
+        0;
 
     return AppUser(
       id: json['id'] as String,
@@ -50,7 +58,10 @@ class AppUser {
       email: _nonEmpty(json['email'] as String?),
       city: _nonEmpty(json['city'] as String?),
       totalPoints: points,
-      level: json['level'] as int? ?? fallbackLevel,
+      level: json['level'] as int? ?? 1,
+      levelTitle: json['level_title'] as String?,
+      levelStartXp: json['level_start_xp'] as int?,
+      nextLevelXp: json['next_level_xp'] as int?,
       totalDonated: (json['total_donated'] as num?)?.toDouble() ?? 0,
       treesTagged: json['trees_tagged'] as int? ?? 0,
       avatarUrl: _fixUiAvatars(json['avatar_url'] as String?),
@@ -59,26 +70,19 @@ class AppUser {
     );
   }
 
-  String get levelTitle {
-    switch (level) {
-      case 1:
-        return 'Seedling';
-      case 2:
-        return 'Sapling';
-      case 3:
-        return 'Ranger';
-      case 4:
-        return 'Guardian';
-      case 5:
-        return 'Elder';
-      default:
-        return level >= 5 ? 'Elder' : 'Seedling';
-    }
-  }
+  String get levelTitle => _levelTitle ?? 'Level $level';
 
-  int get pointsForNextLevel => level * 500;
-  int get pointsInCurrentLevel => totalPoints % 500;
-  double get levelProgress => pointsInCurrentLevel / pointsForNextLevel;
+  bool get hasLevelProgress =>
+      levelStartXp != null &&
+      nextLevelXp != null &&
+      nextLevelXp! > levelStartXp!;
+  int get pointsForNextLevel =>
+      hasLevelProgress ? nextLevelXp! - levelStartXp! : 0;
+  int get pointsInCurrentLevel => hasLevelProgress
+      ? (totalPoints - levelStartXp!).clamp(0, pointsForNextLevel)
+      : 0;
+  double get levelProgress =>
+      hasLevelProgress ? pointsInCurrentLevel / pointsForNextLevel : 0;
 
   AppUser copyWith({
     String? fullName,
@@ -99,7 +103,10 @@ class AppUser {
         email: email ?? this.email,
         city: city ?? this.city,
         totalPoints: totalPoints ?? this.totalPoints,
-        level: level ?? this.level,
+    level: level ?? this.level,
+    levelTitle: _levelTitle,
+    levelStartXp: levelStartXp,
+    nextLevelXp: nextLevelXp,
         totalDonated: totalDonated ?? this.totalDonated,
         treesTagged: treesTagged ?? this.treesTagged,
         avatarUrl: avatarUrl ?? this.avatarUrl,

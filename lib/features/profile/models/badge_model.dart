@@ -5,6 +5,8 @@ class Badge {
   final String? metric;
   final int threshold;
   final int points;
+  final int? progress;
+  final String? iconUrl;
   final bool unlocked;
 
   const Badge({
@@ -14,6 +16,8 @@ class Badge {
     this.metric,
     required this.threshold,
     required this.points,
+    this.progress,
+    this.iconUrl,
     this.unlocked = false,
   });
 
@@ -24,7 +28,9 @@ class Badge {
         metric: json['metric'] as String?,
         threshold: json['threshold'] as int? ?? 0,
         points: json['points'] as int? ?? 0,
-        unlocked: unlocked,
+        unlocked: json['unlocked'] as bool? ?? unlocked,
+        progress: json['progress'] as int?,
+        iconUrl: json['icon_url'] as String?,
       );
 
   String get emoji {
@@ -32,7 +38,7 @@ class Badge {
     if (metric!.contains('scan')) return '🌿';
     if (metric!.contains('tree')) return '🌳';
     if (metric!.contains('event')) return '🎪';
-    if (metric!.contains('donate')) return '💚';
+    if (metric!.startsWith('donat')) return '💚';
     if (metric!.contains('volunteer')) return '🤝';
     return '⭐';
   }

@@ -205,3 +205,6 @@ For full details on Income Tax Rule 18AB compliance, Form 10BD annual statement 
   - Update `CASHFREE_ENV=PROD` in GCP Cloud Run environment variables / Secret Manager.
   - Replace sandbox API keys with live production `CASHFREE_APP_ID` and `CASHFREE_SECRET_KEY`.
 
+### Donation rules and receipts
+
+Load amount presets and limits from the donation policy endpoint before requesting a payment. Verification supplies the XP actually awarded. The API records the policy at order creation so a later settings edit cannot change the tree credits or receipt eligibility applied to a pending donation. Admin and mobile use the same eligibility checks and download the issued receipt from the API with authentication.

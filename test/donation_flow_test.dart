@@ -1,3 +1,5 @@
+import 'package:bluedot_app/features/action_hub/models/donation_policy.dart';
+import 'package:bluedot_app/features/action_hub/providers/action_provider.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -17,26 +19,30 @@ void main() {
       description: 'Restoring critical mangrove habitat.',
     );
 
-    test('AppUser model parses total_impact_points, computes level, and parses total_donated', () {
+    test('AppUser model uses server level boundaries for progress', () {
       final json = {
         'id': 'user-123',
         'phone': '+919876543210',
         'full_name': 'Green Champion',
-        'total_impact_points': 1250,
+        'total_impact_points': 750,
+        'level': 2,
+        'level_title': 'Sapling',
+        'level_start_xp': 500,
+        'next_level_xp': 1000,
         'total_donated': 800.0,
         'pan_number': 'ABCDE1234F',
       };
 
       final user = AppUser.fromJson(json);
-      expect(user.totalPoints, 1250);
+      expect(user.totalPoints, 750);
       expect(user.totalDonated, 800.0);
-      // Level should be computed: (1250 ~/ 500) + 1 = Level 3 (Ranger)
-      expect(user.level, 3);
-      expect(user.levelTitle, 'Ranger');
+      expect(user.level, 2);
+      expect(user.levelProgress, 0.5);
+      expect(user.levelTitle, 'Sapling');
       expect(user.panNumber, 'ABCDE1234F');
     });
 
-    testWidgets('DonationSheet displays amounts, pre-fills registered PAN, and shows 80G tax benefit option', (tester) async {
+    testWidgets('DonationSheet uses server amounts and pre-fills registered PAN', (tester) async {
       final user = AppUser.fromJson({
         'id': 'user-123',
         'phone': '+919876543210',
@@ -49,6 +55,13 @@ void main() {
       await tester.pumpWidget(
         ProviderScope(
           overrides: [
+            donationPolicyProvider.overrideWith((ref) async => const DonationPolicy(
+              minAmount: 10,
+              maxAmount: 500000,
+              campaignPresets: [750, 1250],
+              eventPresets: [500],
+              receiptIssuanceEnabled: true,
+            )),
             currentUserProvider.overrideWith(() => _MockCurrentUserNotifier(user)),
           ],
           child: const MaterialApp(
@@ -66,8 +79,8 @@ void main() {
       expect(find.text('Mangrove Sanctuary Restoration'), findsOneWidget);
 
       // Verify amount buttons
-      expect(find.text('₹800'), findsOneWidget);
-      expect(find.text('₹1000'), findsOneWidget);
+      expect(find.text('₹750'), findsOneWidget);
+      expect(find.text('₹1250'), findsOneWidget);
       expect(find.text('Custom'), findsOneWidget);
 
       // Since user has PAN registered, PAN field should be prefilled
@@ -75,7 +88,7 @@ void main() {
         find.byWidgetPredicate((w) => w is TextField && w.controller?.text == 'ABCDE1234F'),
         findsOneWidget,
       );
-      expect(find.text('Proceed to Pay ₹800'), findsOneWidget);
+      expect(find.text('Proceed to Pay ₹750'), findsOneWidget);
     });
 
     testWidgets('ProfilePage displays formatted donation (₹800 instead of ₹0.8k), XP, and 80G Vault link', (tester) async {

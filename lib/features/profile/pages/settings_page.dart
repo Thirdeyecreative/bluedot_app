@@ -1,14 +1,13 @@
+import 'package:printing/printing.dart';
 import 'package:flutter/material.dart' hide Badge;
 import 'package:flutter_animate/flutter_animate.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
-import 'package:supabase_flutter/supabase_flutter.dart';
 import 'package:url_launcher/url_launcher.dart';
 import '../../../core/constants/app_colors.dart';
 import '../../../core/services/api_client.dart';
 import '../../../core/services/app_update_service.dart';
 import '../../../core/services/push_notification_service.dart';
-import '../../../core/services/storage_service.dart';
 import '../../../core/config/api_config.dart';
 import '../../auth/providers/auth_provider.dart';
 import '../../auth/data/auth_repository.dart';
@@ -743,7 +742,7 @@ class TaxVaultPage extends ConsumerWidget {
                 const SizedBox(width: 12),
                 Expanded(
                   child: Text(
-                    'Under Section 80G of the Income Tax Act, donations to BlueDot qualify for 50% tax deduction. Download your PDF receipts here.',
+                    'Download issued 80G receipts and check the status of each donation.',
                     style: const TextStyle(color: AppColors.forestGreen, fontSize: 12, height: 1.5),
                   ),
                 ),
@@ -776,27 +775,6 @@ class TaxVaultPage extends ConsumerWidget {
             ),
           ),
 
-          // Download all button — positioned at bottom with safe area
-          SafeArea(
-            top: false,
-            child: Padding(
-              padding: const EdgeInsets.fromLTRB(16, 8, 16, 12),
-              child: SizedBox(
-                width: double.infinity,
-                height: 52,
-                child: ElevatedButton.icon(
-                  onPressed: () {
-                    ScaffoldMessenger.of(context).showSnackBar(
-                      const SnackBar(content: Text('All 80G receipts bundled — link sent to your email!'), backgroundColor: AppColors.forestGreen),
-                    );
-                  },
-                  icon: const Icon(Icons.download_rounded),
-                  label: const Text('Download All 80G PDFs'),
-                  style: ElevatedButton.styleFrom(shape: const StadiumBorder()),
-                ),
-              ),
-            ),
-          ),
         ],
       ),
     );
@@ -818,9 +796,9 @@ class _DonationReceiptCardState extends ConsumerState<_DonationReceiptCard> {
     switch (status) {
       case 'Receipt Ready':
         return AppColors.forestGreen;
-      case 'Generating':
+      case 'Awaiting issuance':
         return AppColors.primaryBlue;
-      case 'Pending PAN':
+      case 'PAN required':
         return AppColors.warningAmber;
       case 'Pending Confirmation':
       case 'Pending':
@@ -938,32 +916,17 @@ class _DonationReceiptCardState extends ConsumerState<_DonationReceiptCard> {
               height: 40,
               child: ElevatedButton.icon(
                 onPressed: () async {
-                  final rawUrl = widget.data['receipt_url'] as String? ?? '';
-                  final recId = widget.data['receipt_id'] as String? ?? widget.data['id'] as String? ?? '';
-                  String finalUrl = rawUrl;
-                  if (finalUrl.startsWith('/')) {
-                    finalUrl = '${ApiConfig.baseUrl}$finalUrl';
-                  } else if (!finalUrl.startsWith('http')) {
-                    finalUrl = '${ApiConfig.baseUrl}/api/v1/app/donations/receipts/$recId/download';
-                  }
                   try {
-                    final session = Supabase.instance.client.auth.currentSession;
-                    final token = session?.accessToken ?? await ref.read(storageServiceProvider).getToken();
-                    if (token != null && token.isNotEmpty) {
-                      final sep = finalUrl.contains('?') ? '&' : '?';
-                      finalUrl = '$finalUrl${sep}token=$token';
-                    }
-                    final uri = Uri.parse(finalUrl);
-                    if (await canLaunchUrl(uri)) {
-                      await launchUrl(uri, mode: LaunchMode.externalApplication);
-                    } else {
-                      if (context.mounted) {
-                        AppFeedback.showError(context, 'Could not open receipt link.');
-                      }
-                    }
-                  } catch (e) {
+                    final path = widget.data['receipt_url'] as String;
+                    final bytes = await ref.read(apiClientProvider).downloadApiPdf(path);
+                    if (!context.mounted) return;
+                    await Printing.layoutPdf(
+                      onLayout: (_) async => bytes,
+                      name: 'BlueDot_80G.pdf',
+                    );
+                  } catch (_) {
                     if (context.mounted) {
-                      AppFeedback.showError(context, 'Error downloading receipt: $e');
+                      AppFeedback.showError(context, 'Could not download the receipt. Try again.');
                     }
                   }
                 },

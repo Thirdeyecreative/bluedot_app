@@ -636,7 +636,6 @@ class _DonationTile extends StatefulWidget {
 }
 
 class _DonationTileState extends State<_DonationTile> {
-  static const _amounts = [500, 1000, 2500, 5000];
   bool _loading = false;
 
   Future<void> _donate(BuildContext context, WidgetRef ref, int amount) async {
@@ -692,26 +691,31 @@ class _DonationTileState extends State<_DonationTile> {
 
         if (verifyStatus == 'pending') {
           // Reassuring, interactive pending state dialog
+          int? retryXp;
           final settledOnRetry = await AppFeedback.showPaymentPending(
             context,
             reason: (verifyRes['message'] as String?) ??
                 'Payment is awaiting confirmation from your bank or UPI app.',
             onCheckStatus: () async {
               final retryRes = await repo.verifyDonation(orderId);
+              retryXp = retryRes['xp_awarded'] as int?;
               return retryRes['status'] == 'success' || retryRes['payment_status'] == 'Completed';
             },
           );
 
           if (settledOnRetry == true) {
             // Succeeded on manual retry!
-            final refreshFuture = syncAppStateAfterPayment(ref, eventId: widget.eventId);
+            final refreshFuture = syncAppStateAfterPayment(
+              ref,
+              eventId: widget.eventId,
+            );
 
             if (!context.mounted) return;
             await AppFeedback.showThankYou(
               context,
               title: 'Thank You! 🌳',
               message: 'Your donation of ₹$amount was confirmed!',
-              xpLabel: '+${100 + (amount ~/ 10)} XP earned!',
+              xpLabel: (retryXp ?? 0) > 0 ? '+$retryXp XP earned!' : null,
             );
             await refreshFuture;
             return;
@@ -737,10 +741,13 @@ class _DonationTileState extends State<_DonationTile> {
           return;
         }
       }
-      final xp = verifyRes['xp_awarded'] ?? (100 + (amount ~/ 10));
+      final xp = verifyRes['xp_awarded'] as int?;
 
       // Trigger eager background sync for all impacted providers across the app
-      final refreshFuture = syncAppStateAfterPayment(ref, eventId: widget.eventId);
+      final refreshFuture = syncAppStateAfterPayment(
+        ref,
+        eventId: widget.eventId,
+      );
 
       if (!context.mounted) return;
 
@@ -749,7 +756,7 @@ class _DonationTileState extends State<_DonationTile> {
         context,
         title: 'Thank You! 🌳',
         message: 'Your ₹$amount donation will help plant trees at this drive.',
-        xpLabel: '+$xp XP earned!',
+        xpLabel: (xp ?? 0) > 0 ? '+$xp XP earned!' : null,
       );
 
       await refreshFuture;
@@ -768,7 +775,9 @@ class _DonationTileState extends State<_DonationTile> {
   @override
   Widget build(BuildContext context) {
     return Consumer(
-      builder: (context, ref, _) => Container(
+      builder: (context, ref, _) {
+        final policy = ref.watch(donationPolicyProvider);
+        return Container(
         padding: const EdgeInsets.all(16),
         decoration: BoxDecoration(
           color: AppColors.forestGreen.withAlpha(10),
@@ -780,34 +789,68 @@ class _DonationTileState extends State<_DonationTile> {
           children: [
             Row(
               children: [
-                const Icon(Icons.park_rounded, color: AppColors.forestGreen, size: 20),
+                  const Icon(
+                    Icons.park_rounded,
+                    color: AppColors.forestGreen,
+                    size: 20,
+                  ),
                 const SizedBox(width: 8),
-                const Text('Donate for Trees', style: TextStyle(color: AppColors.forestGreen, fontWeight: FontWeight.w700, fontSize: 15)),
+                  const Text(
+                    'Donate for Trees',
+                    style: TextStyle(
+                      color: AppColors.forestGreen,
+                      fontWeight: FontWeight.w700,
+                      fontSize: 15,
+                    ),
+                  ),
               ],
             ),
             const SizedBox(height: 4),
-            const Text('Funds this event\'s plantation directly', style: TextStyle(color: AppColors.textMedium, fontSize: 12)),
-            const SizedBox(height: 14),
-            Row(
-              children: _amounts.map((amt) => Expanded(
+              const Text(
+                'Funds this event\'s plantation directly',
+                style: TextStyle(color: AppColors.textMedium, fontSize: 12),
+              ),
+              const SizedBox(height: 14),
+              policy.when(
+                loading: () => const LinearProgressIndicator(),
+                error: (_, _) => TextButton(
+                  onPressed: () => ref.invalidate(donationPolicyProvider),
+                  child: const Text('Could not load donation amounts. Retry'),
+                ),
+                data: (rules) => Row(
+                  children: rules.eventPresets
+                      .map(
+                        (amt) => Expanded(
                 child: Padding(
                   padding: const EdgeInsets.only(right: 6),
                   child: OutlinedButton(
                     onPressed: _loading ? null : () => _donate(context, ref, amt),
                     style: OutlinedButton.styleFrom(
-                      side: const BorderSide(color: AppColors.forestGreen),
+                                side: const BorderSide(
+                                  color: AppColors.forestGreen,
+                                ),
                       foregroundColor: AppColors.forestGreen,
                       padding: EdgeInsets.zero,
                       tapTargetSize: MaterialTapTargetSize.shrinkWrap,
                     ),
-                    child: Text('₹$amt', style: const TextStyle(fontSize: 12, fontWeight: FontWeight.w600)),
-                  ),
+                              child: Text(
+                                '₹$amt',
+                                style: const TextStyle(
+                                  fontSize: 12,
+                                  fontWeight: FontWeight.w600,
+                                ),
+                              ),
+                            ),
+                          ),
+                        ),
+                      )
+                      .toList(),
                 ),
-              )).toList(),
-            ),
-          ],
-        ),
-      ),
+              ),
+            ],
+          ),
+        );
+      },
     );
   }
 }

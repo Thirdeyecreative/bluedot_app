@@ -96,3 +96,7 @@ All user data displayed across the profile header and impact stats is **100% REA
 ### 6. Sign Out & Account Deletion
 - **Sign Out:** Clears local Supabase session, resets Riverpod providers, and redirects to `/login`.
 - **Delete Account:** Issues `DELETE /api/v1/app/profile`, cleans up Supabase user, and purges local storage.
+
+### Badges, certificates, and XP
+
+Badges load from the authenticated profile API. Badge progress comes from recorded activity. Certificate downloads use the authenticated API PDF. The app displays the server's XP boundaries and divides XP earned within the current level by the width of that level. With 750 XP inside the 500–1,000 interval, the progress bar reads 50%.

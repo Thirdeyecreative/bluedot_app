@@ -49,6 +49,7 @@ class SpeciesInfo {
   final String scientificName;
   final String localName;
   final double? co2OffsetFactor;
+  final String? co2EstimateStatus;
   final int? growthTimeYears;
   final List<String> imageUrls;
   final List<String> funFacts;
@@ -59,6 +60,7 @@ class SpeciesInfo {
     required this.scientificName,
     required this.localName,
     this.co2OffsetFactor,
+    this.co2EstimateStatus,
     this.growthTimeYears,
     this.imageUrls = const [],
     this.funFacts = const [],
@@ -70,6 +72,7 @@ class SpeciesInfo {
         scientificName: json['scientific_name'] as String? ?? '',
         localName: json['local_name'] as String? ?? '',
         co2OffsetFactor: (json['co2_offset_factor'] as num?)?.toDouble(),
+        co2EstimateStatus: json['co2_estimate_status'] as String?,
         growthTimeYears: json['growth_time_years'] as int?,
         imageUrls: (json['image_urls'] as List<dynamic>?)?.cast<String>() ?? const [],
         funFacts: (json['fun_facts'] as List<dynamic>?)?.cast<String>() ?? const [],

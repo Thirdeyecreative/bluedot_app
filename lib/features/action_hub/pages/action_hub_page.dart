@@ -1,3 +1,4 @@
+import '../models/donation_policy.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_animate/flutter_animate.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -31,7 +32,11 @@ class _ActionHubPageState extends ConsumerState<ActionHubPage>
   @override
   void initState() {
     super.initState();
-    _tab = TabController(initialIndex: widget.initialTab, length: 2, vsync: this);
+    _tab = TabController(
+      initialIndex: widget.initialTab,
+      length: 2,
+      vsync: this,
+    );
   }
 
   @override
@@ -64,7 +69,11 @@ class _ActionHubPageState extends ConsumerState<ActionHubPage>
               snap: true,
               leadingWidth: 64,
               leading: Padding(
-                padding: const EdgeInsets.only(left: 16.0, top: 8.0, bottom: 8.0),
+                padding: const EdgeInsets.only(
+                  left: 16.0,
+                  top: 8.0,
+                  bottom: 8.0,
+                ),
                 child: GestureDetector(
                   onTap: () => context.go('/home'),
                   child: Container(
@@ -72,7 +81,10 @@ class _ActionHubPageState extends ConsumerState<ActionHubPage>
                       color: AppColors.primaryYellow,
                       shape: BoxShape.circle,
                       boxShadow: [
-                        BoxShadow(color: Colors.black.withAlpha(20), blurRadius: 8),
+                        BoxShadow(
+                          color: Colors.black.withAlpha(20),
+                          blurRadius: 8,
+                        ),
                       ],
                     ),
                     child: const Icon(
@@ -569,10 +581,14 @@ class _CampaignFundingCard extends StatelessWidget {
                     children: [
                       Expanded(
                         child: OutlinedButton(
-                          onPressed: () => context.push('/action-hub/campaign/${campaign.id}'),
+                          onPressed: () => context.push(
+                            '/action-hub/campaign/${campaign.id}',
+                          ),
                           style: OutlinedButton.styleFrom(
                             minimumSize: const Size(0, 44),
-                            side: const BorderSide(color: AppColors.borderMedium),
+                            side: const BorderSide(
+                              color: AppColors.borderMedium,
+                            ),
                             shape: RoundedRectangleBorder(
                               borderRadius: BorderRadius.circular(12),
                             ),
@@ -666,7 +682,7 @@ class DonationSheet extends ConsumerStatefulWidget {
 }
 
 class _DonationSheetState extends ConsumerState<DonationSheet> {
-  int _selected = 800;
+  int? _selected;
   final _panCtrl = TextEditingController();
   final _customCtrl = TextEditingController();
   bool _showPan = false;
@@ -689,16 +705,18 @@ class _DonationSheetState extends ConsumerState<DonationSheet> {
     super.dispose();
   }
 
-  Future<void> _handleDonate() async {
+  Future<void> _handleDonate(DonationPolicy policy, int selection) async {
     if (_isSubmitting) return;
 
-    int amount = _selected;
-    if (_selected == -1) {
-      amount = int.tryParse(_customCtrl.text.trim()) ?? 0;
-      if (amount <= 0) {
-        AppFeedback.showError(context, 'Please enter a valid amount');
-        return;
-      }
+    final amount = selection == -1
+        ? int.tryParse(_customCtrl.text.trim())
+        : selection;
+    if (amount == null || !policy.allows(amount)) {
+      AppFeedback.showError(
+        context,
+        'Enter an amount between ₹${policy.minAmount} and ₹${policy.maxAmount}.',
+      );
+      return;
     }
 
     final pan = _panCtrl.text.trim().toUpperCase();
@@ -762,12 +780,14 @@ class _DonationSheetState extends ConsumerState<DonationSheet> {
 
         if (verifyStatus == 'pending') {
           // Reassuring, interactive pending state dialog
+          int? retryXp;
           final settledOnRetry = await AppFeedback.showPaymentPending(
             context,
             reason: (verifyRes['message'] as String?) ??
                 'Payment is awaiting confirmation from your bank or UPI app.',
             onCheckStatus: () async {
               final retryRes = await repo.verifyDonation(orderId);
+              retryXp = retryRes['xp_awarded'] as int?;
               return retryRes['status'] == 'success' || retryRes['payment_status'] == 'Completed';
             },
           );
@@ -776,13 +796,16 @@ class _DonationSheetState extends ConsumerState<DonationSheet> {
             // Succeeded on manual retry!
             if (!mounted) return;
             Navigator.pop(context);
-            final refreshFuture = syncAppStateAfterPayment(ref, campaignId: widget.campaign.id);
+            final refreshFuture = syncAppStateAfterPayment(
+              ref,
+              campaignId: widget.campaign.id,
+            );
 
             await AppFeedback.showThankYou(
               context,
               title: 'Thank You! 🌿',
               message: 'Your donation of ₹$amount towards "${widget.campaign.title}" was confirmed!',
-              xpLabel: '+${100 + (amount ~/ 10)} XP earned!',
+              xpLabel: (retryXp ?? 0) > 0 ? '+$retryXp XP earned!' : null,
             );
             await refreshFuture;
             return;
@@ -813,7 +836,7 @@ class _DonationSheetState extends ConsumerState<DonationSheet> {
           return;
         }
       }
-      final xpEarned = verifyRes['xp_awarded'] ?? (100 + (amount ~/ 10));
+      final xpEarned = verifyRes['xp_awarded'] as int?;
 
       // Dismiss the donation sheet first so the user returns to the campaign view
       if (!mounted) return;
@@ -821,7 +844,10 @@ class _DonationSheetState extends ConsumerState<DonationSheet> {
 
       // Trigger immediate background sync for all impacted providers across the app:
       // Campaign progress, Home feed activity, User Profile XP, 80G Tax Vault, Badges & Leaderboard
-      final refreshFuture = syncAppStateAfterPayment(ref, campaignId: widget.campaign.id);
+      final refreshFuture = syncAppStateAfterPayment(
+        ref,
+        campaignId: widget.campaign.id,
+      );
 
       // Show the celebratory Thank You popup.
       // While this popup is visible, the background page re-renders with updated numbers!
@@ -829,7 +855,7 @@ class _DonationSheetState extends ConsumerState<DonationSheet> {
         context,
         title: 'Thank You! 🌿',
         message: 'Your donation of ₹$amount towards "${widget.campaign.title}" was successful!',
-        xpLabel: '+$xpEarned XP earned!',
+        xpLabel: (xpEarned ?? 0) > 0 ? '+$xpEarned XP earned!' : null,
       );
 
       await refreshFuture;
@@ -847,6 +873,28 @@ class _DonationSheetState extends ConsumerState<DonationSheet> {
 
   @override
   Widget build(BuildContext context) {
+    final policyAsync = ref.watch(donationPolicyProvider);
+    final policy = policyAsync.asData?.value;
+    if (policy == null) {
+      return SafeArea(
+        child: Padding(
+          padding: const EdgeInsets.all(24),
+          child: Center(
+            heightFactor: 1,
+            child: policyAsync.hasError
+                ? TextButton(
+                    onPressed: () => ref.invalidate(donationPolicyProvider),
+                    child: const Text('Could not load donation amounts. Retry'),
+                  )
+                : const CircularProgressIndicator(),
+          ),
+        ),
+      );
+    }
+    final selected =
+        _selected ??
+        (policy.campaignPresets.isEmpty ? -1 : policy.campaignPresets.first);
+
     return Padding(
       padding: EdgeInsets.only(
         bottom: MediaQuery.of(context).viewInsets.bottom,
@@ -895,7 +943,7 @@ class _DonationSheetState extends ConsumerState<DonationSheet> {
               const SizedBox(height: 20),
               Row(
                 children: [
-                  for (final a in [800, 1000, -1])
+                  for (final a in [...policy.campaignPresets, -1])
                     Expanded(
                       child: Padding(
                         padding: const EdgeInsets.only(right: 8),
@@ -905,12 +953,12 @@ class _DonationSheetState extends ConsumerState<DonationSheet> {
                             duration: 150.ms,
                             height: 44,
                             decoration: BoxDecoration(
-                              color: _selected == a
+                              color: selected == a
                                   ? AppColors.primaryBlue
                                   : AppColors.surfaceCard,
                               borderRadius: BorderRadius.circular(10),
                               border: Border.all(
-                                color: _selected == a
+                                color: selected == a
                                     ? AppColors.primaryBlue
                                     : AppColors.borderLight,
                               ),
@@ -920,7 +968,7 @@ class _DonationSheetState extends ConsumerState<DonationSheet> {
                                 a == -1 ? 'Custom' : '₹$a',
                                 style: TextStyle(
                                   fontWeight: FontWeight.w700,
-                                  color: _selected == a
+                                  color: selected == a
                                       ? Colors.white
                                       : AppColors.textDark,
                                   fontSize: 13,
@@ -933,7 +981,7 @@ class _DonationSheetState extends ConsumerState<DonationSheet> {
                     ),
                 ],
               ),
-              if (_selected == -1) ...[
+              if (selected == -1) ...[
                 const SizedBox(height: 16),
                 TextField(
                   controller: _customCtrl,
@@ -977,7 +1025,9 @@ class _DonationSheetState extends ConsumerState<DonationSheet> {
                 width: double.infinity,
                 height: 52,
                 child: ElevatedButton(
-                  onPressed: _isSubmitting ? null : _handleDonate,
+                  onPressed: _isSubmitting
+                      ? null
+                      : () => _handleDonate(policy, selected),
                   child: _isSubmitting
                       ? const SizedBox(
                           width: 22,
@@ -987,22 +1037,13 @@ class _DonationSheetState extends ConsumerState<DonationSheet> {
                             strokeWidth: 2.5,
                           ),
                         )
-                      : Builder(
-                          builder: (_) {
-                            String label = 'Donate';
-                            if (_selected != -1) {
-                              label += ' ₹$_selected';
-                            }
-                            return Text(
-                              _showPan
-                                  ? label.replaceAll('Donate', 'Proceed to Pay')
-                                  : label,
-                            );
-                          },
+                      : Text(
+                          (_showPan ? 'Proceed to Pay' : 'Donate') +
+                              (selected == -1 ? '' : ' ₹$selected'),
                         ),
                 ),
               ),
-              if (!_showPan)
+              if (policy.receiptIssuanceEnabled && !_showPan)
                 Center(
                   child: TextButton(
                     onPressed: _isSubmitting ? null : () => setState(() => _showPan = true),

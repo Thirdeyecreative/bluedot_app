@@ -2,7 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_animate/flutter_animate.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../core/constants/app_colors.dart';
-import '../../../core/services/storage_service.dart';
+import '../../../core/services/api_client.dart';
 import '../../../core/widgets/skeletons.dart';
 import '../../auth/providers/auth_provider.dart';
 import '../models/certificate_model.dart';
@@ -24,7 +24,12 @@ class CertificatesPage extends ConsumerWidget {
       ),
       body: certs.when(
         loading: () => const SkeletonCardList(count: 3, height: 150),
-        error: (e, _) => Center(child: Text('Could not load certificates.\n$e', textAlign: TextAlign.center)),
+        error: (_, _) => Center(
+          child: TextButton(
+            onPressed: () => ref.invalidate(certificatesProvider),
+            child: const Text('Could not load certificates. Retry'),
+          ),
+        ),
         data: (list) {
           final volunteerCerts = list.where((c) => c.role.toLowerCase() != 'attendee').toList();
           if (volunteerCerts.isEmpty) return const _EmptyCertificates();
@@ -220,22 +225,23 @@ class _CertificateSheetState extends ConsumerState<_CertificateSheet> {
   bool _isDownloading = false;
   bool _isSharing = false;
 
-  Future<void> _handleDownload(String recipientName) async {
-    if (_isDownloading || _isSharing) return;
+  Future<void> _handleDownload() async {
+    if (!mounted || _isDownloading || _isSharing) return;
     setState(() => _isDownloading = true);
     try {
-      final token = await ref.read(storageServiceProvider).getToken();
-      await CertificatePdfService.downloadCertificate(
-        cert: widget.cert,
-        recipientName: recipientName,
-        token: token,
-      );
-    } catch (e) {
+      final pdf = CertificatePdfService(ref.read(apiClientProvider));
+      await pdf.downloadCertificate(widget.cert);
+    } catch (_) {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
-            content: Text('Could not open print/download: $e'),
+            content: const Text('Could not download the certificate.'),
             backgroundColor: AppColors.errorRed,
+            action: SnackBarAction(
+              label: 'Retry',
+              textColor: Colors.white,
+              onPressed: _handleDownload,
+            ),
           ),
         );
       }
@@ -244,22 +250,23 @@ class _CertificateSheetState extends ConsumerState<_CertificateSheet> {
     }
   }
 
-  Future<void> _handleShare(String recipientName) async {
-    if (_isDownloading || _isSharing) return;
+  Future<void> _handleShare() async {
+    if (!mounted || _isDownloading || _isSharing) return;
     setState(() => _isSharing = true);
     try {
-      final token = await ref.read(storageServiceProvider).getToken();
-      await CertificatePdfService.shareCertificate(
-        cert: widget.cert,
-        recipientName: recipientName,
-        token: token,
-      );
-    } catch (e) {
+      final pdf = CertificatePdfService(ref.read(apiClientProvider));
+      await pdf.shareCertificate(widget.cert);
+    } catch (_) {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
-            content: Text('Could not share certificate: $e'),
+            content: const Text('Could not share the certificate.'),
             backgroundColor: AppColors.errorRed,
+            action: SnackBarAction(
+              label: 'Retry',
+              textColor: Colors.white,
+              onPressed: _handleShare,
+            ),
           ),
         );
       }
@@ -296,7 +303,7 @@ class _CertificateSheetState extends ConsumerState<_CertificateSheet> {
                 children: [
                   Expanded(
                     child: OutlinedButton.icon(
-                      onPressed: (_isDownloading || _isSharing) ? null : () => _handleShare(name),
+                      onPressed: (_isDownloading || _isSharing) ? null : _handleShare,
                       icon: _isSharing
                           ? const SizedBox(
                               width: 18,
@@ -316,7 +323,7 @@ class _CertificateSheetState extends ConsumerState<_CertificateSheet> {
                   const SizedBox(width: 12),
                   Expanded(
                     child: ElevatedButton.icon(
-                      onPressed: (_isDownloading || _isSharing) ? null : () => _handleDownload(name),
+                      onPressed: (_isDownloading || _isSharing) ? null : _handleDownload,
                       icon: _isDownloading
                           ? const SizedBox(
                               width: 18,
@@ -324,7 +331,7 @@ class _CertificateSheetState extends ConsumerState<_CertificateSheet> {
                               child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white),
                             )
                           : const Icon(Icons.download_rounded, size: 18),
-                      label: Text(_isDownloading ? 'Generating...' : 'Download'),
+                      label: Text(_isDownloading ? 'Downloading...' : 'Download'),
                       style: ElevatedButton.styleFrom(
                         minimumSize: const Size(0, 50),
                         backgroundColor: AppColors.primaryBlue,

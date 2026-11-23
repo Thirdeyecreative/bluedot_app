@@ -265,7 +265,9 @@ class _ProfileHeader extends ConsumerWidget {
           ),
           const SizedBox(height: 12),
           Text(
-            '${user.pointsInCurrentLevel} / ${user.pointsForNextLevel} XP to Level ${user.level + 1}',
+            user.hasLevelProgress
+                ? '${user.pointsInCurrentLevel} / ${user.pointsForNextLevel} XP to Level ${user.level + 1}'
+                : 'Level progress unavailable',
             style: TextStyle(color: Colors.white.withAlpha(160), fontSize: 12),
           ),
         ],
@@ -474,7 +476,12 @@ class _BadgesSection extends StatelessWidget {
           ),
         ),
         badges.when(
-          data: (list) => SizedBox(
+          data: (list) => list.isEmpty
+              ? const Padding(
+                  padding: EdgeInsets.all(16),
+                  child: Text('No badges available yet.'),
+                )
+              : SizedBox(
             height: 100,
             child: ListView.separated(
               padding: const EdgeInsets.symmetric(horizontal: 16),

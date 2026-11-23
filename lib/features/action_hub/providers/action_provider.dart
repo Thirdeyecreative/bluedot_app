@@ -1,3 +1,4 @@
+import '../models/donation_policy.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../data/action_repository.dart';
 import '../models/event_model.dart';
@@ -8,15 +9,19 @@ final eventsProvider = FutureProvider<List<PlantationEvent>>((ref) {
   return ref.watch(actionRepositoryProvider).fetchEvents();
 });
 
-final eventDetailProvider = FutureProvider.family<PlantationEvent, String>((ref, id) {
+final eventDetailProvider = FutureProvider.family<PlantationEvent, String>((
+  ref,
+  id,
+) {
   return ref.watch(actionRepositoryProvider).fetchEventById(id);
 });
 
 // ── RSVP notifier ─────────────────────────────────────────────────────────────
 // Non-family: event ID is passed through methods. Seeded from eventDetailProvider on page load.
 
-final rsvpStateProvider =
-    NotifierProvider<RsvpNotifier, AsyncValue<bool>>(RsvpNotifier.new);
+final rsvpStateProvider = NotifierProvider<RsvpNotifier, AsyncValue<bool>>(
+  RsvpNotifier.new,
+);
 
 class RsvpNotifier extends Notifier<AsyncValue<bool>> {
   @override
@@ -27,7 +32,10 @@ class RsvpNotifier extends Notifier<AsyncValue<bool>> {
   }
 
   Future<void> toggle(String eventId) async {
-    final current = switch (state) { AsyncData(:final value) => value, _ => false };
+    final current = switch (state) {
+      AsyncData(:final value) => value,
+      _ => false,
+    };
     state = const AsyncValue.loading();
     state = await AsyncValue.guard(() async {
       final repo = ref.read(actionRepositoryProvider);
@@ -46,7 +54,9 @@ class RsvpNotifier extends Notifier<AsyncValue<bool>> {
 // ── Volunteer notifier ────────────────────────────────────────────────────────
 
 final volunteerStateProvider =
-    NotifierProvider<VolunteerNotifier, AsyncValue<bool>>(VolunteerNotifier.new);
+    NotifierProvider<VolunteerNotifier, AsyncValue<bool>>(
+      VolunteerNotifier.new,
+    );
 
 class VolunteerNotifier extends Notifier<AsyncValue<bool>> {
   @override
@@ -57,7 +67,10 @@ class VolunteerNotifier extends Notifier<AsyncValue<bool>> {
   }
 
   Future<void> toggle(String eventId) async {
-    final current = switch (state) { AsyncData(:final value) => value, _ => false };
+    final current = switch (state) {
+      AsyncData(:final value) => value,
+      _ => false,
+    };
     state = const AsyncValue.loading();
     state = await AsyncValue.guard(() async {
       final repo = ref.read(actionRepositoryProvider);
@@ -81,11 +94,17 @@ class CheckInResult {
   final String role;
   final int xpAwarded;
   final String message;
-  const CheckInResult({required this.role, required this.xpAwarded, required this.message});
+  const CheckInResult({
+    required this.role,
+    required this.xpAwarded,
+    required this.message,
+  });
 }
 
 final checkInProvider =
-    NotifierProvider<CheckInNotifier, AsyncValue<CheckInResult?>>(CheckInNotifier.new);
+    NotifierProvider<CheckInNotifier, AsyncValue<CheckInResult?>>(
+      CheckInNotifier.new,
+    );
 
 class CheckInNotifier extends Notifier<AsyncValue<CheckInResult?>> {
   @override
@@ -115,11 +134,17 @@ class CheckOutResult {
   final String role;
   final int durationMinutes;
   final String message;
-  const CheckOutResult({required this.role, required this.durationMinutes, required this.message});
+  const CheckOutResult({
+    required this.role,
+    required this.durationMinutes,
+    required this.message,
+  });
 }
 
 final checkOutProvider =
-    NotifierProvider<CheckOutNotifier, AsyncValue<CheckOutResult?>>(CheckOutNotifier.new);
+    NotifierProvider<CheckOutNotifier, AsyncValue<CheckOutResult?>>(
+      CheckOutNotifier.new,
+    );
 
 class CheckOutNotifier extends Notifier<AsyncValue<CheckOutResult?>> {
   @override
@@ -140,3 +165,9 @@ class CheckOutNotifier extends Notifier<AsyncValue<CheckOutResult?>> {
 
   void reset() => state = const AsyncValue.data(null);
 }
+
+final donationPolicyProvider = FutureProvider.autoDispose<DonationPolicy>((
+  ref,
+) {
+  return ref.watch(actionRepositoryProvider).fetchDonationPolicy();
+});

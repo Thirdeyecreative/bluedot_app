@@ -7,7 +7,7 @@ import 'package:bluedot_app/features/home/providers/home_provider.dart';
 import 'package:flutter_widget_from_html/flutter_widget_from_html.dart';
 
 void main() {
-  testWidgets('CampaignDetailPage displays WYSIWYG HTML and Donate button just above bottom nav bar', (tester) async {
+  testWidgets('CampaignDetailPage displays WYSIWYG HTML and Donate button above the bottom safe area', (tester) async {
     const testCampaign = Campaign(
       id: 'test-campaign-123',
       title: 'Rainforest Reforestation Initiative',
@@ -54,8 +54,11 @@ void main() {
     expect(positionedFinder, findsOneWidget);
 
     final Positioned positionedWidget = tester.widget(positionedFinder);
-    // Button is positioned at bottom: 86 (12px above the 74px bottom nav bar)
-    expect(positionedWidget.bottom, 86.0);
+    // Campaign details open on the root navigator. The CTA uses bottom safe-area padding.
+    expect(positionedWidget.bottom, 0.0);
+    final ctaBottom = tester.getBottomLeft(find.widgetWithText(ElevatedButton, 'Donate Now')).dy;
+    final scaffoldBottom = tester.getBottomLeft(find.byType(Scaffold)).dy;
+    expect(ctaBottom, lessThanOrEqualTo(scaffoldBottom - 16));
     expect(positionedWidget.left, 16.0);
     expect(positionedWidget.right, 16.0);
   });

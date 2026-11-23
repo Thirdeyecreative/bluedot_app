@@ -117,8 +117,10 @@ class ScanHistoryDetailSheet extends StatelessWidget {
 
               const SizedBox(height: 20),
 
-              if (co2 != null && co2 > 0)
-                Co2Card(species: displayScientificName, co2: co2).animate().fadeIn(delay: 200.ms),
+              Co2Card(species: displayScientificName, co2: co2,
+                  pendingReview: species?.co2EstimateStatus == 'pending_review' ||
+                      (species?.isPendingReview ?? false),
+                ).animate().fadeIn(delay: 200.ms),
 
               const SizedBox(height: 24),
 

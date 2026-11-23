@@ -47,9 +47,7 @@ class _ScanResultSheetState extends State<ScanResultSheet> {
     // guess wherever both are available.
     final displayScientificName = species?.scientificName ?? pn?.scientificName;
     final displayCommonName = species?.localName ?? pn?.commonName;
-    final co2 = (species?.co2OffsetFactor != null && species!.co2OffsetFactor! > 0)
-        ? species.co2OffsetFactor!
-        : _estimateCo2(pn?.scientificName);
+    final co2 = species?.co2OffsetFactor;
 
     // Taller surface: anchored at the bottom, extending up the screen —
     // 20px shy of the 0.85 mark, consistent across device heights.
@@ -227,7 +225,10 @@ class _ScanResultSheetState extends State<ScanResultSheet> {
                   const SizedBox(height: 20),
 
                   // ── CO₂ impact card ────────────────────────────────────
-                  Co2Card(species: displayScientificName, co2: co2)
+                  Co2Card(species: displayScientificName, co2: co2,
+                  pendingReview: species?.co2EstimateStatus == 'pending_review' ||
+                      (species?.isPendingReview ?? false),
+                )
                       .animate()
                       .fadeIn(delay: 300.ms)
                       .slideY(begin: 0.06, end: 0),
@@ -379,21 +380,5 @@ class _ScanResultSheetState extends State<ScanResultSheet> {
         ),
       ),
     );
-  }
-
-  double _estimateCo2(String? scientificName) {
-    // Average annual CO₂ absorption per species
-    const map = {
-      'azadirachta indica': 21.77,
-      'ficus religiosa': 28.0,
-      'ficus benghalensis': 31.2,
-      'mangifera indica': 19.5,
-      'bambusa bambos': 62.0,
-      'terminalia arjuna': 26.1,
-      'syzygium cumini': 24.7,
-      'cassia fistula': 16.8,
-    };
-    final key = scientificName?.toLowerCase() ?? '';
-    return map[key] ?? 20.0;
   }
 }

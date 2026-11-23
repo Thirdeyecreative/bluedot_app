@@ -128,3 +128,7 @@ Configured in `lib/core/router/app_router.dart`:
 - `/home/blogs` — `AllBlogsPage` (list of all articles)
 - `/home/blog/:slug` — `BlogDetailPage` (article reader)
 - `/notifications` — `NotificationsPage` (standalone full screen)
+
+### Home hero and feed states
+
+Publish a banner in Admin Content → Banners with **Home hero** placement, media, and a destination. The API selects the first eligible hero using display order. Home hides the section if no hero is published, and offers Retry if the feed request fails. Empty banner and campaign results show their empty states.

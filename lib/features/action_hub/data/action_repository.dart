@@ -1,3 +1,4 @@
+import '../models/donation_policy.dart';
 import 'dart:io';
 
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -37,7 +38,10 @@ class ActionRepository {
   }
 
   Future<Map<String, dynamic>> volunteerForEvent(String eventId) async {
-    final data = await _api.post(ApiConfig.appEventVolunteer(eventId), body: {});
+    final data = await _api.post(
+      ApiConfig.appEventVolunteer(eventId),
+      body: {},
+    );
     return (data as Map<String, dynamic>?) ?? {};
   }
 
@@ -45,17 +49,28 @@ class ActionRepository {
     await _api.delete(ApiConfig.appEventVolunteer(eventId));
   }
 
-  Future<Map<String, dynamic>> checkInEvent(String eventId, String token) async {
-    final data = await _api.post(ApiConfig.appEventCheckin, body: {
-      'event_id': eventId,
-      'token': token,
-    });
+  Future<Map<String, dynamic>> checkInEvent(
+    String eventId,
+    String token,
+  ) async {
+    final data = await _api.post(
+      ApiConfig.appEventCheckin,
+      body: {'event_id': eventId, 'token': token},
+    );
     return (data as Map<String, dynamic>?) ?? {};
   }
 
   Future<Map<String, dynamic>> checkOutEvent(String eventId) async {
-    final data = await _api.post(ApiConfig.appEventCheckout, body: {'event_id': eventId});
+    final data = await _api.post(
+      ApiConfig.appEventCheckout,
+      body: {'event_id': eventId},
+    );
     return (data as Map<String, dynamic>?) ?? {};
+  }
+
+  Future<DonationPolicy> fetchDonationPolicy() async {
+    final data = await _api.get(ApiConfig.donationPolicy, requireAuth: false);
+    return DonationPolicy.fromJson(data as Map<String, dynamic>);
   }
 
   Future<Map<String, dynamic>> initiateDonation({
@@ -66,22 +81,28 @@ class ActionRepository {
     String? donorName,
     String? occasionText,
   }) async {
-    final body = <String, dynamic>{
-      'amount': amount,
-    };
+    final body = <String, dynamic>{'amount': amount};
     if (campaignId != null && campaignId.isNotEmpty) body['campaign_id'] = campaignId;
     if (eventId != null && eventId.isNotEmpty) body['event_id'] = eventId;
     if (pan != null && pan.isNotEmpty) body['pan_number'] = pan;
     if (donorName != null && donorName.isNotEmpty) body['donor_name'] = donorName;
     if (occasionText != null && occasionText.isNotEmpty) body['occasion_text'] = occasionText;
 
-    final data = await _api.post(ApiConfig.initiateDonation, body: body, requireAuth: true);
+    final data = await _api.post(
+      ApiConfig.initiateDonation,
+      body: body,
+      requireAuth: true,
+    );
     return (data as Map<String, dynamic>?) ?? {};
   }
 
   Future<Map<String, dynamic>> verifyDonation(String orderId) async {
     final body = <String, dynamic>{'order_id': orderId};
-    final data = await _api.post(ApiConfig.verifyDonation, body: body, requireAuth: true);
+    final data = await _api.post(
+      ApiConfig.verifyDonation,
+      body: body,
+      requireAuth: true,
+    );
     return (data as Map<String, dynamic>?) ?? {};
   }
 
@@ -90,12 +111,13 @@ class ActionRepository {
     int amount, {
     String? pan,
   }) async {
-    final body = <String, dynamic>{
-      'amount': amount,
-      'campaign_id': campaignId,
-    };
+    final body = <String, dynamic>{'amount': amount, 'campaign_id': campaignId};
     if (pan != null && pan.isNotEmpty) body['pan_number'] = pan;
-    final data = await _api.post(ApiConfig.donations, body: body, requireAuth: true);
+    final data = await _api.post(
+      ApiConfig.donations,
+      body: body,
+      requireAuth: true,
+    );
     return (data as Map<String, dynamic>?) ?? {};
   }
 
@@ -106,7 +128,11 @@ class ActionRepository {
   }) async {
     final body = <String, dynamic>{'amount': amount};
     if (pan != null && pan.isNotEmpty) body['pan'] = pan;
-    final data = await _api.post(ApiConfig.appEventDonate(eventId), body: body, requireAuth: true);
+    final data = await _api.post(
+      ApiConfig.appEventDonate(eventId),
+      body: body,
+      requireAuth: true,
+    );
     return (data as Map<String, dynamic>?) ?? {};
   }
 

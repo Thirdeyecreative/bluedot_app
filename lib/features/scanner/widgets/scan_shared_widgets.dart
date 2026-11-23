@@ -30,11 +30,15 @@ class PillTag extends StatelessWidget {
 
 class Co2Card extends StatelessWidget {
   final String? species;
-  final double co2;
-  const Co2Card({super.key, this.species, required this.co2});
+  final double? co2;
+  final bool pendingReview;
+  const Co2Card({super.key, this.species, required this.co2, this.pendingReview = false});
 
   @override
-  Widget build(BuildContext context) => Container(
+  Widget build(BuildContext context) {
+    final estimate = co2;
+    final available = estimate != null && estimate.isFinite && estimate > 0;
+    return Container(
         padding: const EdgeInsets.all(18),
         decoration: BoxDecoration(
           gradient: LinearGradient(
@@ -61,9 +65,11 @@ class Co2Card extends StatelessWidget {
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  const Text(
-                    'Estimated CO₂ Offset',
-                    style: TextStyle(
+                  Text(
+                    pendingReview && available
+                        ? 'CO₂ Estimate (Pending Review)'
+                        : 'Estimated CO₂ Offset',
+                    style: const TextStyle(
                       fontWeight: FontWeight.w700,
                       color: AppColors.forestGreen,
                       fontSize: 13,
@@ -71,12 +77,10 @@ class Co2Card extends StatelessWidget {
                   ),
                   const SizedBox(height: 2),
                   Text(
-                    '~${co2.toStringAsFixed(1)} kg / year',
+                    available
+                        ? '~${estimate.toStringAsFixed(1)} kg CO₂ / year'
+                        : 'Unavailable',
                     style: const TextStyle(fontSize: 20, fontWeight: FontWeight.w700, color: AppColors.textDark),
-                  ),
-                  Text(
-                    'Over 20 years: ~${(co2 * 20).toStringAsFixed(0)} kg absorbed',
-                    style: const TextStyle(fontSize: 11, color: AppColors.textMedium),
                   ),
                 ],
               ),
@@ -84,6 +88,7 @@ class Co2Card extends StatelessWidget {
           ],
         ),
       );
+  }
 }
 
 class PlantPlaceholder extends StatelessWidget {

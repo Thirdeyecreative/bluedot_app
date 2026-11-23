@@ -1,5 +1,4 @@
 import 'dart:async';
-import 'dart:ui' as ui;
 import 'package:cached_network_image/cached_network_image.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
@@ -12,6 +11,7 @@ import '../../../core/constants/app_colors.dart';
 import '../../../core/widgets/skeletons.dart';
 import '../../action_hub/models/event_model.dart';
 import '../models/campaign_model.dart';
+import '../models/banner_model.dart';
 import '../models/blog_model.dart';
 import '../providers/home_provider.dart';
 import '../widgets/promo_banner_carousel.dart';
@@ -334,9 +334,20 @@ class _HomePageState extends ConsumerState<HomePage> {
                   .slideY(begin: 0.04, end: 0, curve: Curves.easeOut),
             ),
 
-            // ── 4. "Protect The Canopy" Hero Card ──────────────────────────
+            // ── 4. Published Home Hero ──────────────────────────
             SliverToBoxAdapter(
-              child: const _ProtectCanopyHeroCard()
+              child:
+                  switch (homeFeedAsync) {
+                        AsyncData(:final value) when value.hero != null =>
+                          _HomeHeroCard(banner: value.hero!),
+                        AsyncError() => Center(
+                          child: TextButton(
+                            onPressed: () => ref.invalidate(homeFeedProvider),
+                            child: const Text('Could not load Home. Retry'),
+                          ),
+                        ),
+                        _ => const SizedBox.shrink(),
+                      }
                   .animate()
                   .fadeIn(delay: 100.ms, duration: 400.ms)
                   .slideY(begin: 0.06, end: 0, curve: Curves.easeOutCubic),
@@ -1576,178 +1587,25 @@ class _ThermalDetailSheet extends StatelessWidget {
 // "PROTECT THE CANOPY" HERO CARD
 // ─────────────────────────────────────────────────────────────────────────────
 
-class _ProtectCanopyHeroCard extends StatelessWidget {
-  const _ProtectCanopyHeroCard();
+class _HomeHeroCard extends StatelessWidget {
+  const _HomeHeroCard({required this.banner});
+
+  final AppBanner banner;
 
   @override
   Widget build(BuildContext context) {
-    return Padding(
-      padding: const EdgeInsets.fromLTRB(16, 6, 16, 10),
-      child: Container(
-        padding: const EdgeInsets.all(20),
-        decoration: BoxDecoration(
-          borderRadius: BorderRadius.circular(24),
-          gradient: const LinearGradient(
-            begin: Alignment.topLeft,
-            end: Alignment.bottomRight,
-            colors: [Color(0xFF5D7566), Color(0xFF384E40)],
-          ),
-          boxShadow: [
-            BoxShadow(
-              color: const Color(0xFF384E40).withOpacity(0.28),
-              blurRadius: 16,
-              offset: const Offset(0, 8),
-            ),
-          ],
-        ),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            // Top pills
-            Row(
-              mainAxisAlignment: MainAxisAlignment.spaceBetween,
-              children: [
-                Container(
-                  padding: const EdgeInsets.symmetric(
-                    horizontal: 14,
-                    vertical: 6,
-                  ),
-                  decoration: BoxDecoration(
-                    color: Colors.white,
-                    borderRadius: BorderRadius.circular(20),
-                  ),
-                  child: const Text(
-                    'BlueDot Initiative 2025',
-                    style: TextStyle(
-                      color: Color(0xFF1B2B20),
-                      fontSize: 11.5,
-                      fontWeight: FontWeight.w700,
-                    ),
-                  ),
-                ),
-                Container(
-                  padding: const EdgeInsets.symmetric(
-                    horizontal: 14,
-                    vertical: 6,
-                  ),
-                  decoration: BoxDecoration(
-                    color: AppColors.primaryYellow,
-                    borderRadius: BorderRadius.circular(20),
-                  ),
-                  child: const Text(
-                    '100,000 Acres',
-                    style: TextStyle(
-                      color: Color(0xFF2E2005),
-                      fontSize: 11.5,
-                      fontWeight: FontWeight.w800,
-                    ),
-                  ),
-                ),
-              ],
-            ),
-            const SizedBox(height: 28),
-            // Headline
-            const Text(
-              'Protect The Canopy',
-              style: TextStyle(
-                color: Colors.white,
-                fontSize: 26,
-                fontWeight: FontWeight.w800,
-                letterSpacing: -0.5,
-              ),
-            ),
-            const SizedBox(height: 8),
-            // Subtitle
-            Text(
-              'Preserving ancient old-growth ecosystems from fragmentation. Join our community-backed land trust.',
-              style: TextStyle(
-                color: Colors.white.withOpacity(0.88),
-                fontSize: 13,
-                height: 1.4,
-              ),
-            ),
-            const SizedBox(height: 20),
-            // Bottom row: CTA Button & Goal Badge
-            Row(
-              children: [
-                Material(
-                  color: Colors.transparent,
-                  child: InkWell(
-                    onTap: () => context.go('/action-hub?tab=0'),
-                    borderRadius: BorderRadius.circular(22),
-                    child: Container(
-                      padding: const EdgeInsets.symmetric(
-                        horizontal: 18,
-                        vertical: 10,
-                      ),
-                      decoration: BoxDecoration(
-                        color: AppColors.primaryYellow,
-                        borderRadius: BorderRadius.circular(22),
-                        boxShadow: [
-                          BoxShadow(
-                            color: Colors.black.withOpacity(0.14),
-                            blurRadius: 6,
-                            offset: const Offset(0, 2),
-                          ),
-                        ],
-                      ),
-                      child: const Row(
-                        mainAxisSize: MainAxisSize.min,
-                        children: [
-                          Text(
-                            'Learn More',
-                            style: TextStyle(
-                              color: Color(0xFF2E2005),
-                              fontSize: 12.5,
-                              fontWeight: FontWeight.w800,
-                            ),
-                          ),
-                          SizedBox(width: 6),
-                          Icon(
-                            Icons.arrow_forward_rounded,
-                            size: 15,
-                            color: Color(0xFF2E2005),
-                          ),
-                        ],
-                      ),
-                    ),
-                  ),
-                ),
-                const SizedBox(width: 12),
-                Container(
-                  padding: const EdgeInsets.symmetric(
-                    horizontal: 14,
-                    vertical: 10,
-                  ),
-                  decoration: BoxDecoration(
-                    color: Colors.black.withOpacity(0.35),
-                    borderRadius: BorderRadius.circular(22),
-                    border: Border.all(
-                      color: Colors.white.withOpacity(0.18),
-                      width: 1,
-                    ),
-                  ),
-                  child: const Text(
-                    'Goal: 68% secured',
-                    style: TextStyle(
-                      color: Colors.white,
-                      fontSize: 12,
-                      fontWeight: FontWeight.w600,
-                    ),
-                  ),
-                ),
-              ],
-            ),
-          ],
-        ),
-      ),
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        if (banner.title?.isNotEmpty ?? false)
+          Text(banner.title!, style: Theme.of(context).textTheme.titleLarge),
+        if (banner.subtitle?.isNotEmpty ?? false) Text(banner.subtitle!),
+        const SizedBox(height: 8),
+        PromoBannerCarousel(banners: [banner]),
+      ],
     );
   }
 }
-
-// ─────────────────────────────────────────────────────────────────────────────
-// DIRECT ACTION / DAILY IMPACT (3-CARD ROW)
-// ─────────────────────────────────────────────────────────────────────────────
 
 class _DirectActionsRow extends StatelessWidget {
   const _DirectActionsRow();

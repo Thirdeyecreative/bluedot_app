@@ -1,4 +1,4 @@
-﻿import 'package:flutter/material.dart' hide Badge;
+import 'package:flutter/material.dart' hide Badge;
 import 'package:flutter_animate/flutter_animate.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../core/constants/app_colors.dart';
@@ -20,6 +20,8 @@ class BadgesPage extends ConsumerWidget {
       ),
       body: badges.when(
         data: (list) {
+          if (list.isEmpty)
+            return const Center(child: Text('No badges available yet.'));
           final unlocked = list.where((b) => b.unlocked).toList();
           final locked = list.where((b) => !b.unlocked).toList();
           return CustomScrollView(
@@ -44,11 +46,18 @@ class BadgesPage extends ConsumerWidget {
                         children: [
                           Text(
                             '${unlocked.length} / ${list.length} Unlocked',
-                            style: const TextStyle(color: Colors.white, fontWeight: FontWeight.w700, fontSize: 18),
+                            style: const TextStyle(
+                              color: Colors.white,
+                              fontWeight: FontWeight.w700,
+                              fontSize: 18,
+                            ),
                           ),
                           Text(
                             'Keep scanning to earn more!',
-                            style: TextStyle(color: Colors.white.withAlpha(200), fontSize: 13),
+                            style: TextStyle(
+                              color: Colors.white.withAlpha(200),
+                              fontSize: 13,
+                            ),
                           ),
                         ],
                       ),
@@ -61,7 +70,12 @@ class BadgesPage extends ConsumerWidget {
                 SliverToBoxAdapter(
                   child: Padding(
                     padding: const EdgeInsets.fromLTRB(20, 8, 20, 12),
-                    child: Text('Unlocked', style: Theme.of(context).textTheme.titleMedium?.copyWith(fontWeight: FontWeight.w700)),
+                    child: Text(
+                      'Unlocked',
+                      style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                        fontWeight: FontWeight.w700,
+                      ),
+                    ),
                   ),
                 ),
                 SliverPadding(
@@ -77,7 +91,12 @@ class BadgesPage extends ConsumerWidget {
                       (_, i) => _BadgeTile(badge: unlocked[i])
                           .animate()
                           .fadeIn(delay: (80 * i).ms)
-                          .scaleXY(begin: 0.8, end: 1, delay: (80 * i).ms, curve: Curves.elasticOut),
+                          .scaleXY(
+                            begin: 0.8,
+                            end: 1,
+                            delay: (80 * i).ms,
+                            curve: Curves.elasticOut,
+                          ),
                       childCount: unlocked.length,
                     ),
                   ),
@@ -88,7 +107,13 @@ class BadgesPage extends ConsumerWidget {
                 SliverToBoxAdapter(
                   child: Padding(
                     padding: const EdgeInsets.fromLTRB(20, 24, 20, 12),
-                    child: Text('Locked', style: Theme.of(context).textTheme.titleMedium?.copyWith(fontWeight: FontWeight.w700, color: AppColors.textMedium)),
+                    child: Text(
+                      'Locked',
+                      style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                        fontWeight: FontWeight.w700,
+                        color: AppColors.textMedium,
+                      ),
+                    ),
                   ),
                 ),
                 SliverPadding(
@@ -101,7 +126,10 @@ class BadgesPage extends ConsumerWidget {
                       childAspectRatio: 0.85,
                     ),
                     delegate: SliverChildBuilderDelegate(
-                      (_, i) => Opacity(opacity: 0.4, child: _BadgeTile(badge: locked[i])),
+                      (_, i) => Opacity(
+                        opacity: 0.4,
+                        child: _BadgeTile(badge: locked[i]),
+                      ),
                       childCount: locked.length,
                     ),
                   ),
@@ -110,8 +138,17 @@ class BadgesPage extends ConsumerWidget {
             ],
           );
         },
-        loading: () => const SkeletonGrid(count: 9, crossAxisCount: 3, childAspectRatio: 0.85),
-        error: (e, _) => Center(child: Text('Error: $e')),
+        loading: () => const SkeletonGrid(
+          count: 9,
+          crossAxisCount: 3,
+          childAspectRatio: 0.85,
+        ),
+        error: (_, _) => Center(
+          child: TextButton(
+            onPressed: () => ref.invalidate(badgesProvider),
+            child: const Text('Could not load badges. Retry'),
+          ),
+        ),
       ),
     );
   }
@@ -149,11 +186,15 @@ class _BadgeTile extends StatelessWidget {
                 color: badge.unlocked ? AppColors.textDark : AppColors.textLight,
               ),
             ),
-            if (badge.unlocked) ...[
+            if (badge.unlocked && badge.points > 0) ...[
               const SizedBox(height: 4),
               Text(
                 '+${badge.points} XP',
-                style: const TextStyle(fontSize: 10, color: AppColors.primaryYellow, fontWeight: FontWeight.w600),
+                style: const TextStyle(
+                  fontSize: 10,
+                  color: AppColors.primaryYellow,
+                  fontWeight: FontWeight.w600,
+                ),
               ),
             ],
           ],
@@ -168,31 +209,56 @@ class _BadgeTile extends StatelessWidget {
       // Root navigator so the sheet renders above the shell's floating nav bar.
       useRootNavigator: true,
       backgroundColor: AppColors.backgroundCream,
-      shape: const RoundedRectangleBorder(borderRadius: BorderRadius.vertical(top: Radius.circular(24))),
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
+      ),
       builder: (sheetContext) => Padding(
         padding: EdgeInsets.fromLTRB(
-            28, 28, 28, 28 + MediaQuery.of(sheetContext).viewPadding.bottom),
+          28,
+          28,
+          28,
+          28 + MediaQuery.of(sheetContext).viewPadding.bottom,
+        ),
         child: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
             Text(badge.emoji, style: const TextStyle(fontSize: 56)),
             const SizedBox(height: 12),
-            Text(badge.name, style: const TextStyle(fontWeight: FontWeight.w700, fontSize: 20)),
+            Text(
+              badge.name,
+              style: const TextStyle(fontWeight: FontWeight.w700, fontSize: 20),
+            ),
             if (badge.description != null) ...[
               const SizedBox(height: 8),
-              Text(badge.description!, textAlign: TextAlign.center, style: const TextStyle(color: AppColors.textMedium)),
+              Text(
+                badge.description!,
+                textAlign: TextAlign.center,
+                style: const TextStyle(color: AppColors.textMedium),
+              ),
             ],
             const SizedBox(height: 16),
             if (badge.metric != null)
               Text(
-                badge.unlocked ? 'Achieved!' : 'Reach ${badge.threshold} ${badge.metric} to unlock',
+                badge.unlocked
+                    ? 'Achieved!'
+                    : badge.progress == null
+                    ? 'Progress unavailable'
+                    : '${badge.progress} / ${badge.threshold}',
                 style: TextStyle(
                   color: badge.unlocked ? AppColors.forestGreen : AppColors.textMedium,
                   fontWeight: FontWeight.w500,
                 ),
               ),
             const SizedBox(height: 8),
-            Text('+${badge.points} XP reward', style: const TextStyle(fontWeight: FontWeight.w700, color: AppColors.primaryYellow, fontSize: 16)),
+            if (badge.points > 0)
+              Text(
+                '+${badge.points} XP reward',
+                style: const TextStyle(
+                  fontWeight: FontWeight.w700,
+                  color: AppColors.primaryYellow,
+                  fontSize: 16,
+                ),
+              ),
             const SizedBox(height: 24),
           ],
         ),

@@ -34,7 +34,10 @@ class ApiConfig {
   // Compile-time optional overrides
   static const String _overrideBaseUrl = String.fromEnvironment('BASE_URL');
   static const String _apiHost = String.fromEnvironment('API_HOST');
-  static const String _apiPort = String.fromEnvironment('API_PORT', defaultValue: '8000');
+  static const String _apiPort = String.fromEnvironment(
+    'API_PORT',
+    defaultValue: '8000',
+  );
 
   /// Default Wi-Fi address of the local API server for physical iOS devices.
   static const String currentLanIp = '192.168.1.44';
@@ -104,9 +107,11 @@ class ApiConfig {
   static String get ecoVitals => '$_app/eco-vitals';
   static String get campaigns => '$_app/campaigns';
   static String get donations => '$_app/donations';
+  static String get donationPolicy => '$_app/donations/policy';
   static String get initiateDonation => '$_app/donations/initiate';
   static String get verifyDonation => '$_app/donations/verify';
   static String get userProfile => '$_app/profile';
+  static String get userBadges => '$_app/profile/badges';
   static String get userCertificates => '$_app/profile/certificates';
   static String get notifications => '$_app/notifications';
   static String get markAllNotificationsRead => '$_app/notifications/mark-all-read';
