@@ -78,9 +78,13 @@ class _NoInternetPageState extends ConsumerState<NoInternetPage> {
       ref.invalidate(blogsProvider);
 
       // Await Home Feed (banners, campaigns, events, stats)
-      final feedData = await ref
-          .read(homeFeedProvider.future)
-          .timeout(const Duration(seconds: 12));
+      try {
+        await ref
+            .read(homeFeedProvider.future)
+            .timeout(const Duration(seconds: 12));
+      } catch (e) {
+        debugPrint('[NoInternetPage] Home feed preload note: $e');
+      }
 
       // Attempt blogs fetch in parallel/softly without blocking home feed entry
       try {
@@ -99,36 +103,30 @@ class _NoInternetPageState extends ConsumerState<NoInternetPage> {
 
       if (!mounted) return;
 
-      // 3. Confirm API content is successfully populated
-      if (feedData != null) {
-        // Mark as online NOW — this cleanly dismisses the ConnectivityGate overlay
-        // since the Home screen underneath is ALREADY 100% loaded with API content!
-        ref.read(connectivityProvider.notifier).setOnline(true);
+      // 3. Mark as online NOW — this cleanly dismisses the ConnectivityGate overlay
+      ref.read(connectivityProvider.notifier).setOnline(true);
 
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: const Row(
-              children: [
-                Icon(Icons.check_circle_rounded, color: Colors.white, size: 20),
-                SizedBox(width: 10),
-                Text('Connection restored! Welcome back.',
-                    style: TextStyle(fontWeight: FontWeight.w600)),
-              ],
-            ),
-            backgroundColor: AppColors.forestGreen,
-            behavior: SnackBarBehavior.floating,
-            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-            duration: const Duration(seconds: 2),
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: const Row(
+            children: [
+              Icon(Icons.check_circle_rounded, color: Colors.white, size: 20),
+              SizedBox(width: 10),
+              Text('Connection restored! Welcome back.',
+                  style: TextStyle(fontWeight: FontWeight.w600)),
+            ],
           ),
-        );
+          backgroundColor: AppColors.forestGreen,
+          behavior: SnackBarBehavior.floating,
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+          duration: const Duration(seconds: 2),
+        ),
+      );
 
-        if (widget.onRetrySuccess != null) {
-          widget.onRetrySuccess!();
-        } else if (!widget.isOverlay && context.canPop()) {
-          context.pop();
-        }
-      } else {
-        throw Exception('Feed data was null');
+      if (widget.onRetrySuccess != null) {
+        widget.onRetrySuccess!();
+      } else if (!widget.isOverlay && context.canPop()) {
+        context.pop();
       }
     } catch (_) {
       if (!mounted) return;

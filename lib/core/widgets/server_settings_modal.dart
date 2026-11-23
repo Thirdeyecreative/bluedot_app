@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../config/api_config.dart';
 import '../constants/app_colors.dart';
+import '../services/connectivity_service.dart';
 import '../../features/home/providers/home_provider.dart';
 
 /// Interactive modal allowing developers and testers to inspect, test,
@@ -111,6 +112,7 @@ class _ServerSettingsModalState extends ConsumerState<ServerSettingsModal> {
     // Invalidate home feed and blogs so it immediately fetches from the new server
     ref.invalidate(homeFeedProvider);
     ref.invalidate(blogsProvider);
+    ref.read(connectivityProvider.notifier).setOnline(true);
 
     if (!mounted) return;
     _close();

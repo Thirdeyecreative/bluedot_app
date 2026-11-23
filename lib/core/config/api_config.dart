@@ -49,6 +49,27 @@ class ApiConfig {
     try {
       final prefs = await SharedPreferences.getInstance();
       _runtimeBaseUrl = prefs.getString(_prefCustomBaseUrlKey);
+
+      // On physical mobile devices (Android/iOS), 127.0.0.1 or localhost points
+      // to the mobile device itself and is unreachable without active USB adb reverse.
+      // Automatically migrate any stale loopback base URL to the host PC's Wi-Fi LAN IP
+      // so the app connects immediately over the local network without user intervention.
+      if (!kIsWeb &&
+          (defaultTargetPlatform == TargetPlatform.android ||
+              defaultTargetPlatform == TargetPlatform.iOS)) {
+        if (_runtimeBaseUrl != null &&
+            (_runtimeBaseUrl!.contains('127.0.0.1') ||
+                _runtimeBaseUrl!.contains('localhost'))) {
+          _runtimeBaseUrl = _runtimeBaseUrl!
+              .replaceAll('127.0.0.1', currentLanIp)
+              .replaceAll('localhost', currentLanIp);
+          await prefs.setString(_prefCustomBaseUrlKey, _runtimeBaseUrl!);
+          debugPrint(
+            '[ApiConfig] Migrated loopback base URL to LAN IP: $_runtimeBaseUrl',
+          );
+        }
+      }
+
       final savedEnv = prefs.getString(_prefEnvKey);
       if (savedEnv != null) {
         _runtimeEnv = switch (savedEnv) {
@@ -65,7 +86,9 @@ class ApiConfig {
 
   /// Sets or clears a custom runtime base URL (persisted across app restarts).
   static Future<void> setRuntimeBaseUrl(String? url) async {
-    _runtimeBaseUrl = (url != null && url.trim().isNotEmpty) ? url.trim() : null;
+    _runtimeBaseUrl = (url != null && url.trim().isNotEmpty)
+        ? url.trim()
+        : null;
     try {
       final prefs = await SharedPreferences.getInstance();
       if (_runtimeBaseUrl != null) {
@@ -118,7 +141,7 @@ class ApiConfig {
 
   /// Resolves the local API host for the current platform:
   /// - Web / Desktop (Windows, macOS, Linux): 127.0.0.1
-  /// - Android emulator: 10.0.2.2 or currentLanIp
+  /// - Android device over USB: 127.0.0.1 via adb reverse
   /// - iOS / physical mobile on Wi-Fi: [currentLanIp]
   static String get resolvedLocalHost {
     if (_apiHost.isNotEmpty) return _apiHost;
@@ -129,7 +152,7 @@ class ApiConfig {
       case TargetPlatform.linux:
         return '127.0.0.1';
       case TargetPlatform.android:
-        return currentLanIp;
+        return '127.0.0.1';
       case TargetPlatform.iOS:
       default:
         return currentLanIp;
@@ -150,10 +173,14 @@ class ApiConfig {
   static String get productionUrl => _productionUrl;
 
   static String get baseUrl {
+    if (_overrideBaseUrl.isNotEmpty) return _overrideBaseUrl;
+    // Local debug builds must remain deterministic. A saved Settings override
+    // from an older build must not redirect development traffic away from the
+    // API selected by ENV/API_HOST.
+    if (!kReleaseMode && _envName == 'local') return _localUrl;
     if (_runtimeBaseUrl != null && _runtimeBaseUrl!.isNotEmpty) {
       return _runtimeBaseUrl!;
     }
-    if (_overrideBaseUrl.isNotEmpty) return _overrideBaseUrl;
     return switch (env) {
       AppEnv.production => _productionUrl,
       AppEnv.staging => _stagingUrl,
@@ -162,9 +189,15 @@ class ApiConfig {
   }
 
   /// Actively checks server connectivity to the /health endpoint with rich diagnostics.
-  static Future<ServerHealthResult> checkServerHealthDetails([String? targetUrl]) async {
-    final base = (targetUrl != null && targetUrl.trim().isNotEmpty) ? targetUrl.trim() : baseUrl;
-    final cleanBase = base.endsWith('/') ? base.substring(0, base.length - 1) : base;
+  static Future<ServerHealthResult> checkServerHealthDetails([
+    String? targetUrl,
+  ]) async {
+    final base = (targetUrl != null && targetUrl.trim().isNotEmpty)
+        ? targetUrl.trim()
+        : baseUrl;
+    final cleanBase = base.endsWith('/')
+        ? base.substring(0, base.length - 1)
+        : base;
     final uri = Uri.parse('$cleanBase/health');
     final sw = Stopwatch()..start();
     try {
@@ -223,11 +256,15 @@ class ApiConfig {
   static String get userCertificates => '$_app/profile/certificates';
   static String get notifications => '$_app/notifications';
   static String get openNotificationInbox => '$_app/notifications/open';
-  static String get markAllNotificationsRead => '$_app/notifications/mark-all-read';
-  static String markNotificationRead(String id) => '$_app/notifications/$id/read';
+  static String get markAllNotificationsRead =>
+      '$_app/notifications/mark-all-read';
+  static String markNotificationRead(String id) =>
+      '$_app/notifications/$id/read';
   static String deleteNotification(String id) => '$_app/notifications/$id';
-  static String get notificationDeviceToken => '$_app/notifications/device-token';
-  static String get notificationPreferences => '$_app/notifications/preferences';
+  static String get notificationDeviceToken =>
+      '$_app/notifications/device-token';
+  static String get notificationPreferences =>
+      '$_app/notifications/preferences';
   static String get leaderboard => '$_app/leaderboard';
   static String get appBanners => '$_app/banners';
   static String get directoryData => '$_app/directory';

@@ -64,11 +64,6 @@ class ConnectivityNotifier extends Notifier<bool> {
       }
 
       if (updateState) {
-        // If we are currently offline (gated by NoInternetPage), do NOT automatically un-gate
-        // in the background without preloading the API content first!
-        if (!state && online) {
-          return true;
-        }
         if (state != online) state = online;
       }
       return online;
