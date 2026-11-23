@@ -11,6 +11,7 @@ import '../../../core/constants/app_colors.dart';
 import '../../../core/widgets/skeletons.dart';
 import '../../auth/models/user_model.dart';
 import '../../auth/providers/auth_provider.dart';
+import '../../scanner/models/scan_result_model.dart';
 import '../../scanner/providers/scanner_provider.dart';
 import '../../scanner/widgets/scan_history_detail_sheet.dart';
 import '../models/badge_model.dart';
@@ -36,7 +37,6 @@ class _ProfilePageState extends ConsumerState<ProfilePage> {
   Widget build(BuildContext context) {
     final user = ref.watch(currentUserProvider);
     final badges = ref.watch(badgesProvider);
-    final history = ref.watch(scanHistoryProvider);
 
     if (user == null) {
       return Scaffold(
@@ -99,7 +99,7 @@ class _ProfilePageState extends ConsumerState<ProfilePage> {
                 _ImpactStats(user: user),
                 _QuickActions(),
                 _BadgesSection(badges: badges, onSeeAll: () => context.push('/profile/badges')),
-                _ScansHistory(history: history),
+                _ScansHistory(key: ValueKey(user.id), userId: user.id),
                 const SizedBox(height: 120),
               ],
             ),
@@ -531,12 +531,28 @@ class _BadgeChip extends StatelessWidget {
   }
 }
 
-class _ScansHistory extends StatelessWidget {
-  final AsyncValue<dynamic> history;
-  const _ScansHistory({required this.history});
+class _ScansHistory extends ConsumerStatefulWidget {
+  const _ScansHistory({super.key, required this.userId});
+
+  final String userId;
+
+  @override
+  ConsumerState<_ScansHistory> createState() => _ScansHistoryState();
+}
+
+class _ScansHistoryState extends ConsumerState<_ScansHistory> {
+  int? _olderScansSkip;
 
   @override
   Widget build(BuildContext context) {
+    final firstPageProvider = scanHistoryProvider((
+      userId: widget.userId,
+      skip: 0,
+    ));
+    final history = ref.watch(firstPageProvider);
+    final hasOlderScans = history.asData?.value.hasMore == true;
+    final skip = hasOlderScans ? _olderScansSkip : null;
+
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
@@ -546,25 +562,26 @@ class _ScansHistory extends StatelessWidget {
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
               Text('Recent Scans', style: Theme.of(context).textTheme.titleMedium?.copyWith(fontWeight: FontWeight.w700)),
-              history.whenOrNull(
-                data: (list) {
-                  final items = list as List;
-                  if (items.length > 5) {
-                    return TextButton(
-                      onPressed: () => _showAllScansSheet(context, items),
-                      child: const Text('See all'),
-                    );
-                  }
-                  return const SizedBox();
-                },
-              ) ?? const SizedBox(),
+              if (hasOlderScans)
+                TextButton(
+                  onPressed: () => setState(() {
+                    _olderScansSkip = skip == null
+                        ? ScanHistoryPage.pageSize
+                        : null;
+                  }),
+                  child: Text(
+                    skip == null ? 'See all' : 'Show less',
+                    semanticsLabel: skip == null
+                        ? 'See all scans'
+                        : 'Show fewer scans',
+                  ),
+                ),
             ],
           ),
         ),
         history.when(
-          data: (list) {
-            final items = list as List;
-            if (items.isEmpty) {
+          data: (page) {
+            if (page.items.isEmpty) {
               return Padding(
                 padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 16),
                 child: Container(
@@ -584,63 +601,96 @@ class _ScansHistory extends StatelessWidget {
                 ),
               );
             }
-            return ListView.separated(
-              shrinkWrap: true,
-              physics: const NeverScrollableScrollPhysics(),
-              padding: const EdgeInsets.symmetric(horizontal: 16),
-              itemCount: items.take(5).length,
-              separatorBuilder: (_, _) => const SizedBox(height: 8),
-              itemBuilder: (_, i) => _ScanHistoryItemTile(item: items[i]),
-            );
+            return _scanTiles(page.items);
           },
           loading: () => const SkeletonCardList(count: 3, height: 72),
-          error: (_, _) => const SizedBox(),
+          error: (_, _) => _loadError(() => ref.invalidate(firstPageProvider)),
         ),
+        if (skip != null) _olderScans(skip),
       ],
     );
   }
-  void _showAllScansSheet(BuildContext context, List items) {
-    showModalBottomSheet(
-      context: context,
-      isScrollControlled: true,
-      backgroundColor: AppColors.backgroundCream,
-      useRootNavigator: true,
-      shape: const RoundedRectangleBorder(borderRadius: BorderRadius.vertical(top: Radius.circular(24))),
-      builder: (ctx) => DraggableScrollableSheet(
-        initialChildSize: 0.9,
-        minChildSize: 0.5,
-        maxChildSize: 0.9,
-        expand: false,
-        builder: (_, scrollController) => Column(
-          children: [
-            const SizedBox(height: 12),
-            Container(width: 40, height: 4, decoration: BoxDecoration(color: AppColors.borderMedium, borderRadius: BorderRadius.circular(2))),
-            const SizedBox(height: 16),
-            const Text('All Scans', style: TextStyle(fontSize: 18, fontWeight: FontWeight.w700)),
-            const SizedBox(height: 16),
-            Expanded(
-              child: ListView.separated(
-                controller: scrollController,
-                padding: const EdgeInsets.fromLTRB(16, 0, 16, 40),
-                itemCount: items.length,
-                separatorBuilder: (_, _) => const SizedBox(height: 8),
-                itemBuilder: (_, i) => _ScanHistoryItemTile(item: items[i]),
-              ),
-            ),
-          ],
+  Widget _olderScans(int skip) {
+    final provider = scanHistoryProvider((userId: widget.userId, skip: skip));
+    final history = ref.watch(provider);
+    const pageSize = ScanHistoryPage.pageSize;
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Padding(
+          padding: const EdgeInsets.fromLTRB(20, 16, 16, 8),
+          child: Text(
+            'Older Scans',
+            style: Theme.of(context).textTheme.titleSmall,
+          ),
         ),
-      ),
+        history.when(
+          data: (page) => page.items.isEmpty
+              ? const Padding(
+                  padding: EdgeInsets.symmetric(horizontal: 20),
+                  child: Text('No more scans.'),
+                )
+              : _scanTiles(page.items),
+          loading: () => const SkeletonCardList(count: 3, height: 72),
+          error: (_, _) => _loadError(() => ref.invalidate(provider)),
+        ),
+        if (skip > pageSize || history.asData?.value.hasMore == true)
+          Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 16),
+            child: Wrap(
+              spacing: 8,
+              children: [
+                TextButton(
+                  onPressed: skip > pageSize
+                      ? () => setState(() => _olderScansSkip = skip - pageSize)
+                      : null,
+                  child: const Text('Previous'),
+                ),
+                TextButton(
+                  onPressed: history.asData?.value.hasMore == true
+                      ? () => setState(() => _olderScansSkip = skip + pageSize)
+                      : null,
+                  child: const Text('Next'),
+                ),
+              ],
+            ),
+          ),
+      ],
     );
   }
+
+  Widget _scanTiles(List<ScanHistoryItem> items) => Padding(
+    padding: const EdgeInsets.symmetric(horizontal: 16),
+    child: Column(
+      children: [
+        for (final item in items.take(ScanHistoryPage.pageSize))
+          Padding(
+            padding: const EdgeInsets.only(bottom: 8),
+            child: _ScanHistoryItemTile(item: item),
+          ),
+      ],
+    ),
+  );
+
+  Widget _loadError(VoidCallback onRetry) => Padding(
+    padding: const EdgeInsets.symmetric(horizontal: 20),
+    child: Wrap(
+      crossAxisAlignment: WrapCrossAlignment.center,
+      children: [
+        const Text('Couldn’t load scans.'),
+        TextButton(onPressed: onRetry, child: const Text('Retry')),
+      ],
+    ),
+  );
 }
 
 class _ScanHistoryItemTile extends StatelessWidget {
-  final dynamic item;
+  final ScanHistoryItem item;
   const _ScanHistoryItemTile({required this.item});
 
   @override
   Widget build(BuildContext context) {
-    final isPendingReview = item.species?.isPendingReview == true;
     final scientificName = item.species?.scientificName ?? item.plantnetData?.scientificName;
     final commonName = item.species?.localName ?? item.plantnetData?.commonName;
     final primaryLabel = commonName ?? scientificName ?? 'Unidentified plant';

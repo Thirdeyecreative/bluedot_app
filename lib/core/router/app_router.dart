@@ -107,8 +107,9 @@ final routerProvider = Provider<GoRouter>((ref) {
       GoRoute(path: '/map', builder: (__, _) => const EcoGardenPage()),
       GoRoute(path: '/notifications', builder: (__, _) => const NotificationsPage()),
 
-      StatefulShellRoute.indexedStack(
+      StatefulShellRoute(
         builder: (_, __, navigationShell) => MainNavigationShell(navigationShell: navigationShell),
+        navigatorContainerBuilder: MainNavigationShell.buildBranchContainer,
         branches: [
           StatefulShellBranch(
             routes: [

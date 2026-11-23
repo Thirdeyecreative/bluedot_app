@@ -91,6 +91,12 @@ void main() {
       await tester.pumpAndSettle();
       expect(find.byType(AppUpdateSheet), findsNothing);
 
+      final section = find.text('APP UPDATE');
+      expect(section, findsOneWidget);
+      expect(
+        tester.getTopLeft(section).dy,
+        lessThan(tester.getTopLeft(find.text('NOTIFICATIONS')).dy),
+      );
       await tester.tap(find.widgetWithText(ActionChip, 'Update available'));
       await tester.pumpAndSettle();
       expect(find.byType(AppUpdateSheet), findsOneWidget);
@@ -131,6 +137,7 @@ void main() {
       router.go('/settings');
       await tester.pumpAndSettle();
       expect(find.byType(AppUpdateSheet), findsNothing);
+      expect(find.text('APP UPDATE'), findsNothing);
       expect(find.widgetWithText(ActionChip, 'Update available'), findsNothing);
 
       hasUpdate = true;

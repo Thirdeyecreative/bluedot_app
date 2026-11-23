@@ -2,14 +2,14 @@
 
 **Status:** 100% Complete & Fully Integrated  
 **Last Updated:** 2026-11-04  
-**Router:** `GoRouter` with `StatefulShellRoute.indexedStack`  
+**Router:** `GoRouter` with `StatefulShellRoute`\
 **Shell UI:** Floating `CapsuleNavBar` with Expanding Pill Indicator & Haptic Feedback  
 
 ---
 
 ## 1. App Shell Architecture
 
-The BlueDot application uses declarative routing powered by `go_router` and `StatefulShellRoute.indexedStack`. This architecture preserves the state and scroll position of each tab independently while switching.
+The BlueDot application uses `go_router` and `StatefulShellRoute`. The shell stays mounted once, and each tab navigator keeps a stable position in the branch container. This preserves each tab's state and scroll position while switching.
 
 ### Source Files
 - `lib/core/router/app_router.dart` — Router definitions, state listeners, and auth redirect guards.
@@ -33,7 +33,7 @@ The bottom navigation bar features 4 primary branches corresponding to the core 
 - **Floating Elevated Dock:** Soft Blush Terracotta container (`#E1BCB4`) with 36px rounded corners, dual ambient shadow, and frosted highlight border.
 - **Minimalist Inactive State:** Inactive tabs display clean, warm earthen charcoal outline icons (`#5A3D36`).
 - **Compositor-Driven Capsule Animation:** Pure RenderBox compositor animation using `AnimatedBuilder` and `Align(widthFactor: t)` with `Color.lerp`, expanding into a crisp white pill (`#FFFFFF`) with deep terracotta typography (`#8E4533`).
-- **Direction-Aware Page Transitions:** `MainNavigationShell` animates tab switching using an `AnimatedSwitcher` + `SlideTransition` + `FadeTransition` (`Curves.easeOutCubic`), sliding pages smoothly in the direction of navigation travel.
+- Tab transitions use `AnimatedSlide` and `AnimatedOpacity` on the individual branch navigators. The outgoing and incoming tabs can animate at the same time while the shell stays mounted once.
 - **App-Wide Cupertino Transitions:** Standardized `CupertinoPageTransitionsBuilder` across both platforms for fluid, swipe-friendly page navigations.
 - **Haptic Feedback:** Fires `HapticFeedback.selectionClick()` on every selection.
 - **Haptic Feedback:** Fires `HapticFeedback.selectionClick()` on every selection.
@@ -61,7 +61,7 @@ The bottom navigation bar features 4 primary branches corresponding to the core 
 | `/map` | `EcoGardenPage` | Full-screen interactive Eco Garden map |
 | `/notifications` | `NotificationsPage` | Notifications center |
 
-### Inside the Shell (`StatefulShellRoute.indexedStack`)
+### Inside the Shell (`StatefulShellRoute`)
 
 #### Branch 0: Home
 - `/home` — `HomePage`

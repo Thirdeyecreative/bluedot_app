@@ -638,8 +638,40 @@ class _EcoVitalsSection extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final aqiAsync = ref.watch(cityAqiProvider);
-    final vitals = aqiAsync.value ?? CityAqiData.fallbackBangalore;
+    final readings = ref.watch(cityAqiProvider);
+    final vitals = readings.asData?.value;
+    if (vitals == null) {
+      return Padding(
+        padding: const EdgeInsets.fromLTRB(18, 6, 18, 12),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            Text(
+              'Local Eco Vitals',
+              style: Theme.of(context).textTheme.titleSmall,
+            ),
+            Row(
+              children: [
+                Expanded(
+                  child: Text(
+                    readings.isLoading
+                        ? 'Loading local readings…'
+                        : 'Local readings are unavailable.',
+                  ),
+                ),
+                if (!readings.isLoading)
+                  TextButton(
+                    onPressed: () => ref.invalidate(cityAqiProvider),
+                    child: const Text('Retry'),
+                  ),
+              ],
+            ),
+            const SizedBox(height: 10),
+            _noiseCard(context),
+          ],
+        ),
+      );
+    }
 
     // Color & icon for AQI
     final Color aqiColor;
@@ -723,7 +755,7 @@ class _EcoVitalsSection extends ConsumerWidget {
                     ),
                     const SizedBox(width: 5),
                     Text(
-                      '${vitals.city} • Live',
+                      vitals.city,
                       style: const TextStyle(
                         fontSize: 11,
                         fontWeight: FontWeight.w700,
@@ -754,7 +786,7 @@ class _EcoVitalsSection extends ConsumerWidget {
                   badgeBg: aqiBg,
                   subtext: vitals.pm25 != null
                       ? 'PM2.5: ${vitals.pm25!.toStringAsFixed(1)}'
-                      : 'Clean air',
+                      : 'PM2.5 unavailable',
                 ),
               ),
               const SizedBox(width: 10),
@@ -795,26 +827,26 @@ class _EcoVitalsSection extends ConsumerWidget {
               ),
               const SizedBox(width: 10),
               // 4. Acoustic Tranquility (Phone Mic Noise Meter)
-              Expanded(
-                child: _VitalCard(
-                  onTap: () => AcousticMeterSheet.show(context),
-                  icon: Icons.graphic_eq_rounded,
-                  iconColor: const Color(0xFF059669),
-                  iconBg: const Color(0xFFECFDF5),
-                  label: 'Noise & Calm',
-                  metric: 'Decibels',
-                  badgeText: 'Sample',
-                  badgeColor: const Color(0xFF059669),
-                  badgeBg: const Color(0xFFECFDF5),
-                  subtext: 'Tap to measure dB',
-                ),
-              ),
+              Expanded(child: _noiseCard(context)),
             ],
           ),
         ],
       ),
     );
   }
+
+  Widget _noiseCard(BuildContext context) => _VitalCard(
+    onTap: () => AcousticMeterSheet.show(context),
+    icon: Icons.graphic_eq_rounded,
+    iconColor: const Color(0xFF059669),
+    iconBg: const Color(0xFFECFDF5),
+    label: 'Noise & Calm',
+    metric: 'Decibels',
+    badgeText: 'Sample',
+    badgeColor: const Color(0xFF059669),
+    badgeBg: const Color(0xFFECFDF5),
+    subtext: 'Tap to measure dB',
+  );
 
   void _showAqiDetail(BuildContext context, CityAqiData aqi) {
     showModalBottomSheet(
@@ -1409,7 +1441,7 @@ class _ThermalDetailSheet extends StatelessWidget {
                       ),
                     ),
                     Text(
-                      'Live temperature & humidity in ${vitals.city}',
+                      'Temperature & humidity',
                       style: const TextStyle(
                         fontSize: 12.5,
                         color: AppColors.textMedium,

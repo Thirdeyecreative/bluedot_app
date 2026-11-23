@@ -232,20 +232,6 @@ class SettingsPage extends ConsumerWidget {
         // floating bottom nav bar.
         padding: const EdgeInsets.fromLTRB(0, 8, 0, 120),
         children: [
-          if (appUpdate != null)
-            Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 16),
-              child: Align(
-                alignment: AlignmentDirectional.centerStart,
-                child: ActionChip(
-                  avatar: const Icon(Icons.system_update_rounded, size: 18),
-                  label: const Text('Update available'),
-                  shape: const StadiumBorder(),
-                  onPressed: () => AppUpdateSheet.show(context, appUpdate),
-                ),
-              ),
-            ),
-
           // ── Account ──────────────────────────────────────────────────
           _SectionHeader('Account'),
           _SettingsTile(
@@ -268,6 +254,22 @@ class SettingsPage extends ConsumerWidget {
             trailing: const Icon(Icons.chevron_right_rounded, color: AppColors.textLight),
             onTap: () => _showPanSheet(context),
           ),
+
+          if (appUpdate != null) ...[
+            const _SectionHeader('App Update'),
+            Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 16),
+              child: Align(
+                alignment: AlignmentDirectional.centerStart,
+                child: ActionChip(
+                  avatar: const Icon(Icons.system_update_rounded, size: 18),
+                  label: const Text('Update available'),
+                  shape: const StadiumBorder(),
+                  onPressed: () => AppUpdateSheet.show(context, appUpdate),
+                ),
+              ),
+            ),
+          ],
 
           // ── Notifications ─────────────────────────────────────────────
           _SectionHeader('Notifications'),

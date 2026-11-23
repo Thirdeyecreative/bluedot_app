@@ -30,6 +30,7 @@ The Home screen serves as the core discovery hub for BlueDot. It delivers person
 |---|---|---|
 | **Compact App Bar** | `currentUserProvider` | Shows user profile avatar (tappable to `/profile`), dynamic time greeting (`Good morning / afternoon / evening, {name}`), and notification bell with unread badge. |
 | **Legal Consent Check** | `legalServiceProvider` | On initial mount, verifies `checkConsentStatus()`. If legal documents were updated, opens `PolicyUpdateSheet`. |
+| **Local Eco Vitals** | `GET /api/v1/app/eco-vitals` | BlueDot's API resolves the location and fetches and caches AQI, UV, temperature, feels-like temperature, and humidity. Flutter sends available device coordinates or the profile city and displays the API response. Noise & Calm samples the device microphone locally. |
 | **Protect The Canopy Hero** | App content | Shows the conservation initiative and links to the Action Hub. |
 | **4-Pillar Quick Action Hub** | Navigation / Routes | Tactile 1-tap squircle shortcuts: Eco Garden (`/map`), Rankings (`/profile/leaderboard`), Suggest Site (`/action-hub/suggest-site`), Directory (`/directory`). |
 | **Promo Banners Carousel** | **REAL** (`homeFeedProvider`) | Banners returned from `GET /api/v1/app/home-feed`. If no banners are present, the section gracefully collapses with zero layout artifacts, transitioning seamlessly into Upcoming Drives. |

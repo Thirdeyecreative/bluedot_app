@@ -23,9 +23,10 @@ class ScanResultNotifier extends Notifier<ScanResult?> {
 }
 
 // Scan history
-final scanHistoryProvider = FutureProvider<List<ScanHistoryItem>>((ref) {
-  return ref.watch(scannerRepositoryProvider).fetchHistory();
-});
+final scanHistoryProvider = FutureProvider.autoDispose
+    .family<ScanHistoryPage, ({String userId, int skip})>((ref, page) {
+      return ref.watch(scannerRepositoryProvider).fetchHistory(skip: page.skip);
+    });
 
 // Geo-bounding box parameter model for targeted map queries
 class GeoBoundingBox {

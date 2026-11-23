@@ -61,7 +61,7 @@ All user data displayed across the profile header and impact stats is **100% REA
 ### 4. Recent Scans
 - Directly embedded in `ProfilePage` via `_ScansHistory` widget.
 - Powered by `scanHistoryProvider` calling `GET /api/v1/app/tags/history`.
-- Displays the user's latest 5 tagged trees. Tapping any item opens `ScanHistoryDetailSheet`.
+- Displays up to 10 recent scans. When more than 10 exist, **See all** expands an inline **Older Scans** list with 10 scans per page and **Previous** and **Next** controls. Tapping any scan opens `ScanHistoryDetailSheet`.
 
 ---
 
@@ -84,7 +84,7 @@ All user data displayed across the profile header and impact stats is **100% REA
 - Displays all historical donations with 80G receipt numbers, generation status, and one-click PDF receipt downloads for Indian Income Tax deductions.
 
 ### 4. App Updates
-- BlueDot checks for updates on launch, after returning to the foreground, and after reconnecting. When the store offers a newer version, BlueDot shows a dismissible update sheet once per release during the session. The **Update available** pill in Settings reopens it.
+- BlueDot checks for updates on launch, after returning to the foreground, and after reconnecting. When the store offers a newer version, the **App Update** section appears immediately above **Notifications** in Settings. BlueDot shows a dismissible update sheet once per release during the session. The **Update available** pill reopens it.
 - Android uses Google Play's in-app update flow with a Play Store listing fallback. iOS uses the App Store storefront for the app's bundle ID and presents the listing through StoreKit, with an App Store link as a fallback.
 - Ship an update-enabled baseline build first. For example, increase `version` in `pubspec.yaml` from `1.0.0+1` to `1.0.1+2` for the next release. To test Android, install the baseline through Google Play internal app sharing and make the higher build available to the same account with the same application ID and signing key. [Google Play testing guide](https://developer.android.com/guide/playcore/in-app-updates/test)
 - To test iOS, use a physical iPhone with the baseline installed and a higher version published on the App Store under the same bundle ID.

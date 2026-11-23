@@ -20,6 +20,15 @@ class MapTreesResult {
   });
 }
 
+class ScanHistoryPage {
+  static const pageSize = 10;
+
+  final List<ScanHistoryItem> items;
+  final bool hasMore;
+
+  const ScanHistoryPage({required this.items, required this.hasMore});
+}
+
 class ScannerRepository {
   final ApiClient _api;
   ScannerRepository(this._api);
@@ -45,12 +54,18 @@ class ScannerRepository {
     return ScanResult.fromJson(json as Map<String, dynamic>);
   }
 
-  Future<List<ScanHistoryItem>> fetchHistory() async {
-    final json = await _api.get(ApiConfig.scanHistory);
-    final data = (json as Map<String, dynamic>)['data'] as List<dynamic>? ?? [];
-    return data
-        .map((e) => ScanHistoryItem.fromJson(e as Map<String, dynamic>))
-        .toList();
+  Future<ScanHistoryPage> fetchHistory({required int skip}) async {
+    final json = await _api.get(
+      ApiConfig.scanHistory,
+      query: {'skip': '$skip', 'limit': '${ScanHistoryPage.pageSize}'},
+    ) as Map<String, dynamic>;
+    final data = json['data'] as List<dynamic>? ?? [];
+    return ScanHistoryPage(
+      items: data
+          .map((e) => ScanHistoryItem.fromJson(e as Map<String, dynamic>))
+          .toList(),
+      hasMore: json['has_more'] == true,
+    );
   }
 
   /// Fetches trees within a bounding box, along with platform-wide total tree counts.

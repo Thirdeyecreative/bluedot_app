@@ -5,37 +5,28 @@ import '../../core/constants/app_colors.dart';
 import '../auth/providers/auth_provider.dart';
 import 'capsule_nav_bar.dart';
 
-/// Main navigation container wrapping the GoRouter StatefulShellRoute.
-///
-/// Features direction-aware fluid slide & crossfade transitions between tabs
-/// and houses the custom floating [CapsuleNavBar].
-class MainNavigationShell extends StatefulWidget {
+/// Hosts the shell and the floating [CapsuleNavBar].
+class MainNavigationShell extends StatelessWidget {
   final StatefulNavigationShell navigationShell;
   const MainNavigationShell({super.key, required this.navigationShell});
 
-  @override
-  State<MainNavigationShell> createState() => _MainNavigationShellState();
-}
-
-class _MainNavigationShellState extends State<MainNavigationShell> {
-  int _previousIndex = 0;
+  static Widget buildBranchContainer(
+    BuildContext context,
+    StatefulNavigationShell shell,
+    List<Widget> children,
+  ) =>
+      _NavigationBranches(currentIndex: shell.currentIndex, branches: children);
 
   void _onTapNav(int index) {
-    if (index != widget.navigationShell.currentIndex) {
-      setState(() {
-        _previousIndex = widget.navigationShell.currentIndex;
-      });
-    }
-    widget.navigationShell.goBranch(
+    navigationShell.goBranch(
       index,
-      initialLocation: index == widget.navigationShell.currentIndex,
+      initialLocation: index == navigationShell.currentIndex,
     );
   }
 
   @override
   Widget build(BuildContext context) {
-    final currentIndex = widget.navigationShell.currentIndex;
-    final isMovingForward = currentIndex >= _previousIndex;
+    final currentIndex = navigationShell.currentIndex;
 
     return PopScope(
       canPop: currentIndex == 0,
@@ -47,39 +38,56 @@ class _MainNavigationShellState extends State<MainNavigationShell> {
       },
       child: Scaffold(
         extendBody: true,
-        body: AnimatedSwitcher(
-          duration: const Duration(milliseconds: 300),
-          switchInCurve: Curves.easeOutCubic,
-          switchOutCurve: Curves.easeInCubic,
-          transitionBuilder: (child, animation) {
-            final offsetTween = Tween<Offset>(
-              begin: Offset(isMovingForward ? 0.04 : -0.04, 0),
-              end: Offset.zero,
-            );
-            return FadeTransition(
-              opacity: CurvedAnimation(
-                parent: animation,
-                curve: Curves.easeOut,
-              ),
-              child: SlideTransition(
-                position: offsetTween.animate(
-                  CurvedAnimation(
-                    parent: animation,
-                    curve: Curves.easeOutCubic,
-                  ),
-                ),
-                child: child,
-              ),
-            );
-          },
-          child: KeyedSubtree(
-            key: ValueKey<int>(currentIndex),
-            child: widget.navigationShell,
-          ),
-        ),
+        body: navigationShell,
         bottomNavigationBar: _BlueDotNavBar(
           currentIndex: currentIndex,
           onTapNav: _onTapNav,
+        ),
+      ),
+    );
+  }
+}
+
+class _NavigationBranches extends StatelessWidget {
+  const _NavigationBranches({
+    required this.currentIndex,
+    required this.branches,
+  });
+
+  final int currentIndex;
+  final List<Widget> branches;
+  static const _duration = Duration(milliseconds: 300);
+
+  @override
+  Widget build(BuildContext context) => Stack(
+    fit: StackFit.expand,
+    children: [
+      // Each navigator stays in its own slot, even when animations overlap.
+      for (var index = 0; index < branches.length; index++) _buildBranch(index),
+    ],
+  );
+
+  Widget _buildBranch(int index) {
+    final active = index == currentIndex;
+    return AnimatedSlide(
+      offset: active
+          ? Offset.zero
+          : Offset(index < currentIndex ? -0.04 : 0.04, 0),
+      duration: _duration,
+      curve: Curves.easeOutCubic,
+      child: AnimatedOpacity(
+        opacity: active ? 1 : 0,
+        duration: _duration,
+        curve: active ? Curves.easeOutCubic : Curves.easeInCubic,
+        child: ExcludeSemantics(
+          excluding: !active,
+          child: ExcludeFocus(
+            excluding: !active,
+            child: IgnorePointer(
+              ignoring: !active,
+              child: TickerMode(enabled: active, child: branches[index]),
+            ),
+          ),
         ),
       ),
     );

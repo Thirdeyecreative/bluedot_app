@@ -152,23 +152,19 @@ class HomeRepository {
   /// Fetches live eco vitals (AQI, UV, Climate & Canopy metrics) from BlueDot backend API.
   /// Backend serves this from Redis with a 45-minute TTL per 10km grid cell.
   Future<CityAqiData> fetchEcoVitals({
-    required double latitude,
-    required double longitude,
+    double? latitude,
+    double? longitude,
     String? city,
   }) async {
-    try {
-      final queryParams = {
-        'latitude': latitude.toString(),
-        'longitude': longitude.toString(),
+    final json = await _api.get(
+      ApiConfig.ecoVitals,
+      requireAuth: false,
+      query: {
+        if (latitude != null) 'latitude': latitude.toString(),
+        if (longitude != null) 'longitude': longitude.toString(),
         if (city != null && city.trim().isNotEmpty) 'city': city.trim(),
-      };
-
-      final uri = Uri.parse(ApiConfig.ecoVitals).replace(queryParameters: queryParams);
-      final json = await _api.get(uri.toString(), requireAuth: false) as Map<String, dynamic>;
-      return CityAqiData.fromJson(json, defaultCity: city);
-    } catch (e, stackTrace) {
-      debugPrint('Error fetching eco vitals from backend: $e\n$stackTrace');
-      rethrow;
-    }
+      },
+    ) as Map<String, dynamic>;
+    return CityAqiData.fromJson(json);
   }
 }

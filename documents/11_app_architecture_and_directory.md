@@ -60,7 +60,7 @@ Every folder inside `features/` adheres to a strict separation of concerns:
 - **Optimistic UI:** Preference toggles (e.g. email notification toggles) update the UI immediately and roll back only upon server failure.
 
 ### 2. Navigation & Routing (GoRouter)
-- **`StatefulShellRoute.indexedStack`:** Hosts the primary tabs (`/home`, `/action-hub`, `/directory`, `/profile`). Tabs preserve scroll positions and form states across transitions.
+- `StatefulShellRoute` hosts the primary tabs (`/home`, `/action-hub`, `/directory`, `/profile`). The branch container animates the individual navigators while preserving their scroll positions and form state.
 - **Smart Redirect Guard:** Intercepts route transitions:
   - Unauthenticated users $\to$ `/login`
   - Authenticated "ghost" users without names $\to$ `/complete-profile`
