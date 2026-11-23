@@ -20,7 +20,6 @@ lib/
 ├── core/                           // Shared application infrastructure
 │   ├── config/                     // Environment config, health checks, endpoints (api_config.dart)
 │   ├── constants/                  // Colors (app_colors.dart), assets, typography
-│   ├── demo/                       // Fallback visual mocks (demo_data.dart)
 │   ├── router/                     // GoRouter configuration, redirect guards (app_router.dart)
 │   ├── services/                   // API client, storage, connectivity, app update checks
 │   ├── theme/                      // Custom ThemeData & color schemes (app_theme.dart)

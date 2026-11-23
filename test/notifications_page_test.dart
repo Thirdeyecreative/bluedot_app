@@ -67,7 +67,7 @@ class _LoggedInUserNotifier extends CurrentUserNotifier {
 
 void main() {
   testWidgets(
-    'NotificationsPage shows empty state instead of hardcoded DemoData when backend returns empty',
+    'NotificationsPage shows an empty state when the backend returns an empty list',
     (WidgetTester tester) async {
       final fakeRepo = _FakeNotificationsRepository([]);
 

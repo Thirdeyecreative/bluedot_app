@@ -11,7 +11,7 @@
 The Home screen serves as the core discovery hub for BlueDot. It delivers personalized impact greetings, promotional banners, upcoming plantation drives, active funding campaigns, and ecological educational blogs.
 
 ### Source Files (`lib/features/home/`)
-- `pages/home_page.dart` — Main dashboard: Compact App Bar with dynamic time-based greeting, Hero Green Lens AI Tree Scanner Card, 4-Pillar Quick Action Hub, Promo Banners Carousel, Upcoming Drives carousel, Active Campaigns carousel, and Blogs grid.
+- `pages/home_page.dart` — Main dashboard: Compact App Bar with dynamic time-based greeting, Hero Green Lens AI Tree Scanner Card, Promo Banners Carousel, Direct Access, Upcoming Drives carousel, Active Campaigns carousel, and Blogs grid.
 - `pages/all_blogs_page.dart` — Full-page scrollable list of all published blogs with search and category filtering.
 - `pages/blog_detail_page.dart` — Detail reading view for articles by slug (`/home/blog/:slug`).
 - `pages/notifications_page.dart` — In-app notification center with read/unread tracking.
@@ -33,7 +33,7 @@ The Home screen serves as the core discovery hub for BlueDot. It delivers person
 | **Local Eco Vitals** | `GET /api/v1/app/eco-vitals` | BlueDot's API resolves the location and fetches and caches AQI, UV, temperature, feels-like temperature, and humidity. Flutter sends available device coordinates or the profile city and displays the API response. Noise & Calm samples the device microphone locally. |
 | **Protect The Canopy Hero** | App content | Shows the conservation initiative and links to the Action Hub. |
 | **4-Pillar Quick Action Hub** | Navigation / Routes | Tactile 1-tap squircle shortcuts: Eco Garden (`/map`), Rankings (`/profile/leaderboard`), Suggest Site (`/action-hub/suggest-site`), Directory (`/directory`). |
-| **Promo Banners Carousel** | **REAL** (`homeFeedProvider`) | Banners returned from `GET /api/v1/app/home-feed`. If no banners are present, the section gracefully collapses with zero layout artifacts, transitioning seamlessly into Upcoming Drives. |
+| **Promo Banners Carousel** | **REAL** (`homeFeedProvider`) | Banners returned from `GET /api/v1/app/home-feed` appear above Direct Access. The carousel collapses when the feed has no banners. |
 | **Upcoming Events** | **REAL** (`homeFeedProvider`) | Displays upcoming plantation events with floating date badge, drive/upcoming status tag, spots left indicator, and duration. Tapping routes to `/action-hub/event/:id`. |
 | **Active Campaigns** | **REAL** (`homeFeedProvider`) | Displays crowdfunding campaigns with live funding progress bars, goal pill, and raised amount. Tapping routes to `/action-hub/campaign/:id`. |
 | **Stories & Updates (Blogs)** | **REAL** (`blogsProvider` / `homeFeedProvider`) | Displays latest published articles with multi-media count indicator, formatted dates, and authors. "See all" navigates to `/home/blogs` (`AllBlogsPage`), card tap navigates to `/home/blog/:slug`. |

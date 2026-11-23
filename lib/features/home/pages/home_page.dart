@@ -353,23 +353,7 @@ class _HomePageState extends ConsumerState<HomePage> {
                   .slideY(begin: 0.06, end: 0, curve: Curves.easeOutCubic),
             ),
 
-            // ── 5. Direct Action / Daily Impact (3-Card Row) ───────────────
-            SliverToBoxAdapter(
-              child: const _DirectActionsRow()
-                  .animate()
-                  .fadeIn(delay: 150.ms, duration: 400.ms)
-                  .slideY(begin: 0.06, end: 0, curve: Curves.easeOutCubic),
-            ),
-
-            // ── 6. Instant Flora Scanner (Field Bio-Intelligence) ──────────
-            SliverToBoxAdapter(
-              child: const _InstantFloraScannerCard()
-                  .animate()
-                  .fadeIn(delay: 200.ms, duration: 400.ms)
-                  .slideY(begin: 0.06, end: 0, curve: Curves.easeOutCubic),
-            ),
-
-            // ── 7. Promo Banners Carousel (Graceful Adaptive Layout) ──────
+            // ── 5. Promo Banners Carousel (Graceful Adaptive Layout) ──────
             if (homeFeedAsync.maybeWhen(
               data: (feed) => feed.banners.isNotEmpty,
               orElse: () => false,
@@ -386,6 +370,22 @@ class _HomePageState extends ConsumerState<HomePage> {
                           .slideY(begin: 0.04, end: 0, curve: Curves.easeOut),
                 ),
               ),
+
+            // ── 6. Direct Action / Daily Impact (3-Card Row) ───────────────
+            SliverToBoxAdapter(
+              child: const _DirectActionsRow()
+                  .animate()
+                  .fadeIn(delay: 150.ms, duration: 400.ms)
+                  .slideY(begin: 0.06, end: 0, curve: Curves.easeOutCubic),
+            ),
+
+            // ── 7. Instant Flora Scanner (Field Bio-Intelligence) ──────────
+            SliverToBoxAdapter(
+              child: const _InstantFloraScannerCard()
+                  .animate()
+                  .fadeIn(delay: 200.ms, duration: 400.ms)
+                  .slideY(begin: 0.06, end: 0, curve: Curves.easeOutCubic),
+            ),
 
             // ── 8. Upcoming Events Section ─────────────────────────────────
             SliverToBoxAdapter(
