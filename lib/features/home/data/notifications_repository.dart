@@ -41,6 +41,25 @@ class NotificationsRepository {
     );
   }
 
+  Future<PaginatedNotificationsResponse> openInbox({
+    int limit = 20,
+    String? category,
+  }) async {
+    final uri = Uri.parse(ApiConfig.openNotificationInbox).replace(
+      queryParameters: {
+        'limit': '$limit',
+        if (category != null) 'category': category,
+      },
+    );
+    try {
+      final res = await _api.post(uri.toString());
+      return PaginatedNotificationsResponse.fromJson(res as Map<String, dynamic>);
+    } on ApiException catch (error) {
+      if (error.statusCode != 404 && error.statusCode != 405) rethrow;
+      return fetchNotifications(limit: limit, category: category);
+    }
+  }
+
   Future<void> markRead(String id) async {
     await _api.patch(ApiConfig.markNotificationRead(id), requireAuth: true);
   }

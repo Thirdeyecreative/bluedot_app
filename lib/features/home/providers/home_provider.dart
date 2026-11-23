@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:geolocator/geolocator.dart';
 import '../../auth/providers/auth_provider.dart';
@@ -14,6 +16,25 @@ final homeFeedProvider = FutureProvider<HomeFeedData>((ref) {
   return ref.watch(homeRepositoryProvider).fetchHomeFeed();
 });
 
+final hasNewActionProvider =
+    NotifierProvider.autoDispose<_NewActionNotifier, bool>(
+      _NewActionNotifier.new,
+    );
+
+class _NewActionNotifier extends Notifier<bool> {
+  @override
+  bool build() {
+    final expiry = ref.watch(homeFeedProvider).value?.newActionUntil;
+    if (expiry == null) return false;
+
+    final remaining = expiry.difference(DateTime.now());
+    if (remaining <= Duration.zero) return false;
+    final timer = Timer(remaining, () => state = false);
+    ref.onDispose(timer.cancel);
+    return true;
+  }
+}
+
 final blogsProvider = FutureProvider<List<BlogPost>>((ref) {
   return ref.watch(homeRepositoryProvider).fetchBlogs();
 });
@@ -29,6 +50,7 @@ final blogDetailProvider = FutureProvider.family<BlogPost, String>((ref, slug) {
 class NotificationsState {
   final List<AppNotification> items;
   final int unreadCount;
+  final bool hasNew;
   final int total;
   final bool hasMore;
   final bool isLoading;
@@ -39,6 +61,7 @@ class NotificationsState {
   const NotificationsState({
     this.items = const [],
     this.unreadCount = 0,
+    this.hasNew = false,
     this.total = 0,
     this.hasMore = false,
     this.isLoading = false,
@@ -50,6 +73,7 @@ class NotificationsState {
   NotificationsState copyWith({
     List<AppNotification>? items,
     int? unreadCount,
+    bool? hasNew,
     int? total,
     bool? hasMore,
     bool? isLoading,
@@ -61,6 +85,7 @@ class NotificationsState {
     return NotificationsState(
       items: items ?? this.items,
       unreadCount: unreadCount ?? this.unreadCount,
+      hasNew: hasNew ?? this.hasNew,
       total: total ?? this.total,
       hasMore: hasMore ?? this.hasMore,
       isLoading: isLoading ?? this.isLoading,
@@ -78,22 +103,34 @@ final notificationsProvider =
 
 class NotificationsNotifier extends Notifier<NotificationsState> {
   static const int _pageSize = 20;
+  int _loadVersion = 0;
+  Future<void>? _inboxLoad;
 
   @override
   NotificationsState build() {
-    final user = ref.watch(currentUserProvider);
-    if (user == null) {
+    final userId = ref.watch(currentUserProvider.select((user) => user?.id));
+    final version = ++_loadVersion;
+    _inboxLoad = null;
+    if (userId == null) {
       return const NotificationsState();
     }
 
-    Future.microtask(() => _loadInitial(category: 'all'));
+    Future.microtask(() {
+      if (ref.mounted && version == _loadVersion) {
+        return _loadInitial(category: 'all');
+      }
+    });
     return const NotificationsState(isLoading: true);
   }
 
   NotificationsRepository get _repo =>
       ref.read(notificationsRepositoryProvider);
 
-  Future<void> _loadInitial({required String category}) async {
+  Future<void> _loadInitial({
+    required String category,
+    bool openInbox = false,
+  }) async {
+    final version = ++_loadVersion;
     state = state.copyWith(
       selectedCategory: category,
       isLoading: true,
@@ -101,21 +138,22 @@ class NotificationsNotifier extends Notifier<NotificationsState> {
     );
 
     try {
-      final res = await _repo.fetchNotifications(
-        skip: 0,
-        limit: _pageSize,
-        category: category,
-      );
+      final res = openInbox
+          ? await _repo.openInbox(limit: _pageSize, category: category)
+          : await _repo.fetchNotifications(limit: _pageSize, category: category);
+      if (!ref.mounted || version != _loadVersion) return;
       state = state.copyWith(
         items: res.items,
         unreadCount: res.unreadCount,
+        hasNew: res.hasNew ?? (!openInbox && res.unreadCount > 0),
         total: res.total,
         hasMore: res.hasMore,
         isLoading: false,
         isLoadingMore: false,
         clearError: true,
       );
-    } catch (e) {
+    } catch (_) {
+      if (!ref.mounted || version != _loadVersion) return;
       state = state.copyWith(
         isLoading: false,
         isLoadingMore: false,
@@ -126,7 +164,25 @@ class NotificationsNotifier extends Notifier<NotificationsState> {
 
   Future<void> refresh() async {
     if (ref.read(currentUserProvider) == null) return;
+    final opening = _inboxLoad;
+    if (opening != null) return opening;
     await _loadInitial(category: state.selectedCategory);
+  }
+
+  Future<void> openInbox({bool resetCategory = false}) async {
+    if (ref.read(currentUserProvider) == null) return;
+    final opening = _inboxLoad;
+    if (opening != null) return opening;
+    final request = _loadInitial(
+      category: resetCategory ? 'all' : state.selectedCategory,
+      openInbox: true,
+    );
+    _inboxLoad = request;
+    try {
+      await request;
+    } finally {
+      if (identical(_inboxLoad, request)) _inboxLoad = null;
+    }
   }
 
   Future<void> setCategory(String category) async {
@@ -142,6 +198,7 @@ class NotificationsNotifier extends Notifier<NotificationsState> {
     if (state.isLoading || state.isLoadingMore || !state.hasMore) return;
     if (ref.read(currentUserProvider) == null) return;
 
+    final version = _loadVersion;
     state = state.copyWith(isLoadingMore: true);
     try {
       final res = await _repo.fetchNotifications(
@@ -149,6 +206,7 @@ class NotificationsNotifier extends Notifier<NotificationsState> {
         limit: _pageSize,
         category: state.selectedCategory,
       );
+      if (!ref.mounted || version != _loadVersion) return;
       final existingIds = state.items.map((e) => e.id).toSet();
       final appended = [
         ...state.items,
@@ -157,11 +215,13 @@ class NotificationsNotifier extends Notifier<NotificationsState> {
       state = state.copyWith(
         items: appended,
         unreadCount: res.unreadCount,
+        hasNew: res.hasNew,
         total: res.total,
         hasMore: res.hasMore,
         isLoadingMore: false,
       );
     } catch (_) {
+      if (!ref.mounted || version != _loadVersion) return;
       state = state.copyWith(isLoadingMore: false);
     }
   }
@@ -173,6 +233,7 @@ class NotificationsNotifier extends Notifier<NotificationsState> {
     state = state.copyWith(
       items: [for (final n in state.items) n.copyWith(read: true)],
       unreadCount: 0,
+      hasNew: false,
     );
 
     try {
@@ -193,7 +254,11 @@ class NotificationsNotifier extends Notifier<NotificationsState> {
     ];
     final nextUnread = (state.unreadCount - 1).clamp(0, 999999);
 
-    state = state.copyWith(items: updatedItems, unreadCount: nextUnread);
+    state = state.copyWith(
+      items: updatedItems,
+      unreadCount: nextUnread,
+      hasNew: nextUnread == 0 ? false : null,
+    );
 
     try {
       await _repo.markRead(id);
@@ -218,6 +283,7 @@ class NotificationsNotifier extends Notifier<NotificationsState> {
     state = state.copyWith(
       items: nextItems,
       unreadCount: nextUnread,
+      hasNew: nextUnread == 0 ? false : null,
       total: (state.total - 1).clamp(0, 999999),
     );
 
@@ -231,8 +297,8 @@ class NotificationsNotifier extends Notifier<NotificationsState> {
   }
 }
 
-final unreadCountProvider = Provider<int>((ref) {
-  return ref.watch(notificationsProvider).unreadCount;
+final hasNewNotificationsProvider = Provider<bool>((ref) {
+  return ref.watch(notificationsProvider.select((state) => state.hasNew));
 });
 
 final cityAqiProvider = FutureProvider<CityAqiData>((ref) async {

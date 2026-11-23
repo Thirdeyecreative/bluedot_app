@@ -9,12 +9,14 @@ class CapsuleNavItem {
   final IconData? activeIcon;
   final String label;
   final String? avatarUrl;
+  final bool showNewDot;
 
   const CapsuleNavItem({
     required this.icon,
     this.activeIcon,
     required this.label,
     this.avatarUrl,
+    this.showNewDot = false,
   });
 }
 
@@ -255,7 +257,17 @@ class _CapsuleTabItemState extends State<_CapsuleTabItem>
                 mainAxisSize: MainAxisSize.min,
                 crossAxisAlignment: CrossAxisAlignment.center,
                 children: [
-                  _buildIcon(contentColor, widget.isSelected),
+                  if (widget.item.showNewDot)
+                    Semantics(
+                      label: 'New events or campaigns',
+                      child: Badge(
+                        backgroundColor: AppColors.primaryYellow,
+                        smallSize: 8,
+                        child: _buildIcon(contentColor, widget.isSelected),
+                      ),
+                    )
+                  else
+                    _buildIcon(contentColor, widget.isSelected),
                   const SizedBox(height: 3),
                   Text(
                     widget.item.label,

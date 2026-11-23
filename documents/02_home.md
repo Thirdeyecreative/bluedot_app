@@ -28,7 +28,7 @@ The Home screen serves as the core discovery hub for BlueDot. It delivers person
 
 | Section | Source | Detail |
 |---|---|---|
-| **Compact App Bar** | `currentUserProvider` | Shows user profile avatar (tappable to `/profile`), dynamic time greeting (`Good morning / afternoon / evening, {name}`), and notification bell with unread badge. |
+| **Compact App Bar** | `currentUserProvider` | Shows user profile avatar (tappable to `/profile`), dynamic time greeting (`Good morning / afternoon / evening, {name}`), and notification bell with a dot for new items. |
 | **Legal Consent Check** | `legalServiceProvider` | On initial mount, verifies `checkConsentStatus()`. If legal documents were updated, opens `PolicyUpdateSheet`. |
 | **Local Eco Vitals** | `GET /api/v1/app/eco-vitals` | BlueDot's API resolves the location and fetches and caches AQI, UV, temperature, feels-like temperature, and humidity. Flutter sends available device coordinates or the profile city and displays the API response. Noise & Calm samples the device microphone locally. |
 | **Protect The Canopy Hero** | App content | Shows the conservation initiative and links to the Action Hub. |
@@ -116,8 +116,8 @@ Defined in `lib/features/home/providers/home_provider.dart`:
   Loads a specific blog post by slug or ID.
 - **`notificationsProvider`** (`NotifierProvider<NotificationsNotifier, List<AppNotification>>`):
   Tracks local notification feed state with `.markAllRead()` and `.markRead(id)`.
-- **`unreadCountProvider`** (`Provider<int>`):
-  Computed count of unread notifications for the app-bar notification badge.
+- **hasNewNotificationsProvider** drives the Home bell dot. Opening the inbox advances the saved bell timestamp. Individual read flags and the unread count remain available inside Notifications.
+- **hasNewActionProvider** displays the yellow Action dot until the latest first publication of a live event or campaign reaches 48 hours. The Home feed supplies the expiry.
 
 ---
 

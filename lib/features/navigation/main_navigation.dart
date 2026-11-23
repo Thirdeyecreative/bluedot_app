@@ -2,7 +2,9 @@ import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../core/constants/app_colors.dart';
+import '../action_hub/providers/action_provider.dart';
 import '../auth/providers/auth_provider.dart';
+import '../home/providers/home_provider.dart';
 import 'capsule_nav_bar.dart';
 
 /// Hosts the shell and the floating [CapsuleNavBar].
@@ -94,19 +96,50 @@ class _NavigationBranches extends StatelessWidget {
   }
 }
 
-class _BlueDotNavBar extends ConsumerWidget {
+class _BlueDotNavBar extends ConsumerStatefulWidget {
   final int currentIndex;
   final ValueChanged<int> onTapNav;
 
   const _BlueDotNavBar({required this.currentIndex, required this.onTapNav});
 
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
+  ConsumerState<_BlueDotNavBar> createState() => _BlueDotNavBarState();
+}
+
+class _BlueDotNavBarState extends ConsumerState<_BlueDotNavBar> {
+  late final AppLifecycleListener _lifecycle;
+
+  @override
+  void initState() {
+    super.initState();
+    _lifecycle = AppLifecycleListener(onResume: () {
+      ref.invalidate(homeFeedProvider);
+      ref.read(notificationsProvider.notifier).refresh();
+    });
+  }
+
+  @override
+  void dispose() {
+    _lifecycle.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
     final user = ref.watch(currentUserProvider);
+    final hasNewAction = ref.watch(hasNewActionProvider);
+    ref.listen(
+      homeFeedProvider.select((feed) => feed.value?.newActionUntil),
+      (previous, next) {
+        if (next == null || next == previous || !next.isAfter(DateTime.now())) return;
+        ref.invalidate(eventsProvider);
+        ref.invalidate(campaignsProvider);
+      },
+    );
 
     return CapsuleNavBar(
-      currentIndex: currentIndex,
-      onTap: onTapNav,
+      currentIndex: widget.currentIndex,
+      onTap: widget.onTapNav,
       onCenterTap: () => context.push('/scanner'),
       backgroundColor: AppColors.primaryBlue,
       activeCapsuleColor: const Color(0xFF26377B),
@@ -118,10 +151,11 @@ class _BlueDotNavBar extends ConsumerWidget {
           activeIcon: Icons.home_rounded,
           label: 'Home',
         ),
-        const CapsuleNavItem(
+        CapsuleNavItem(
           icon: Icons.yard_outlined,
           activeIcon: Icons.yard_rounded,
           label: 'Action',
+          showNewDot: hasNewAction,
         ),
         const CapsuleNavItem(
           icon: Icons.explore_outlined,

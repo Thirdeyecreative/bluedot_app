@@ -8,6 +8,7 @@ import '../models/eco_vitals_model.dart';
 import '../../action_hub/models/event_model.dart';
 
 class HomeFeedData {
+  final DateTime? newActionUntil;
   final AppBanner? hero;
   final List<AppBanner> banners;
   final List<Campaign> campaigns;
@@ -16,6 +17,7 @@ class HomeFeedData {
 
   HomeFeedData({
     this.hero,
+    this.newActionUntil,
     required this.banners,
     required this.campaigns,
     required this.events,
@@ -37,6 +39,7 @@ class HomeRepository {
             as Map<String, dynamic>;
     final hero = json['hero'];
     return HomeFeedData(
+      newActionUntil: DateTime.tryParse(json['new_action_until'] as String? ?? ''),
       hero: hero == null
           ? null
           : AppBanner.fromJson(hero as Map<String, dynamic>),

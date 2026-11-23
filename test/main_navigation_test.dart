@@ -1,3 +1,5 @@
+import 'package:bluedot_app/features/home/data/home_repository.dart';
+import 'package:bluedot_app/features/home/providers/home_provider.dart';
 import 'package:bluedot_app/features/navigation/main_navigation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -5,7 +7,7 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:go_router/go_router.dart';
 
 void main() {
-  testWidgets('rapid tab switches keep one shell and preserve branch state', (
+  testWidgets('rapid tab switches preserve state and the Action dot expires', (
     tester,
   ) async {
     final router = GoRouter(
@@ -30,7 +32,17 @@ void main() {
     );
     addTearDown(router.dispose);
     await tester.pumpWidget(
-      ProviderScope(child: MaterialApp.router(routerConfig: router)),
+      ProviderScope(
+        overrides: [
+          homeFeedProvider.overrideWith((ref) async => HomeFeedData(
+            newActionUntil: DateTime.now().add(const Duration(seconds: 10)),
+            banners: [],
+            campaigns: [],
+            events: [],
+          )),
+        ],
+        child: MaterialApp.router(routerConfig: router),
+      ),
     );
     await tester.pumpAndSettle();
 
@@ -56,6 +68,13 @@ void main() {
 
     expect(find.text('profile count: 1').hitTestable(), findsOneWidget);
     expect(find.text('directory count: 0').hitTestable(), findsNothing);
+    final actionDot = find.descendant(
+      of: find.byKey(const ValueKey('capsule-tab-1')),
+      matching: find.byType(Badge),
+    );
+    expect(actionDot, findsOneWidget);
+    await tester.pump(const Duration(seconds: 11));
+    expect(actionDot, findsNothing);
   });
 }
 

@@ -114,6 +114,7 @@ class ApiConfig {
   static String get userBadges => '$_app/profile/badges';
   static String get userCertificates => '$_app/profile/certificates';
   static String get notifications => '$_app/notifications';
+  static String get openNotificationInbox => '$_app/notifications/open';
   static String get markAllNotificationsRead => '$_app/notifications/mark-all-read';
   static String markNotificationRead(String id) => '$_app/notifications/$id/read';
   static String deleteNotification(String id) => '$_app/notifications/$id';

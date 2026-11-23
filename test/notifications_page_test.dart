@@ -15,6 +15,7 @@ import 'package:bluedot_app/core/utils/route_dispatcher.dart';
 class _FakeNotificationsRepository extends NotificationsRepository {
   List<AppNotification> store;
   String? lastRequestedCategory;
+  bool opened = false;
 
   _FakeNotificationsRepository(this.store) : super(ApiClient(StorageService()));
 
@@ -32,9 +33,19 @@ class _FakeNotificationsRepository extends NotificationsRepository {
     return PaginatedNotificationsResponse(
       items: filtered,
       unreadCount: unread,
+      hasNew: !opened && unread > 0,
       total: filtered.length,
       hasMore: false,
     );
+  }
+
+  @override
+  Future<PaginatedNotificationsResponse> openInbox({
+    int limit = 20,
+    String? category,
+  }) {
+    opened = true;
+    return fetchNotifications(limit: limit, category: category);
   }
 
   @override
@@ -135,6 +146,11 @@ void main() {
       expect(find.text('Live 80G Receipt Ready'), findsOneWidget);
       expect(find.text('Cubbon Park Drive'), findsOneWidget);
       expect(find.text('2 unread'), findsOneWidget);
+      expect(fakeRepo.opened, isTrue);
+      final context = tester.element(find.byType(NotificationsPage));
+      final container = ProviderScope.containerOf(context);
+      expect(container.read(hasNewNotificationsProvider), isFalse);
+      expect(container.read(notificationsProvider).items.every((n) => !n.read), isTrue);
 
       // Filter to Campaigns & Donations tab
       await tester.tap(

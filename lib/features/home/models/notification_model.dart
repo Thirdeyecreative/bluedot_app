@@ -193,12 +193,14 @@ class AppNotification {
 class PaginatedNotificationsResponse {
   final List<AppNotification> items;
   final int unreadCount;
+  final bool? hasNew;
   final int total;
   final bool hasMore;
 
   const PaginatedNotificationsResponse({
     required this.items,
     required this.unreadCount,
+    this.hasNew,
     required this.total,
     required this.hasMore,
   });
@@ -218,6 +220,7 @@ class PaginatedNotificationsResponse {
     return PaginatedNotificationsResponse(
       items: items,
       unreadCount: unread,
+      hasNew: json['has_new'] as bool?,
       total: total,
       hasMore: hasMore,
     );

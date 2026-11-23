@@ -32,7 +32,7 @@ class _NotificationsPageState extends ConsumerState<NotificationsPage> {
     _scrollController.addListener(_onScroll);
     WidgetsBinding.instance.addPostFrameCallback((_) {
       if (mounted) {
-        ref.read(notificationsProvider.notifier).refresh();
+        ref.read(notificationsProvider.notifier).openInbox(resetCategory: true);
       }
     });
   }
@@ -120,7 +120,7 @@ class _NotificationsPageState extends ConsumerState<NotificationsPage> {
         ),
       ),
       body: RefreshIndicator(
-        onRefresh: () => ref.read(notificationsProvider.notifier).refresh(),
+        onRefresh: () => ref.read(notificationsProvider.notifier).openInbox(),
         color: AppColors.primaryBlue,
         child: _buildBody(notifState, items, unread),
       ),
@@ -165,7 +165,7 @@ class _NotificationsPageState extends ConsumerState<NotificationsPage> {
                     const SizedBox(height: 16),
                     FilledButton.icon(
                       onPressed: () =>
-                          ref.read(notificationsProvider.notifier).refresh(),
+                          ref.read(notificationsProvider.notifier).openInbox(),
                       icon: const Icon(Icons.refresh_rounded, size: 18),
                       label: const Text('Retry'),
                     ),

@@ -61,6 +61,9 @@ class _HomePageState extends ConsumerState<HomePage> {
           .listen((data) {
             if (!mounted) return;
             ref.read(notificationsProvider.notifier).refresh();
+            if (data.containsKey('event_id') || data.containsKey('campaign_id')) {
+              ref.invalidate(homeFeedProvider);
+            }
             final title = data['title']?.toString() ?? 'BlueDot Notification';
             final body = data['body']?.toString() ?? '';
             ScaffoldMessenger.of(context).showSnackBar(
@@ -2797,7 +2800,7 @@ class _NotificationBell extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final unread = ref.watch(unreadCountProvider);
+    final hasNew = ref.watch(hasNewNotificationsProvider);
     return Stack(
       clipBehavior: Clip.none,
       children: [
@@ -2810,33 +2813,7 @@ class _NotificationBell extends ConsumerWidget {
           tooltip: 'Notifications',
           onPressed: () => context.push('/notifications'),
         ),
-        if (unread > 0)
-          Positioned(
-            right: 8,
-            top: 8,
-            child: Container(
-              padding: const EdgeInsets.symmetric(horizontal: 5, vertical: 1.5),
-              constraints: const BoxConstraints(minWidth: 16, minHeight: 16),
-              decoration: BoxDecoration(
-                color: AppColors.primaryYellow,
-                shape: BoxShape.circle,
-                border: Border.all(
-                  color: isDarkHeader ? AppColors.primaryBlue : Colors.white,
-                  width: 1.5,
-                ),
-              ),
-              child: Text(
-                unread > 9 ? '9+' : '$unread',
-                textAlign: TextAlign.center,
-                style: const TextStyle(
-                  color: Color(0xFF2E2005),
-                  fontSize: 9,
-                  fontWeight: FontWeight.w900,
-                ),
-              ),
-            ),
-          )
-        else
+        if (hasNew)
           Positioned(
             right: 12,
             top: 10,
