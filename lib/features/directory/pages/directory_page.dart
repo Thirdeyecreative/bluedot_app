@@ -142,7 +142,28 @@ class _DirectoryPageState extends ConsumerState<DirectoryPage> {
               ),
 
               if (searchQuery.isEmpty)
-                SliverToBoxAdapter(child: ListTile(leading: const Icon(Icons.history), title: const Text('Your recent scans'), trailing: const Icon(Icons.chevron_right), onTap: () => context.push('/recent-scans'))),
+                SliverToBoxAdapter(
+                  child: Padding(
+                    padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                    child: OutlinedButton(
+                      onPressed: () => context.push('/recent-scans'),
+                      style: OutlinedButton.styleFrom(
+                        foregroundColor: AppColors.primaryBlue,
+                        side: const BorderSide(color: AppColors.primaryBlue),
+                        minimumSize: const Size.fromHeight(48),
+                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
+                      ),
+                      child: const Row(
+                        children: [
+                          Icon(Icons.history),
+                          SizedBox(width: 12),
+                          Expanded(child: Text('Your recent scans')),
+                          Icon(Icons.chevron_right),
+                        ],
+                      ),
+                    ),
+                  ),
+                ),
 
               // Active search results info banner
               if (searchQuery.isNotEmpty && list != null)
