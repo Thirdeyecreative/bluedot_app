@@ -6,9 +6,9 @@ class AppAssets {
   static const String _base = 'assets/images';
 
   // Home
-  static const String greenLensButton = '$_base/home/green_lens_button.png';
+  static const String greenLensButton = '$_base/home/green_lens_button.webp';
 
   // Shared
-  static const String bluedotSplashLogo = '$_base/shared/bluedot_splash_logo.png';
-  static const String bluedotIcon = '$_base/shared/bluedot_icon.png';
+  static const String bluedotSplashLogo = '$_base/shared/bluedot_splash_logo.webp';
+  static const String bluedotIcon = '$_base/shared/bluedot_icon.webp';
 }

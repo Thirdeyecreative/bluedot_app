@@ -141,6 +141,9 @@ class _DirectoryPageState extends ConsumerState<DirectoryPage> {
                 ),
               ),
 
+              if (searchQuery.isEmpty)
+                SliverToBoxAdapter(child: ListTile(leading: const Icon(Icons.history), title: const Text('Your recent scans'), trailing: const Icon(Icons.chevron_right), onTap: () => context.push('/recent-scans'))),
+
               // Active search results info banner
               if (searchQuery.isNotEmpty && list != null)
                 SliverToBoxAdapter(
@@ -354,3 +357,4 @@ class _PlaceholderImage extends StatelessWidget {
         child: const Center(child: Icon(Icons.eco_rounded, color: AppColors.primaryBlue, size: 40)),
       );
 }
+

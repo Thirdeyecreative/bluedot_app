@@ -1,3 +1,5 @@
+import 'settings_page.dart';
+import 'package:url_launcher/url_launcher.dart';
 import 'package:flutter/material.dart' hide Badge;
 import 'package:flutter_animate/flutter_animate.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -66,7 +68,6 @@ class _ProfilePageState extends ConsumerState<ProfilePage> {
           onRefresh: () async {
             await ref.read(authNotifierProvider.notifier).refreshProfile();
             ref.invalidate(badgesProvider);
-            ref.invalidate(scanHistoryProvider);
           },
           color: AppColors.primaryBlue,
           child: CustomScrollView(
@@ -99,7 +100,9 @@ class _ProfilePageState extends ConsumerState<ProfilePage> {
                 _ImpactStats(user: user),
                 _QuickActions(),
                 _BadgesSection(badges: badges, onSeeAll: () => context.push('/profile/badges')),
-                _ScansHistory(key: ValueKey(user.id), userId: user.id),
+                const ProfileAboutSection(),
+                const ProfileLegalSection(),
+                const ProfileTaxSection(),
                 const SizedBox(height: 120),
               ],
             ),
@@ -179,7 +182,7 @@ class _ProfileHeader extends ConsumerWidget {
     return Container(
       width: double.infinity,
       margin: const EdgeInsets.fromLTRB(16, 8, 16, 0),
-      padding: const EdgeInsets.fromLTRB(24, 24, 24, 28),
+      padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 20),
       decoration: BoxDecoration(
         gradient: const LinearGradient(
           colors: [AppColors.primaryBlue, Color(0xFF2D3A8C)],
@@ -195,7 +198,7 @@ class _ProfileHeader extends ConsumerWidget {
           ),
         ],
       ),
-      child: Column(
+      child: Row(
         children: [
           // Avatar with level progress ring
           GestureDetector(
@@ -231,7 +234,10 @@ class _ProfileHeader extends ConsumerWidget {
               ),
             ).animate().fadeIn().scaleXY(begin: 0.8, end: 1, curve: Curves.elasticOut),
           ),
-          const SizedBox(height: 14),
+          const SizedBox(width: 16),
+          Expanded(child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
           Text(
             user.fullName ?? user.phone,
             style: const TextStyle(color: Colors.white, fontSize: 20, fontWeight: FontWeight.w700),
@@ -239,14 +245,13 @@ class _ProfileHeader extends ConsumerWidget {
           if (user.city != null && user.city!.trim().isNotEmpty) ...[
             const SizedBox(height: 6),
             Row(
-              mainAxisAlignment: MainAxisAlignment.center,
               children: [
                 const Icon(Icons.location_on_rounded, color: AppColors.primaryYellow, size: 14),
                 const SizedBox(width: 4),
-                Text(
+                Flexible(child: Text(
                   user.city!,
                   style: const TextStyle(color: Colors.white70, fontSize: 13),
-                ),
+                )),
               ],
             ),
           ],
@@ -270,6 +275,8 @@ class _ProfileHeader extends ConsumerWidget {
                 : 'Level progress unavailable',
             style: TextStyle(color: Colors.white.withAlpha(160), fontSize: 12),
           ),
+            ],
+          )),
         ],
       ),
     );
@@ -779,3 +786,109 @@ class _ScanHistoryItemTile extends StatelessWidget {
     return '${date.day} ${months[date.month - 1]} ${date.year}';
   }
 }
+class RecentScansPage extends ConsumerWidget {
+  const RecentScansPage({super.key});
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final user = ref.watch(currentUserProvider);
+    return Scaffold(appBar: AppBar(title: const Text('Your recent scans')), body: user == null
+      ? const Center(child: Text('Sign in to see your scans.'))
+      : ListView(children: [_ScansHistory(key: ValueKey(user.id), userId: user.id)]));
+  }
+}
+
+class AboutBlueDotPage extends StatelessWidget {
+  const AboutBlueDotPage({super.key});
+  @override
+  Widget build(BuildContext context) {
+    const navy = Color(0xff0c142b);
+    const cream = Color(0xfff6efdd);
+    final theme = ThemeData(
+      useMaterial3: true,
+      colorScheme: ColorScheme.fromSeed(seedColor: AppColors.primaryBlue, brightness: Brightness.dark)
+          .copyWith(surface: navy, onSurface: cream, primary: AppColors.primaryYellow),
+      scaffoldBackgroundColor: navy,
+      textTheme: Theme.of(context).textTheme.apply(bodyColor: cream, displayColor: cream),
+    );
+    return Theme(data: theme, child: Builder(builder: (context) => Scaffold(
+    appBar: AppBar(title: const Text('About BlueDot')),
+    body: ListView(padding: const EdgeInsets.all(24), children: [
+      Text('Our story so far', textAlign: TextAlign.center, style: theme.textTheme.headlineMedium?.copyWith(fontWeight: FontWeight.w800)),
+      const SizedBox(height: 6),
+      const Text('Meet the team and learn about our mission.', textAlign: TextAlign.center),
+      const SizedBox(height: 20),
+      ClipRRect(borderRadius: BorderRadius.circular(20), child: Image.asset(
+        'assets/images/profile/about_bluedot.webp', height: 224, fit: BoxFit.cover, semanticLabel: 'BlueDot emblem',
+      )),
+      const SizedBox(height: 24),
+      Text('About BlueDot', style: theme.textTheme.titleLarge),
+      const SizedBox(height: 12),
+      const Text('BlueDot is a Bangalore-based nonprofit working to restore rivers, lakes, oceans and wetlands and protect the wildlife that depends on them. Environmentalists, scientists, educators and local residents came together out of concern for the effects of climate change.'),
+      const SizedBox(height: 8),
+      const Text('Legal entity: One Blu Foundation'),
+      const SizedBox(height: 24),
+      Center(child: DecoratedBox(
+        decoration: BoxDecoration(color: const Color(0xff18244a), borderRadius: BorderRadius.circular(24)),
+        child: const Padding(padding: EdgeInsets.symmetric(horizontal: 16, vertical: 8), child: Text('MISSION & VALUES')),
+      )),
+      const SizedBox(height: 16),
+      Text('We’re on a mission…', textAlign: TextAlign.center,
+          style: theme.textTheme.headlineMedium?.copyWith(fontWeight: FontWeight.w800)),
+      const SizedBox(height: 8),
+      const Text('We work toward climate-resilient habitats across India through hands-on restoration, scientific research, community engagement and education.', textAlign: TextAlign.center),
+      const SizedBox(height: 24),
+      LayoutBuilder(builder: (context, constraints) {
+        final width = constraints.maxWidth;
+        final cardWidth = width < 300 ? width : (width - 12) / 2;
+        return Wrap(spacing: 12, runSpacing: 12, children: [
+          for (final (label, icon) in const [
+            ('Project Ideation', Icons.lightbulb_outline),
+            ('Project Implementation', Icons.volunteer_activism_outlined),
+            ('Impact Assessment', Icons.monitor_heart_outlined),
+            ('Volunteering', Icons.groups_outlined),
+          ])
+            Container(
+              width: cardWidth, padding: const EdgeInsets.symmetric(vertical: 22, horizontal: 8),
+              decoration: BoxDecoration(color: const Color(0xff102c33), borderRadius: BorderRadius.circular(16)),
+              child: Column(children: [
+                Icon(icon, color: const Color(0xff919fe6), size: 32),
+                const SizedBox(height: 12),
+                Text(label, textAlign: TextAlign.center, style: theme.textTheme.titleSmall),
+              ]),
+            ),
+        ]);
+      }),
+      const SizedBox(height: 24),
+      Text('Meet our founder', style: Theme.of(context).textTheme.titleLarge),
+      const SizedBox(height: 12),
+      ClipRRect(
+        borderRadius: BorderRadius.circular(16),
+        child: ColoredBox(color: const Color(0xff102c33), child: Image.asset(
+          'assets/images/profile/harsha_tej.webp', height: 240, fit: BoxFit.contain,
+          semanticLabel: 'Harsha Tej, founder of BlueDot',
+        )),
+      ),
+      const SizedBox(height: 12),
+      Text('Harsha Tej', style: Theme.of(context).textTheme.titleMedium),
+      const Text('An environmentalist with a background in environmental science, Harsha has led restoration work across Karnataka for over a decade. He helped create and restore 18 lakes and led afforestation initiatives that planted over 1.5 lakh trees.'),
+      const SizedBox(height: 24),
+      Text('Our core team', style: Theme.of(context).textTheme.titleLarge),
+      const SizedBox(height: 8),
+      const Text('Diganth Manchale · Vishlesh S P · Amit Shroff · Rammohan Paranjape · Rahul Aradhya · Himanshu Venugopal · Hitesh R J · Samarth S S · Sachin C S · Babu Chandra'),
+      const SizedBox(height: 24),
+      Text('Our projects', style: Theme.of(context).textTheme.titleLarge),
+      const SizedBox(height: 8),
+      const Text('At Turahalli Forest, volunteers help clear litter from the forest. In Chennai, BlueDot’s mangrove planting work helps restore coastal habitat.'),
+      TextButton(onPressed: () async {
+        final opened = await launchUrl(Uri.parse('https://bluedot.ngo/projects'), mode: LaunchMode.externalApplication);
+        if (!opened && context.mounted) ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Could not open the projects page.')));
+      }, child: const Text('Explore BlueDot projects')),
+      OutlinedButton(onPressed: () async {
+        final opened = await launchUrl(Uri.parse('https://bluedot.ngo/contact'), mode: LaunchMode.externalApplication);
+        if (!opened && context.mounted) ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Could not open the contact page.')));
+      }, child: const Text('Contact BlueDot')),
+    ]),
+  )));
+  }
+}
+

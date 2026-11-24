@@ -36,8 +36,8 @@ class _GreenLensPageState extends ConsumerState<GreenLensPage> {
     final photos = await openInAppCamera(
       context, 
       maxImages: 5, 
-      title: 'Scan a Tree',
-      instructionText: 'Take multiple photos (e.g. leaf, bark, and the whole tree) for a much more accurate AI identification!',
+      title: 'Instant Flora Scanner',
+      instructionText: 'Photograph one tree. Add up to 5 photos of its leaves, bark or shape, then tap Done.',
     );
     if (photos.isEmpty) {
       if (mounted) context.pop();

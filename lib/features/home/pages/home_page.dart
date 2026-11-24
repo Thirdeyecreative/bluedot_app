@@ -246,6 +246,7 @@ class _HomePageState extends ConsumerState<HomePage> {
                     ),
                   ),
                   const Spacer(),
+                  IconButton(tooltip: 'Your recent scans', icon: const Icon(Icons.history, color: Colors.white), onPressed: () => context.push('/recent-scans')),
                   const _NotificationBell(isDarkHeader: true),
                   const SizedBox(width: 6),
                   // User Avatar
@@ -1786,282 +1787,49 @@ class _InstantFloraScannerCard extends StatelessWidget {
   const _InstantFloraScannerCard({super.key});
 
   @override
-  Widget build(BuildContext context) {
-    return Padding(
-      padding: const EdgeInsets.fromLTRB(16, 14, 16, 10),
-      child: Material(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(20),
-        child: InkWell(
-          onTap: () => context.push('/scanner'),
-          borderRadius: BorderRadius.circular(20),
-          splashColor: AppColors.primaryGreen.withOpacity(0.08),
-          child: Container(
-            padding: const EdgeInsets.all(16),
-            decoration: BoxDecoration(
-              color: Colors.white,
-              borderRadius: BorderRadius.circular(20),
-              border: Border.all(color: AppColors.borderLight),
-              boxShadow: [
-                BoxShadow(
-                  color: Colors.black.withOpacity(0.04),
-                  blurRadius: 12,
-                  offset: const Offset(0, 4),
+  Widget build(BuildContext context) => Padding(
+    padding: const EdgeInsets.fromLTRB(16, 14, 16, 10),
+    child: Material(
+      color: AppColors.primaryBlue,
+      borderRadius: BorderRadius.circular(24),
+      clipBehavior: Clip.antiAlias,
+      child: InkWell(
+        onTap: () => context.push('/scanner'),
+        child: Padding(
+          padding: const EdgeInsets.all(20),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Row(children: [
+                const Expanded(child: Text('Instant Flora Scanner',
+                  style: TextStyle(color: Colors.white, fontSize: 24, fontWeight: FontWeight.w800))),
+                const SizedBox(width: 12),
+                DecoratedBox(
+                  decoration: BoxDecoration(color: Colors.white12, borderRadius: BorderRadius.circular(16)),
+                  child: const Padding(padding: EdgeInsets.all(12),
+                    child: Icon(Icons.filter_center_focus_rounded, color: AppColors.primaryYellow, size: 32)),
                 ),
-              ],
-            ),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.stretch,
-              children: [
-                // 1. Header row (Clean title without subtitle text)
-                Row(
-                  children: [
-                    Container(
-                      width: 38,
-                      height: 38,
-                      decoration: BoxDecoration(
-                        color: AppColors.primaryGreen,
-                        borderRadius: BorderRadius.circular(12),
-                      ),
-                      child: const Icon(
-                        Icons.camera_alt_rounded,
-                        color: Colors.white,
-                        size: 20,
-                      ),
-                    ),
-                    const SizedBox(width: 12),
-                    const Expanded(
-                      child: Text(
-                        'Instant Flora Scanner',
-                        style: TextStyle(
-                          fontSize: 16,
-                          fontWeight: FontWeight.w800,
-                          color: AppColors.textDark,
-                        ),
-                      ),
-                    ),
-                    Container(
-                      padding: const EdgeInsets.symmetric(
-                        horizontal: 10,
-                        vertical: 5,
-                      ),
-                      decoration: BoxDecoration(
-                        color: AppColors.ecoIndexBg,
-                        borderRadius: BorderRadius.circular(16),
-                        border: Border.all(color: AppColors.ecoIndexBorder),
-                      ),
-                      child: const Row(
-                        mainAxisSize: MainAxisSize.min,
-                        children: [
-                          Icon(
-                            Icons.bolt_rounded,
-                            color: Color(0xFFC2851B),
-                            size: 14,
-                          ),
-                          SizedBox(width: 3),
-                          Text(
-                            '+50 XP',
-                            style: TextStyle(
-                              color: AppColors.ecoIndexText,
-                              fontSize: 11,
-                              fontWeight: FontWeight.w700,
-                            ),
-                          ),
-                        ],
-                      ),
-                    ),
-                  ],
+              ]),
+              const SizedBox(height: 10),
+              const Text('Which tree is this? Start with a clear photo of a leaf. Add bark or the whole tree for more detail.',
+                style: TextStyle(color: Colors.white, height: 1.45, fontSize: 15)),
+              const SizedBox(height: 18),
+              DecoratedBox(
+                decoration: BoxDecoration(color: AppColors.primaryYellow, borderRadius: BorderRadius.circular(24)),
+                child: const Padding(
+                  padding: EdgeInsets.symmetric(horizontal: 16, vertical: 11),
+                  child: Wrap(crossAxisAlignment: WrapCrossAlignment.center, spacing: 8, children: [
+                    Icon(Icons.camera_alt_outlined, size: 20, color: AppColors.textDark),
+                    Text('Open scanner', style: TextStyle(color: AppColors.textDark, fontWeight: FontWeight.w700)),
+                  ]),
                 ),
-                const SizedBox(height: 14),
-
-                // 2. Botanical Viewfinder Frame (Real botanical backdrop + BlueDot Yellow reticle)
-                ClipRRect(
-                  borderRadius: BorderRadius.circular(16),
-                  child: SizedBox(
-                    height: 180,
-                    width: double.infinity,
-                    child: Stack(
-                      alignment: Alignment.center,
-                      fit: StackFit.expand,
-                      children: [
-                        // Real botanical plant backdrop (lush monstera leaf)
-                        CachedNetworkImage(
-                          imageUrl:
-                              'https://images.unsplash.com/photo-1518531933037-91b2f5f229cc?auto=format&fit=crop&w=800&q=80',
-                          fit: BoxFit.cover,
-                          placeholder: (_, __) => Container(
-                            color: AppColors.forestGreen,
-                          ),
-                          errorWidget: (_, __, ___) => Container(
-                            color: AppColors.forestGreen,
-                          ),
-                        ),
-
-                        // Natural dark gradient vignette for contrast
-                        Container(
-                          decoration: BoxDecoration(
-                            gradient: LinearGradient(
-                              begin: Alignment.topCenter,
-                              end: Alignment.bottomCenter,
-                              colors: [
-                                Colors.black.withOpacity(0.15),
-                                Colors.black.withOpacity(0.55),
-                              ],
-                            ),
-                          ),
-                        ),
-
-                        // DSLR viewfinder corner reticle in BlueDot yellow
-                        const CustomPaint(
-                          size: Size.infinite,
-                          painter: _ViewfinderCornerPainter(
-                            color: AppColors.scannerReticle,
-                            strokeWidth: 2.5,
-                            length: 22.0,
-                          ),
-                        ),
-
-                        // Center focus reticle box
-                        Center(
-                          child: Container(
-                            width: 86,
-                            height: 86,
-                            decoration: BoxDecoration(
-                              borderRadius: BorderRadius.circular(14),
-                              border: Border.all(
-                                color:
-                                    AppColors.scannerReticle.withOpacity(0.65),
-                                width: 1.5,
-                              ),
-                            ),
-                          ),
-                        ),
-
-                        // Bottom camera action pill
-                        Positioned(
-                          bottom: 12,
-                          child: Container(
-                            padding: const EdgeInsets.symmetric(
-                              horizontal: 14,
-                              vertical: 7,
-                            ),
-                            decoration: BoxDecoration(
-                              color: Colors.black.withOpacity(0.65),
-                              borderRadius: BorderRadius.circular(20),
-                              border: Border.all(
-                                color: Colors.white.withOpacity(0.20),
-                                width: 1,
-                              ),
-                            ),
-                            child: const Row(
-                              mainAxisSize: MainAxisSize.min,
-                              children: [
-                                Icon(
-                                  Icons.center_focus_strong_rounded,
-                                  color: AppColors.primaryYellow,
-                                  size: 15,
-                                ),
-                                SizedBox(width: 7),
-                                Text(
-                                  'Tap to scan & identify any plant',
-                                  style: TextStyle(
-                                    color: Colors.white,
-                                    fontSize: 12,
-                                    fontWeight: FontWeight.w600,
-                                  ),
-                                ),
-                              ],
-                            ),
-                          ),
-                        ),
-                      ],
-                    ),
-                  ),
-                ),
-              ],
-            ),
+              ),
+            ],
           ),
         ),
       ),
-    );
-  }
-}
-
-class _ViewfinderCornerPainter extends CustomPainter {
-  final Color color;
-  final double strokeWidth;
-  final double length;
-
-  const _ViewfinderCornerPainter({
-    required this.color,
-    this.strokeWidth = 2.5,
-    this.length = 22.0,
-  });
-
-  @override
-  void paint(Canvas canvas, Size size) {
-    final Paint paint = Paint()
-      ..color = color
-      ..strokeWidth = strokeWidth
-      ..style = PaintingStyle.stroke
-      ..strokeCap = StrokeCap.round;
-
-    const double inset = 16.0;
-
-    // Top-Left
-    canvas.drawLine(
-      Offset(inset, inset + length),
-      const Offset(inset, inset),
-      paint,
-    );
-    canvas.drawLine(
-      const Offset(inset, inset),
-      Offset(inset + length, inset),
-      paint,
-    );
-
-    // Top-Right
-    canvas.drawLine(
-      Offset(size.width - inset - length, inset),
-      Offset(size.width - inset, inset),
-      paint,
-    );
-    canvas.drawLine(
-      Offset(size.width - inset, inset),
-      Offset(size.width - inset, inset + length),
-      paint,
-    );
-
-    // Bottom-Left
-    canvas.drawLine(
-      Offset(inset, size.height - inset - length),
-      Offset(inset, size.height - inset),
-      paint,
-    );
-    canvas.drawLine(
-      Offset(inset, size.height - inset),
-      Offset(inset + length, size.height - inset),
-      paint,
-    );
-
-    // Bottom-Right
-    canvas.drawLine(
-      Offset(size.width - inset - length, size.height - inset),
-      Offset(size.width - inset, size.height - inset),
-      paint,
-    );
-    canvas.drawLine(
-      Offset(size.width - inset, size.height - inset - length),
-      Offset(size.width - inset, size.height - inset),
-      paint,
-    );
-  }
-
-  @override
-  bool shouldRepaint(covariant _ViewfinderCornerPainter oldDelegate) =>
-      color != oldDelegate.color ||
-      strokeWidth != oldDelegate.strokeWidth ||
-      length != oldDelegate.length;
+    ),
+  );
 }
 
 // ─────────────────────────────────────────────────────────────────────────────

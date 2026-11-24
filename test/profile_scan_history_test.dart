@@ -68,7 +68,7 @@ Future<void> _mountProfile(WidgetTester tester, _HistoryApi api) async {
         badgesProvider.overrideWith((ref) async => []),
         apiClientProvider.overrideWithValue(api),
       ],
-      child: const MaterialApp(home: ProfilePage()),
+      child: const MaterialApp(home: RecentScansPage()),
     ),
   );
   await tester.pumpAndSettle();

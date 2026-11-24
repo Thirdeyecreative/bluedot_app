@@ -105,6 +105,8 @@ final routerProvider = Provider<GoRouter>((ref) {
       ),
       GoRoute(path: '/scanner', builder: (__, _) => const GreenLensPage()),
       GoRoute(path: '/map', builder: (__, _) => const EcoGardenPage()),
+      GoRoute(path: '/recent-scans', builder: (__, _) => const RecentScansPage()),
+      GoRoute(path: '/about-bluedot', builder: (__, _) => const AboutBlueDotPage()),
       GoRoute(path: '/notifications', builder: (__, _) => const NotificationsPage()),
 
       StatefulShellRoute(

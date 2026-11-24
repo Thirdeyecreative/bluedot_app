@@ -241,13 +241,6 @@ class SettingsPage extends ConsumerWidget {
             onTap: () => context.push('/profile/settings/edit'),
           ),
           _SettingsTile(
-            icon: Icons.workspace_premium_outlined,
-            label: 'My Certificates',
-            subtitle: 'Volunteer contribution certificates',
-            trailing: const Icon(Icons.chevron_right_rounded, color: AppColors.textLight),
-            onTap: () => context.push('/profile/settings/certificates'),
-          ),
-          _SettingsTile(
             icon: Icons.lock_outline_rounded,
             label: 'PAN Management',
             subtitle: 'Securely update your PAN for 80G receipts',
@@ -346,51 +339,8 @@ class SettingsPage extends ConsumerWidget {
             ),
           ),
 
-          // ── 80G Tax Vault ────────────────────────────────────────────
-          _SectionHeader('Tax & Compliance'),
-          _SettingsTile(
-            icon: Icons.receipt_long_rounded,
-            label: '80G Tax Vault',
-            subtitle: 'View donations & download tax receipts',
-            iconColor: AppColors.forestGreen,
-            trailing: Container(
-              padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 6),
-              decoration: BoxDecoration(
-                color: AppColors.forestGreen.withAlpha(20),
-                borderRadius: BorderRadius.circular(20),
-              ),
-              child: const Text('View', style: TextStyle(color: AppColors.forestGreen, fontWeight: FontWeight.w600, fontSize: 12)),
-            ),
-            onTap: () => context.push('/profile/settings/tax-vault'),
-          ),
 
           // ── Legal ─────────────────────────────────────────────────────
-          _SectionHeader('Legal'),
-          _SettingsTile(
-            icon: Icons.description_outlined,
-            label: 'Terms & Conditions',
-            trailing: const Icon(Icons.chevron_right_rounded, color: AppColors.textLight),
-            onTap: () => context.push('/profile/settings/terms'),
-          ),
-          _SettingsTile(
-            icon: Icons.privacy_tip_outlined,
-            label: 'Privacy Policy',
-            trailing: const Icon(Icons.chevron_right_rounded, color: AppColors.textLight),
-            onTap: () => context.push('/profile/settings/privacy'),
-          ),
-          _SettingsTile(
-            icon: Icons.article_outlined,
-            label: '80G Exemption Details',
-            trailing: const Icon(Icons.open_in_new_rounded, size: 16, color: AppColors.textLight),
-            onTap: () => _openUrl('https://bluedot.org/80g'),
-          ),
-          _SettingsTile(
-            icon: Icons.download_outlined,
-            label: 'Export My Data (DPDP Act)',
-            trailing: const Icon(Icons.chevron_right_rounded, color: AppColors.textLight),
-            onTap: () => _handleExportData(context, ref),
-          ),
-
           // ── Server & Environment ──────────────────────────────────────
           _SectionHeader('Server & Backend'),
           _SettingsTile(
@@ -453,11 +403,6 @@ class SettingsPage extends ConsumerWidget {
     );
   }
 
-  void _openUrl(String url) async {
-    final uri = Uri.parse(url);
-    if (await canLaunchUrl(uri)) await launchUrl(uri, mode: LaunchMode.externalApplication);
-  }
-
   void _confirmSignOut(BuildContext context, WidgetRef ref) {
     showDialog(
       context: context,
@@ -473,51 +418,6 @@ class SettingsPage extends ConsumerWidget {
               if (context.mounted) context.go('/login');
             },
             child: const Text('Sign Out', style: TextStyle(color: AppColors.errorRed)),
-          ),
-        ],
-      ),
-    );
-  }
-
-  void _handleExportData(BuildContext context, WidgetRef ref) {
-    showDialog(
-      context: context,
-      builder: (_) => AlertDialog(
-        title: const Text('Export My Data (DPDP Act)', style: TextStyle(fontWeight: FontWeight.w700, color: AppColors.primaryBlue)),
-        content: const Text(
-          'Under the Digital Personal Data Protection Act 2023, you have the right to obtain a copy of all personal data held by BlueDot, including your profile, donations history, 80G tax receipt links, and tree planting contributions.\n\nWould you like to initiate this export?',
-        ),
-        actions: [
-          TextButton(onPressed: () => Navigator.pop(context), child: const Text('Cancel')),
-          ElevatedButton(
-            onPressed: () async {
-              Navigator.pop(context);
-              if (!context.mounted) return;
-              ScaffoldMessenger.of(context).showSnackBar(
-                const SnackBar(content: Text('Submitting export request...'), duration: Duration(seconds: 1)),
-              );
-
-              final success = await ref.read(legalServiceProvider).requestDataExport();
-              if (context.mounted) {
-                if (success) {
-                  ScaffoldMessenger.of(context).showSnackBar(
-                    const SnackBar(
-                      content: Text('Data export request submitted! Your records are being compiled.'),
-                      backgroundColor: AppColors.successGreen,
-                    ),
-                  );
-                } else {
-                  ScaffoldMessenger.of(context).showSnackBar(
-                    const SnackBar(
-                      content: Text('Failed to initiate export. Please try again later.'),
-                      backgroundColor: AppColors.errorRed,
-                    ),
-                  );
-                }
-              }
-            },
-            style: ElevatedButton.styleFrom(backgroundColor: AppColors.primaryBlue),
-            child: const Text('Export Data'),
           ),
         ],
       ),
@@ -1070,3 +970,139 @@ class _SettingsTile extends StatelessWidget {
         ),
       );
 }
+
+class ProfileAboutSection extends StatelessWidget {
+  const ProfileAboutSection({super.key});
+
+  @override
+  Widget build(BuildContext context) => Column(
+    crossAxisAlignment: CrossAxisAlignment.start,
+    children: [
+      _SectionHeader('About'),
+      _SettingsTile(
+        icon: Icons.info_outline,
+        label: 'About BlueDot',
+        trailing: const Icon(Icons.chevron_right_rounded, color: AppColors.textLight),
+        onTap: () => context.push('/about-bluedot'),
+      ),
+    ],
+  );
+}
+
+class ProfileTaxSection extends StatelessWidget {
+  const ProfileTaxSection({super.key});
+
+  @override
+  Widget build(BuildContext context) => Column(
+    crossAxisAlignment: CrossAxisAlignment.start,
+    children: [
+      _SectionHeader('Tax & Compliance'),
+      _SettingsTile(
+        icon: Icons.receipt_long_rounded,
+        label: '80G Tax Vault',
+        subtitle: 'View donations & download tax receipts',
+        iconColor: AppColors.forestGreen,
+        trailing: Container(
+          padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 6),
+          decoration: BoxDecoration(
+            color: AppColors.forestGreen.withAlpha(20),
+            borderRadius: BorderRadius.circular(20),
+          ),
+          child: const Text('View', style: TextStyle(color: AppColors.forestGreen, fontWeight: FontWeight.w600, fontSize: 12)),
+        ),
+        onTap: () => context.push('/profile/settings/tax-vault'),
+      ),
+      _SettingsTile(
+        icon: Icons.workspace_premium_outlined,
+        label: 'My Certificates',
+        subtitle: 'Volunteer contribution certificates',
+        trailing: const Icon(Icons.chevron_right_rounded, color: AppColors.textLight),
+        onTap: () => context.push('/profile/settings/certificates'),
+      ),
+    ],
+  );
+}
+
+class ProfileLegalSection extends ConsumerWidget {
+  const ProfileLegalSection({super.key});
+  @override
+  Widget build(BuildContext context, WidgetRef ref) => Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+          _SectionHeader('Legal'),
+          _SettingsTile(
+            icon: Icons.description_outlined,
+            label: 'Terms & Conditions',
+            trailing: const Icon(Icons.chevron_right_rounded, color: AppColors.textLight),
+            onTap: () => context.push('/profile/settings/terms'),
+          ),
+          _SettingsTile(
+            icon: Icons.privacy_tip_outlined,
+            label: 'Privacy Policy',
+            trailing: const Icon(Icons.chevron_right_rounded, color: AppColors.textLight),
+            onTap: () => context.push('/profile/settings/privacy'),
+          ),
+          _SettingsTile(
+            icon: Icons.article_outlined,
+            label: '80G Exemption Details',
+            trailing: const Icon(Icons.open_in_new_rounded, size: 16, color: AppColors.textLight),
+            onTap: () => _openUrl('https://bluedot.org/80g'),
+          ),
+          _SettingsTile(
+            icon: Icons.download_outlined,
+            label: 'Export My Data (DPDP Act)',
+            trailing: const Icon(Icons.chevron_right_rounded, color: AppColors.textLight),
+            onTap: () => _handleExportData(context, ref),
+          ),
+
+  ]);
+  void _openUrl(String url) async {
+    final uri = Uri.parse(url);
+    if (await canLaunchUrl(uri)) await launchUrl(uri, mode: LaunchMode.externalApplication);
+  }
+
+  void _handleExportData(BuildContext context, WidgetRef ref) {
+    showDialog(
+      context: context,
+      builder: (_) => AlertDialog(
+        title: const Text('Export My Data (DPDP Act)', style: TextStyle(fontWeight: FontWeight.w700, color: AppColors.primaryBlue)),
+        content: const Text(
+          'Under the Digital Personal Data Protection Act 2023, you have the right to obtain a copy of all personal data held by BlueDot, including your profile, donations history, 80G tax receipt links, and tree planting contributions.\n\nWould you like to initiate this export?',
+        ),
+        actions: [
+          TextButton(onPressed: () => Navigator.pop(context), child: const Text('Cancel')),
+          ElevatedButton(
+            onPressed: () async {
+              Navigator.pop(context);
+              if (!context.mounted) return;
+              ScaffoldMessenger.of(context).showSnackBar(
+                const SnackBar(content: Text('Submitting export request...'), duration: Duration(seconds: 1)),
+              );
+
+              final success = await ref.read(legalServiceProvider).requestDataExport();
+              if (context.mounted) {
+                if (success) {
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    const SnackBar(
+                      content: Text('Data export request submitted! Your records are being compiled.'),
+                      backgroundColor: AppColors.successGreen,
+                    ),
+                  );
+                } else {
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    const SnackBar(
+                      content: Text('Failed to initiate export. Please try again later.'),
+                      backgroundColor: AppColors.errorRed,
+                    ),
+                  );
+                }
+              }
+            },
+            style: ElevatedButton.styleFrom(backgroundColor: AppColors.primaryBlue),
+            child: const Text('Export Data'),
+          ),
+        ],
+      ),
+    );
+  }
+
+}
+
