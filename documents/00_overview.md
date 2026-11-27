@@ -44,7 +44,7 @@ Every feature in the application has been verified against the live source code 
   - Branch 3: `/profile` (with `/profile/badges`, `/profile/leaderboard`, `/profile/certificates`, `/profile/settings`)
 
 ### API Configuration (`ApiConfig`)
-- Release builds default to production. Other builds default to local development.
+- All builds default to the production Cloud Run server.
 - Use `--dart-define=ENV=production|staging|local` to select an environment at build time, or `--dart-define=BASE_URL=...` to set a specific endpoint.
 - Local Android builds use `127.0.0.1:8000` through `adb reverse tcp:8000 tcp:8000`. Local iOS builds use the developer machine's Wi-Fi address. Use `--dart-define=API_HOST=...` to override the local host.
 - The connectivity monitor can use the configured backend's `/health` endpoint as a fallback when DNS resolution fails.

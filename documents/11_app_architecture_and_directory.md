@@ -67,7 +67,7 @@ Every folder inside `features/` adheres to a strict separation of concerns:
   - Public exemptions for `/splash`, `/terms`, `/privacy`, and `/no-internet`.
 
 ### 3. Build-Time Environment Selection (`ApiConfig`)
-- Set `--dart-define=ENV=local|staging|production` when building the app. Release builds default to production and other builds default to local.
+- Set `--dart-define=ENV=local|staging|production` when building the app. All builds default to the production Cloud Run server.
 - For local development, desktop/web builds use `127.0.0.1`. Android uses `127.0.0.1` through `adb reverse tcp:8000 tcp:8000` and iOS uses the configured Wi-Fi host. Override the host with `--dart-define=API_HOST=...`, or the entire endpoint with `--dart-define=BASE_URL=...`.
 - The connectivity service can fall back to the configured endpoint's `/health` route.
 

@@ -1,4 +1,3 @@
-import 'dart:convert';
 import 'package:flutter/foundation.dart';
 import 'package:http/http.dart' as http;
 import 'package:shared_preferences/shared_preferences.dart';
@@ -6,12 +5,12 @@ import 'package:shared_preferences/shared_preferences.dart';
 /// Backend environment selection.
 ///
 /// Choose the environment at build time or override at runtime via ServerSettingsModal.
-/// Release builds default to production unless a runtime override exists.
+/// All builds default to the production Cloud Run server.
 ///
-///   flutter run                                    -> local (auto-detects local backend)
+///   flutter run                                    -> production Cloud Run backend
 ///   flutter run --dart-define=ENV=local            -> local backend
 ///   flutter run --dart-define=ENV=staging          -> staging
-///   flutter run --dart-define=API_HOST=192.168.1.11 -> explicit LAN IP
+///   flutter run --dart-define=ENV=local --dart-define=API_HOST=192.168.1.11 -> explicit LAN IP
 enum AppEnv { local, staging, production }
 
 class ServerHealthResult {
@@ -34,7 +33,7 @@ class ApiConfig {
   // Compile-time flag injected via --dart-define=ENV=...
   static const String _envName = String.fromEnvironment(
     'ENV',
-    defaultValue: kReleaseMode ? 'production' : 'local',
+    defaultValue: 'production',
   );
 
   static const String _prefCustomBaseUrlKey = 'bluedot_custom_base_url';
@@ -48,28 +47,14 @@ class ApiConfig {
   static Future<void> init() async {
     try {
       final prefs = await SharedPreferences.getInstance();
-      _runtimeBaseUrl = prefs.getString(_prefCustomBaseUrlKey);
-
-      // On physical mobile devices (Android/iOS), 127.0.0.1 or localhost points
-      // to the mobile device itself and is unreachable without active USB adb reverse.
-      // Automatically migrate any stale loopback base URL to the host PC's Wi-Fi LAN IP
-      // so the app connects immediately over the local network without user intervention.
-      if (!kIsWeb &&
-          (defaultTargetPlatform == TargetPlatform.android ||
-              defaultTargetPlatform == TargetPlatform.iOS)) {
-        if (_runtimeBaseUrl != null &&
-            (_runtimeBaseUrl!.contains('127.0.0.1') ||
-                _runtimeBaseUrl!.contains('localhost'))) {
-          _runtimeBaseUrl = _runtimeBaseUrl!
-              .replaceAll('127.0.0.1', currentLanIp)
-              .replaceAll('localhost', currentLanIp);
-          await prefs.setString(_prefCustomBaseUrlKey, _runtimeBaseUrl!);
-          debugPrint(
-            '[ApiConfig] Migrated loopback base URL to LAN IP: $_runtimeBaseUrl',
-          );
-        }
+      // Older builds could persist a LAN address even after a production release.
+      const migratedKey = 'bluedot_cloud_default_migrated';
+      if (prefs.getBool(migratedKey) != true) {
+        await prefs.remove(_prefCustomBaseUrlKey);
+        await prefs.remove(_prefEnvKey);
+        await prefs.setBool(migratedKey, true);
       }
-
+      _runtimeBaseUrl = prefs.getString(_prefCustomBaseUrlKey);
       final savedEnv = prefs.getString(_prefEnvKey);
       if (savedEnv != null) {
         _runtimeEnv = switch (savedEnv) {
@@ -119,9 +104,9 @@ class ApiConfig {
   static AppEnv get env {
     if (_runtimeEnv != null) return _runtimeEnv!;
     return switch (_envName) {
-      'production' => AppEnv.production,
+      'local' => AppEnv.local,
       'staging' => AppEnv.staging,
-      _ => AppEnv.local,
+      _ => AppEnv.production,
     };
   }
 
