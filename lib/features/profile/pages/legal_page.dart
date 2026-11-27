@@ -273,13 +273,13 @@ class TermsPage extends StatelessWidget {
         lastUpdated: '01 June 2026',
         initialVersion: '1.0',
         intro:
-            'Welcome to BlueDot. By creating an account and using our app, you agree to these Terms & '
+            'Welcome to One blue. By creating an account and using our app, you agree to these Terms & '
             'Conditions. Please read them carefully — they govern your participation in tree-tagging, '
             'volunteer drives, donations, and the rewards programme.',
         sections: [
           LegalSection(
             'Eligibility & Account',
-            'You must be at least 13 years old to use BlueDot. You are responsible for keeping your '
+            'You must be at least 13 years old to use One blue. You are responsible for keeping your '
                 'account and registered phone number secure. You agree to provide accurate information '
                 'and to keep it up to date in your profile.',
           ),
@@ -325,7 +325,7 @@ class TermsPage extends StatelessWidget {
           ),
           LegalSection(
             'Changes to These Terms',
-            'We may update these Terms from time to time. Continued use of BlueDot after changes take '
+            'We may update these Terms from time to time. Continued use of One blue after changes take '
                 'effect constitutes acceptance of the revised Terms.',
           ),
           LegalSection(

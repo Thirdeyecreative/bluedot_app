@@ -73,8 +73,8 @@ class _AppUpdateSheetState extends State<AppUpdateSheet> {
             const SizedBox(height: 8),
             Text(
               version == null
-                  ? 'A new version of BlueDot is ready to install.'
-                  : 'BlueDot $version is ready to install.',
+                  ? 'A new version of One blue is ready to install.'
+                  : 'One blue $version is ready to install.',
               textAlign: TextAlign.center,
               style: theme.textTheme.bodyMedium,
             ),

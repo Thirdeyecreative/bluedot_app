@@ -66,7 +66,7 @@ class _HomePageState extends ConsumerState<HomePage> {
             if (data.containsKey('event_id') || data.containsKey('campaign_id')) {
               ref.invalidate(homeFeedProvider);
             }
-            final title = data['title']?.toString() ?? 'BlueDot Notification';
+            final title = data['title']?.toString() ?? 'One blue Notification';
             final body = data['body']?.toString() ?? '';
             ScaffoldMessenger.of(context).showSnackBar(
               SnackBar(
@@ -224,7 +224,7 @@ class _HomePageState extends ConsumerState<HomePage> {
                           mainAxisSize: MainAxisSize.min,
                           children: const [
                             Text(
-                              'BlueDot',
+                              'One blue',
                               style: TextStyle(
                                 color: Colors.white,
                                 fontSize: 18.5,
@@ -2296,7 +2296,7 @@ class _BlogCard extends StatelessWidget {
                         const SizedBox(width: 4),
                         Expanded(
                           child: Text(
-                            blog.author ?? 'BlueDot',
+                            blog.author ?? 'One blue',
                             maxLines: 1,
                             overflow: TextOverflow.ellipsis,
                             style: const TextStyle(

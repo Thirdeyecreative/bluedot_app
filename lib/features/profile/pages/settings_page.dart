@@ -835,7 +835,7 @@ class ProfileAboutSection extends StatelessWidget {
       _SectionHeader('About'),
       _SettingsTile(
         icon: Icons.info_outline,
-        label: 'About BlueDot',
+        label: 'About One blue',
         trailing: const Icon(Icons.chevron_right_rounded, color: AppColors.textLight),
         onTap: () => context.push('/about-bluedot'),
       ),

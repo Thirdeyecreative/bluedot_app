@@ -1,6 +1,6 @@
 {
-    "name": "bluedot_app",
-    "short_name": "bluedot_app",
+    "name": "One blue",
+    "short_name": "One blue",
     "start_url": ".",
     "display": "standalone",
     "background_color": "#0175C2",

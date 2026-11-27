@@ -476,7 +476,7 @@ class _LeaderList extends StatelessWidget {
               ),
               const SizedBox(height: 12),
               const Text(
-                'Not enough other Rangers yet.\nShare BlueDot to grow your community!',
+                'Not enough other Rangers yet.\nShare One blue to grow your community!',
                 textAlign: TextAlign.center,
                 style: TextStyle(
                   color: AppColors.textMedium,

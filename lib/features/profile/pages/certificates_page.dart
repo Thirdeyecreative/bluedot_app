@@ -383,7 +383,7 @@ class _CertificateArtwork extends StatelessWidget {
               child: const Icon(Icons.eco_rounded, color: AppColors.primaryYellow, size: 30),
             ),
             const SizedBox(height: 12),
-            const Text('BlueDot', style: TextStyle(fontWeight: FontWeight.w800, fontSize: 18, color: AppColors.primaryBlue, letterSpacing: 0.5)),
+            const Text('One blue', style: TextStyle(fontWeight: FontWeight.w800, fontSize: 18, color: AppColors.primaryBlue, letterSpacing: 0.5)),
             const Text('CERTIFICATE OF CONTRIBUTION', style: TextStyle(fontSize: 10, letterSpacing: 2, color: AppColors.textMedium, fontWeight: FontWeight.w600)),
             const SizedBox(height: 20),
 

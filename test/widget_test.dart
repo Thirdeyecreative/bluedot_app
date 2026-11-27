@@ -11,7 +11,7 @@ void main() {
         home: const Scaffold(
           body: Center(
             child: Text(
-              'BlueDot',
+              'One blue',
               style: TextStyle(color: AppColors.primaryBlue),
             ),
           ),
@@ -19,7 +19,7 @@ void main() {
       ),
     );
 
-    expect(find.text('BlueDot'), findsOneWidget);
+    expect(find.text('One blue'), findsOneWidget);
     expect(find.byType(Scaffold), findsOneWidget);
   });
 }

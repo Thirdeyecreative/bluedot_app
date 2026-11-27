@@ -30,7 +30,7 @@ Future<GoRouter> _mountApp(
     routes: [
       GoRoute(
         path: '/splash',
-        builder: (_, _) => const Scaffold(body: Text('Starting BlueDot')),
+        builder: (_, _) => const Scaffold(body: Text('Starting One blue')),
       ),
       GoRoute(path: '/settings', builder: (_, _) => const SettingsPage()),
     ],
@@ -144,7 +144,7 @@ void main() {
       tester.binding.handleAppLifecycleStateChanged(AppLifecycleState.inactive);
       tester.binding.handleAppLifecycleStateChanged(AppLifecycleState.resumed);
       await tester.pumpAndSettle();
-      expect(find.text('BlueDot 1.1.0 is ready to install.'), findsOneWidget);
+      expect(find.text('One blue 1.1.0 is ready to install.'), findsOneWidget);
       await tester.tap(find.text('Update now'));
       await tester.pumpAndSettle();
       expect(presentedAppStoreId, '12345');

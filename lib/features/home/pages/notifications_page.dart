@@ -347,7 +347,7 @@ class _EmptyNotifications extends StatelessWidget {
       'donations' =>
         'Your 80G tax receipt alerts and campaign milestones will appear here.',
       'announcements' =>
-        'Community updates and announcements from BlueDot will appear here.',
+        'Community updates and announcements from One blue will appear here.',
       _ =>
         'Drive reminders, badge unlocks, donation alerts, and campaign updates will appear here.',
     };

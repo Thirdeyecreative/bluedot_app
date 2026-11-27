@@ -811,7 +811,7 @@ class AboutBlueDotPage extends StatelessWidget {
       textTheme: Theme.of(context).textTheme.apply(bodyColor: cream, displayColor: cream),
     );
     return Theme(data: theme, child: Builder(builder: (context) => Scaffold(
-    appBar: AppBar(title: const Text('About BlueDot')),
+    appBar: AppBar(title: const Text('About One blue')),
     body: ListView(padding: const EdgeInsets.all(24), children: [
       Text('Our story so far', textAlign: TextAlign.center, style: theme.textTheme.headlineMedium?.copyWith(fontWeight: FontWeight.w800)),
       const SizedBox(height: 6),
@@ -821,7 +821,7 @@ class AboutBlueDotPage extends StatelessWidget {
         'assets/images/profile/about_bluedot.webp', height: 224, fit: BoxFit.cover, semanticLabel: 'BlueDot emblem',
       )),
       const SizedBox(height: 24),
-      Text('About BlueDot', style: theme.textTheme.titleLarge),
+      Text('About One blue', style: theme.textTheme.titleLarge),
       const SizedBox(height: 12),
       const Text('BlueDot is a Bangalore-based nonprofit working to restore rivers, lakes, oceans and wetlands and protect the wildlife that depends on them. Environmentalists, scientists, educators and local residents came together out of concern for the effects of climate change.'),
       const SizedBox(height: 8),
