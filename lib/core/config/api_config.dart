@@ -173,9 +173,12 @@ class ApiConfig {
     };
   }
 
+  static DateTime? _lastWarmUpAt;
+
   /// Actively checks server connectivity to the /health endpoint with rich diagnostics.
   static Future<ServerHealthResult> checkServerHealthDetails([
     String? targetUrl,
+    Duration timeout = const Duration(seconds: 4),
   ]) async {
     final base = (targetUrl != null && targetUrl.trim().isNotEmpty)
         ? targetUrl.trim()
@@ -186,7 +189,7 @@ class ApiConfig {
     final uri = Uri.parse('$cleanBase/health');
     final sw = Stopwatch()..start();
     try {
-      final response = await http.get(uri).timeout(const Duration(seconds: 4));
+      final response = await http.get(uri).timeout(timeout);
       sw.stop();
       if (response.statusCode >= 200 && response.statusCode < 300) {
         return ServerHealthResult(
@@ -218,6 +221,26 @@ class ApiConfig {
   static Future<bool> checkServerHealth([String? targetUrl]) async {
     final result = await checkServerHealthDetails(targetUrl);
     return result.isHealthy;
+  }
+
+  /// Silently pings /health in the background to wake a cold-started Cloud Run instance.
+  /// Uses a 15s timeout so it stays open through an ~11s cold start without blocking the UI.
+  static Future<void> warmUpServer() async {
+    final now = DateTime.now();
+    if (_lastWarmUpAt != null &&
+        now.difference(_lastWarmUpAt!) < const Duration(minutes: 2)) {
+      return;
+    }
+    _lastWarmUpAt = now;
+    try {
+      final result = await checkServerHealthDetails(
+        null,
+        const Duration(seconds: 15),
+      );
+      debugPrint('[ApiConfig] Server warm-up: ${result.message}');
+    } catch (e) {
+      debugPrint('[ApiConfig] Server warm-up error: $e');
+    }
   }
 
   static const String _v1 = '/api/v1';

@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'dart:ui';
 import 'package:firebase_core/firebase_core.dart';
 import 'package:firebase_crashlytics/firebase_crashlytics.dart';
@@ -30,6 +31,8 @@ Future<void> main() async {
 
   MediaKit.ensureInitialized();
   await ApiConfig.init();
+  // Fire-and-forget /health ping so Cloud Run starts waking up immediately on app launch.
+  unawaited(ApiConfig.warmUpServer());
 
   await Supabase.initialize(
     url: 'https://luklinptoewincftfpse.supabase.co',
