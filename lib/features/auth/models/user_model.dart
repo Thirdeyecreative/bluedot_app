@@ -13,6 +13,8 @@ class AppUser {
   final int treesTagged;
   final String? avatarUrl;
   final String? panNumber;
+  final bool panVerified;
+  final bool panVerificationPending;
   final Map<String, dynamic>? preferences;
 
   const AppUser({
@@ -30,6 +32,8 @@ class AppUser {
     this.treesTagged = 0,
     this.avatarUrl,
     this.panNumber,
+    this.panVerified = false,
+    this.panVerificationPending = false,
     this.preferences,
   }) : _levelTitle = levelTitle;
 
@@ -65,6 +69,8 @@ class AppUser {
       totalDonated: (json['total_donated'] as num?)?.toDouble() ?? 0,
       treesTagged: json['trees_tagged'] as int? ?? 0,
       avatarUrl: _fixUiAvatars(json['avatar_url'] as String?),
+      panVerified: json['pan_verified'] == true,
+      panVerificationPending: json['pan_verification_pending'] == true,
       panNumber: _nonEmpty(json['pan_number'] as String?),
       preferences: json['preferences'] as Map<String, dynamic>?,
     );
@@ -111,6 +117,8 @@ class AppUser {
         treesTagged: treesTagged ?? this.treesTagged,
         avatarUrl: avatarUrl ?? this.avatarUrl,
         panNumber: panNumber ?? this.panNumber,
+        panVerified: panVerified,
+        panVerificationPending: panVerificationPending,
         preferences: preferences ?? this.preferences,
       );
 }

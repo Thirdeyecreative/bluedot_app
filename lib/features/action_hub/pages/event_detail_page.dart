@@ -1,3 +1,4 @@
+import '../widgets/checkout_pan_field.dart';
 import 'package:cached_network_image/cached_network_image.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_animate/flutter_animate.dart';
@@ -640,6 +641,7 @@ class _DonationTileState extends State<_DonationTile> {
 
   Future<void> _donate(BuildContext context, WidgetRef ref, int amount) async {
     if (_loading) return;
+    if (ref.read(currentUserProvider)?.panVerified != true) return;
     setState(() => _loading = true);
     try {
       final repo = ref.read(actionRepositoryProvider);
@@ -659,6 +661,7 @@ class _DonationTileState extends State<_DonationTile> {
         throw 'Failed to initiate donation order.';
       }
 
+      if (!mounted) return;
       // Step 2: Launch Cashfree native checkout
       final cfService = CashfreePaymentService();
       final cfResult = await cfService.startPayment(
@@ -811,6 +814,8 @@ class _DonationTileState extends State<_DonationTile> {
                 style: TextStyle(color: AppColors.textMedium, fontSize: 12),
               ),
               const SizedBox(height: 14),
+              const CheckoutPanField(),
+              const SizedBox(height: 12),
               policy.when(
                 loading: () => const LinearProgressIndicator(),
                 error: (_, _) => TextButton(
@@ -824,7 +829,7 @@ class _DonationTileState extends State<_DonationTile> {
                 child: Padding(
                   padding: const EdgeInsets.only(right: 6),
                   child: OutlinedButton(
-                    onPressed: _loading ? null : () => _donate(context, ref, amt),
+                    onPressed: _loading || ref.watch(currentUserProvider)?.panVerified != true ? null : () => _donate(context, ref, amt),
                     style: OutlinedButton.styleFrom(
                                 side: const BorderSide(
                                   color: AppColors.forestGreen,

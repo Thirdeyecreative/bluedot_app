@@ -81,7 +81,10 @@ class ActionRepository {
     String? donorName,
     String? occasionText,
   }) async {
-    final body = <String, dynamic>{'amount': amount};
+    final body = <String, dynamic>{
+      'amount': amount,
+      'donation_type': campaignId != null ? 'campaign' : eventId != null ? 'plantation_drive' : 'general',
+    };
     if (campaignId != null && campaignId.isNotEmpty) body['campaign_id'] = campaignId;
     if (eventId != null && eventId.isNotEmpty) body['event_id'] = eventId;
     if (pan != null && pan.isNotEmpty) body['pan_number'] = pan;

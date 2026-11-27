@@ -6,6 +6,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:bluedot_app/features/action_hub/pages/action_hub_page.dart';
 import 'package:bluedot_app/features/home/models/campaign_model.dart';
 import 'package:bluedot_app/features/auth/models/user_model.dart';
+import 'package:bluedot_app/features/auth/pages/complete_profile_page.dart';
 import 'package:bluedot_app/features/auth/providers/auth_provider.dart';
 import 'package:bluedot_app/features/profile/pages/profile_page.dart';
 
@@ -18,6 +19,16 @@ void main() {
       currentAmountRaised: 120000,
       description: 'Restoring critical mangrove habitat.',
     );
+
+    testWidgets('a new user can complete the profile form with name and email', (tester) async {
+      await tester.pumpWidget(const ProviderScope(child: MaterialApp(home: CompleteProfilePage())));
+      await tester.pumpAndSettle();
+      final fields = find.byType(TextFormField);
+      expect(fields, findsNWidgets(2));
+      await tester.enterText(fields.at(0), 'Sample User');
+      await tester.enterText(fields.at(1), 'sample@example.org');
+      expect(tester.state<FormState>(find.byType(Form)).validate(), isTrue);
+    });
 
     test('AppUser model uses server level boundaries for progress', () {
       final json = {
@@ -42,7 +53,46 @@ void main() {
       expect(user.panNumber, 'ABCDE1234F');
     });
 
-    testWidgets('DonationSheet uses server amounts and pre-fills registered PAN', (tester) async {
+    testWidgets('Organisation checkout opens above bottom navigation', (tester) async {
+      await tester.pumpWidget(ProviderScope(
+        overrides: [
+          donationPolicyProvider.overrideWith((_) async => const DonationPolicy(
+            minAmount: 10,
+            maxAmount: 500000,
+            campaignPresets: [750],
+            eventPresets: [],
+            receiptIssuanceEnabled: false,
+          )),
+        ],
+        child: MaterialApp(
+          home: Scaffold(
+            extendBody: true,
+            body: Navigator(
+              onGenerateRoute: (_) => MaterialPageRoute<void>(
+                builder: (_) => const Scaffold(body: GeneralDonationButton()),
+              ),
+            ),
+            bottomNavigationBar: const SizedBox(
+              height: 80,
+              child: ColoredBox(color: Colors.white),
+            ),
+          ),
+        ),
+      ));
+      await tester.tap(find.text('Support our Cause'));
+      await tester.pumpAndSettle();
+      expect(find.text('BlueDot organisation'), findsOneWidget);
+      expect(find.text('Custom'), findsOneWidget);
+      expect(find.text('₹750'), findsOneWidget);
+      final sheetContext = tester.element(find.byType(DonationSheet));
+      expect(Navigator.of(sheetContext), same(Navigator.of(sheetContext, rootNavigator: true)));
+      expect(find.text('Donate ₹750').hitTestable(), findsOneWidget);
+      expect(find.text('Verify with DigiLocker'), findsOneWidget);
+      final payButton = tester.widget<ElevatedButton>(find.widgetWithText(ElevatedButton, 'Donate ₹750'));
+      expect(payButton.onPressed, isNull);
+    });
+
+    testWidgets('DonationSheet uses server amounts and locks the saved PAN', (tester) async {
       final user = AppUser.fromJson({
         'id': 'user-123',
         'phone': '+919876543210',
@@ -50,6 +100,7 @@ void main() {
         'total_impact_points': 500,
         'total_donated': 800.0,
         'pan_number': 'ABCDE1234F',
+        'pan_verified': true,
       });
 
       await tester.pumpWidget(
@@ -83,12 +134,9 @@ void main() {
       expect(find.text('₹1250'), findsOneWidget);
       expect(find.text('Custom'), findsOneWidget);
 
-      // Since user has PAN registered, PAN field should be prefilled
-      expect(
-        find.byWidgetPredicate((w) => w is TextField && w.controller?.text == 'ABCDE1234F'),
-        findsOneWidget,
-      );
-      expect(find.text('Proceed to Pay ₹750'), findsOneWidget);
+      expect(find.text('Verified PAN ending in 234F'), findsOneWidget);
+      expect(find.text('PAN Number'), findsNothing);
+      expect(find.text('Donate ₹750'), findsOneWidget);
     });
 
     testWidgets('ProfilePage displays formatted donation (₹800 instead of ₹0.8k), XP, and 80G Vault link', (tester) async {

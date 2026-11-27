@@ -1,5 +1,4 @@
 import 'package:flutter/material.dart';
-import 'package:flutter/services.dart';
 import 'package:flutter_animate/flutter_animate.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../core/constants/app_colors.dart';
@@ -16,7 +15,6 @@ class _CompleteProfilePageState extends ConsumerState<CompleteProfilePage> {
   final _formKey = GlobalKey<FormState>();
   final _nameController = TextEditingController();
   final _emailController = TextEditingController();
-  final _panController = TextEditingController();
 
   bool _isSubmitting = false;
 
@@ -24,7 +22,6 @@ class _CompleteProfilePageState extends ConsumerState<CompleteProfilePage> {
   void dispose() {
     _nameController.dispose();
     _emailController.dispose();
-    _panController.dispose();
     super.dispose();
   }
 
@@ -38,7 +35,6 @@ class _CompleteProfilePageState extends ConsumerState<CompleteProfilePage> {
       await ref.read(authNotifierProvider.notifier).updateProfile(
         fullName: _nameController.text.trim(),
         email: _emailController.text.trim(),
-        panNumber: _panController.text.trim().toUpperCase(),
         city: '',
       );
 
@@ -139,7 +135,7 @@ class _CompleteProfilePageState extends ConsumerState<CompleteProfilePage> {
                     TextFormField(
                       controller: _emailController,
                       keyboardType: TextInputType.emailAddress,
-                      textInputAction: TextInputAction.next,
+                      textInputAction: TextInputAction.done,
                       decoration: InputDecoration(
                         labelText: 'Email Address',
                         prefixIcon: const Icon(Icons.email_outlined),
@@ -159,38 +155,6 @@ class _CompleteProfilePageState extends ConsumerState<CompleteProfilePage> {
                         return null;
                       },
                     ).animate().fadeIn(delay: 400.ms),
-                    const SizedBox(height: 20),
-
-                    // PAN Number
-                    TextFormField(
-                      controller: _panController,
-                      textCapitalization: TextCapitalization.characters,
-                      textInputAction: TextInputAction.done,
-                      inputFormatters: [
-                        FilteringTextInputFormatter.allow(RegExp(r'[A-Za-z0-9]')),
-                        LengthLimitingTextInputFormatter(10),
-                      ],
-                      decoration: InputDecoration(
-                        labelText: 'PAN Number',
-                        prefixIcon: const Icon(Icons.credit_card_outlined),
-                        border: OutlineInputBorder(
-                          borderRadius: BorderRadius.circular(12),
-                        ),
-                        helperText: 'For offline donation verification & tax exemption.',
-                        helperMaxLines: 2,
-                      ),
-                      validator: (value) {
-                        if (value == null || value.trim().isEmpty) {
-                          return 'Please enter your PAN number';
-                        }
-                        // Indian PAN format: ABCDE1234F
-                        final panRegex = RegExp(r'^[A-Z]{5}[0-9]{4}[A-Z]$');
-                        if (!panRegex.hasMatch(value.trim().toUpperCase())) {
-                          return 'Enter a valid PAN (e.g. ABCDE1234F)';
-                        }
-                        return null;
-                      },
-                    ).animate().fadeIn(delay: 500.ms),
                     const SizedBox(height: 40),
 
                     // Submit Button

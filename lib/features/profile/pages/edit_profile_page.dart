@@ -104,12 +104,10 @@ class _EditProfilePageState extends ConsumerState<EditProfilePage> {
     setState(() => _saving = true);
     
     try {
-      final panNumber = ref.read(currentUserProvider)?.panNumber ?? '';
       await ref.read(authNotifierProvider.notifier).updateProfile(
         fullName: _nameCtrl.text.trim(),
         email: _emailCtrl.text.trim(),
         city: _cityCtrl.text.trim(),
-        panNumber: panNumber,
       );
       
       if (!mounted) return;

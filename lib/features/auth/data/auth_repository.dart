@@ -41,7 +41,6 @@ class AuthRepository {
   Future<AppUser> updateProfile({
     required String fullName,
     required String email,
-    required String panNumber,
     required String city,
   }) async {
     await _apiClient.put(
@@ -49,12 +48,23 @@ class AuthRepository {
       data: {
         'full_name': fullName,
         'email': email,
-        'pan_number': panNumber,
         'city': city,
       },
       requireAuth: true,
     );
     return await fetchCurrentUser();
+  }
+
+  Future<Map<String, dynamic>> startPanVerification({required bool replace}) async {
+    final result = await _apiClient.post(
+      '${ApiConfig.userProfile}/pan/verification/start?replace=$replace', requireAuth: true,
+    );
+    return Map<String, dynamic>.from(result as Map);
+  }
+
+  Future<bool> finishPanVerification() async {
+    final result = await _apiClient.post('${ApiConfig.userProfile}/pan/verification/finish', requireAuth: true);
+    return result['status'] == 'verified';
   }
 
   Future<AppUser> updatePreferences(Map<String, dynamic> preferences) async {

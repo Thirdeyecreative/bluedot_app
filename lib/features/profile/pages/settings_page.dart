@@ -11,7 +11,7 @@ import '../../../core/services/push_notification_service.dart';
 import '../../../core/config/api_config.dart';
 import '../../../core/widgets/server_settings_modal.dart';
 import '../../auth/providers/auth_provider.dart';
-import '../../auth/data/auth_repository.dart';
+import '../../action_hub/widgets/checkout_pan_field.dart';
 import '../../home/data/notifications_repository.dart';
 import '../../legal/services/legal_service.dart';
 import '../../action_hub/data/action_repository.dart';
@@ -463,162 +463,16 @@ class SettingsPage extends ConsumerWidget {
 
 // ── PAN Management Sheet ──────────────────────────────────────────────────────
 
-class _PanManagementSheet extends ConsumerStatefulWidget {
+class _PanManagementSheet extends StatelessWidget {
   const _PanManagementSheet();
 
   @override
-  ConsumerState<_PanManagementSheet> createState() => _PanManagementSheetState();
-}
-
-class _PanManagementSheetState extends ConsumerState<_PanManagementSheet> {
-  final _panCtrl = TextEditingController();
-  bool _obscure = true;
-  bool _saved = false;
-  bool _isLoading = false;
-
-  @override
-  void initState() {
-    super.initState();
-    final user = ref.read(currentUserProvider);
-    if (user?.panNumber != null) {
-      _panCtrl.text = user!.panNumber!;
-    }
-  }
-
-  @override
-  void dispose() {
-    _panCtrl.dispose();
-    super.dispose();
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    return Padding(
-      // Rises with the keyboard; the scroll view lets the content adjust
-      // instead of overflowing when space gets tight.
-      padding: EdgeInsets.only(bottom: MediaQuery.of(context).viewInsets.bottom),
-      child: SingleChildScrollView(
-        padding: EdgeInsets.fromLTRB(
-            24, 20, 24, 24 + MediaQuery.of(context).viewPadding.bottom),
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Center(child: Container(width: 40, height: 4, decoration: BoxDecoration(color: AppColors.borderMedium, borderRadius: BorderRadius.circular(2)))),
-            const SizedBox(height: 20),
-            Row(
-              children: [
-                const Icon(Icons.lock_outline_rounded, color: AppColors.primaryBlue, size: 20),
-                const SizedBox(width: 8),
-                Text('PAN Management', style: Theme.of(context).textTheme.titleLarge?.copyWith(fontWeight: FontWeight.w700)),
-              ],
-            ),
-            const SizedBox(height: 4),
-            const Text('Your PAN is encrypted and only used to generate 80G tax certificates.', style: TextStyle(color: AppColors.textMedium, fontSize: 13)),
-            const SizedBox(height: 20),
-            TextField(
-              controller: _panCtrl,
-              obscureText: _obscure,
-              textCapitalization: TextCapitalization.characters,
-              maxLength: 10,
-              decoration: InputDecoration(
-                labelText: 'PAN Number',
-                hintText: 'ABCDE1234F',
-                prefixIcon: const Icon(Icons.credit_card_rounded),
-                suffixIcon: IconButton(
-                  icon: Icon(_obscure ? Icons.visibility_off_outlined : Icons.visibility_outlined),
-                  onPressed: () => setState(() => _obscure = !_obscure),
-                ),
-                counterText: '',
-              ),
-            ),
-            const SizedBox(height: 16),
-            if (_saved)
-              Container(
-                padding: const EdgeInsets.all(12),
-                decoration: BoxDecoration(
-                  color: AppColors.forestGreen.withAlpha(20),
-                  borderRadius: BorderRadius.circular(10),
-                ),
-                child: const Row(
-                  children: [
-                    Icon(Icons.check_circle_rounded, color: AppColors.forestGreen, size: 18),
-                    SizedBox(width: 8),
-                    Text('PAN saved securely!', style: TextStyle(color: AppColors.forestGreen, fontWeight: FontWeight.w600)),
-                  ],
-                ),
-              ).animate().fadeIn().scaleXY(begin: 0.9, end: 1),
-            const SizedBox(height: 20),
-            SizedBox(
-              width: double.infinity,
-              height: 52,
-              child: ElevatedButton.icon(
-                onPressed: _isLoading
-                    ? null
-                    : () async {
-                        final pan = _panCtrl.text.trim();
-                        if (pan.isEmpty) {
-                          ScaffoldMessenger.of(context).showSnackBar(
-                            const SnackBar(content: Text('Please enter a PAN number'), backgroundColor: AppColors.errorRed),
-                          );
-                          return;
-                        }
-
-                        // Strict Indian PAN format regex check
-                        final panRegex = RegExp(r'^[A-Z]{5}[0-9]{4}[A-Z]$');
-                        if (!panRegex.hasMatch(pan.toUpperCase())) {
-                          ScaffoldMessenger.of(context).showSnackBar(
-                            const SnackBar(content: Text('Enter a valid PAN (e.g. ABCDE1234F)'), backgroundColor: AppColors.errorRed),
-                          );
-                          return;
-                        }
-
-                        setState(() => _isLoading = true);
-                        try {
-                          final user = ref.read(currentUserProvider);
-                          if (user == null) throw Exception("User not found");
-
-                          await ref.read(authNotifierProvider.notifier).updateProfile(
-                                fullName: user.fullName ?? '',
-                                email: user.email ?? '',
-                                panNumber: pan,
-                                city: user.city ?? '',
-                              );
-
-                          if (!mounted) return;
-                          setState(() {
-                            _isLoading = false;
-                            _saved = true;
-                          });
-
-                          Future.delayed(1500.ms, () {
-                            if (!mounted) return;
-                            Navigator.pop(context);
-                          });
-                        } catch (e) {
-                          if (!mounted) return;
-                          setState(() => _isLoading = false);
-                          ScaffoldMessenger.of(context).showSnackBar(
-                            SnackBar(content: Text('Failed to save PAN: $e'), backgroundColor: AppColors.errorRed),
-                          );
-                        }
-                      },
-                icon: _isLoading
-                    ? const SizedBox(
-                        width: 20,
-                        height: 20,
-                        child: CircularProgressIndicator(color: Colors.white, strokeWidth: 2),
-                      )
-                    : const Icon(Icons.save_rounded),
-                label: Text(_isLoading ? 'Saving...' : 'Save PAN Securely'),
-                style: ElevatedButton.styleFrom(shape: const StadiumBorder()),
-              ),
-            ),
-          ],
-        ),
-      ),
-    );
-  }
+  Widget build(BuildContext context) => const SafeArea(
+    child: Padding(
+      padding: EdgeInsets.all(24),
+      child: CheckoutPanField(manage: true),
+    ),
+  );
 }
 
 // ── 80G Tax Vault Page ────────────────────────────────────────────────────────

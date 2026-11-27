@@ -8,6 +8,9 @@ class AppAssets {
   // Home
   static const String greenLensButton = '$_base/home/green_lens_button.webp';
 
+  // Profile
+  static const String founderSignature = '$_base/profile/founder_signature.png';
+
   // Shared
   static const String bluedotSplashLogo = '$_base/shared/bluedot_splash_logo.webp';
   static const String bluedotIcon = '$_base/shared/bluedot_icon.webp';

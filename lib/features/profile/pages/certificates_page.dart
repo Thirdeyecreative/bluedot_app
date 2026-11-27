@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_animate/flutter_animate.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import '../../../core/constants/app_assets.dart';
 import '../../../core/constants/app_colors.dart';
 import '../../../core/services/api_client.dart';
 import '../../../core/widgets/skeletons.dart';
@@ -433,9 +434,15 @@ class _CertificateArtwork extends StatelessWidget {
                 Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    Container(width: 90, height: 1.4, color: AppColors.borderMedium),
+                    Image.asset(
+                      AppAssets.founderSignature,
+                      width: 104,
+                      height: 35,
+                      fit: BoxFit.contain,
+                      excludeFromSemantics: true,
+                    ),
                     const SizedBox(height: 4),
-                    const Text('Programme Director', style: TextStyle(fontSize: 10, color: AppColors.textMedium)),
+                    const Text('Harsha Tej, Founder', style: TextStyle(fontSize: 10, color: AppColors.textMedium)),
                   ],
                 ),
                 const Spacer(),

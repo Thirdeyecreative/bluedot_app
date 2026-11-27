@@ -1,3 +1,4 @@
+import '../widgets/checkout_pan_field.dart';
 import '../models/donation_policy.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_animate/flutter_animate.dart';
@@ -122,6 +123,7 @@ class _ActionHubPageState extends ConsumerState<ActionHubPage>
                 ],
               ),
             ),
+            const SliverToBoxAdapter(child: GeneralDonationButton()),
           ],
           body: TabBarView(
             controller: _tab,
@@ -674,33 +676,49 @@ class _CampaignImageFallback extends StatelessWidget {
 
 // ── Donation Sheet ────────────────────────────────────────────────────────────
 
+class GeneralDonationButton extends StatelessWidget {
+  const GeneralDonationButton({super.key});
+
+  @override
+  Widget build(BuildContext context) => Padding(
+    padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+    child: FilledButton.icon(
+      style: FilledButton.styleFrom(
+        minimumSize: const Size(double.infinity, kMinInteractiveDimension),
+        padding: const EdgeInsets.symmetric(horizontal: 8),
+        textStyle: const TextStyle(fontSize: 13, fontWeight: FontWeight.w600),
+        shape: const StadiumBorder(),
+      ),
+      icon: const Icon(Icons.volunteer_activism_outlined, size: 17),
+      label: const Text('Support our Cause'),
+      onPressed: () => showModalBottomSheet<void>(
+        context: context,
+        useRootNavigator: true,
+        isScrollControlled: true,
+        backgroundColor: Colors.transparent,
+        builder: (_) => const DonationSheet.general(),
+      ),
+    ),
+  );
+}
+
 class DonationSheet extends ConsumerStatefulWidget {
-  final Campaign campaign;
-  const DonationSheet({super.key, required this.campaign});
+  final Campaign? campaign;
+  const DonationSheet({super.key, required Campaign campaign}) : campaign = campaign;
+  const DonationSheet.general({super.key}) : campaign = null;
+
+  String get recipient => campaign?.title ?? 'BlueDot organisation';
   @override
   ConsumerState<DonationSheet> createState() => _DonationSheetState();
 }
 
 class _DonationSheetState extends ConsumerState<DonationSheet> {
   int? _selected;
-  final _panCtrl = TextEditingController();
   final _customCtrl = TextEditingController();
-  bool _showPan = false;
   bool _isSubmitting = false;
 
   @override
-  void initState() {
-    super.initState();
-    final user = ref.read(currentUserProvider);
-    if (user?.panNumber != null && user!.panNumber!.trim().isNotEmpty) {
-      _panCtrl.text = user.panNumber!.trim().toUpperCase();
-      _showPan = true;
-    }
-  }
-
-  @override
   void dispose() {
-    _panCtrl.dispose();
     _customCtrl.dispose();
     super.dispose();
   }
@@ -719,14 +737,7 @@ class _DonationSheetState extends ConsumerState<DonationSheet> {
       return;
     }
 
-    final pan = _panCtrl.text.trim().toUpperCase();
-    if (_showPan && pan.isNotEmpty) {
-      final panRegex = RegExp(r'^[A-Z]{5}[0-9]{4}[A-Z]$');
-      if (!panRegex.hasMatch(pan)) {
-        AppFeedback.showError(context, 'Enter a valid PAN (e.g. ABCDE1234F)');
-        return;
-      }
-    }
+    if (ref.read(currentUserProvider)?.panVerified != true) return;
 
     setState(() => _isSubmitting = true);
     try {
@@ -735,8 +746,7 @@ class _DonationSheetState extends ConsumerState<DonationSheet> {
       // Step 1: Initiate donation and obtain Cashfree payment session
       final initRes = await repo.initiateDonation(
         amount: amount,
-        campaignId: widget.campaign.id,
-        pan: pan.isNotEmpty ? pan : null,
+        campaignId: widget.campaign?.id,
       );
 
       final orderId = initRes['order_id'] as String?;
@@ -748,6 +758,7 @@ class _DonationSheetState extends ConsumerState<DonationSheet> {
         throw 'Failed to initiate donation order.';
       }
 
+      if (!mounted) return;
       // Step 2: Launch Cashfree Native Checkout (UPI Intent / Cards)
       final cfService = CashfreePaymentService();
       final cfResult = await cfService.startPayment(
@@ -798,13 +809,13 @@ class _DonationSheetState extends ConsumerState<DonationSheet> {
             Navigator.pop(context);
             final refreshFuture = syncAppStateAfterPayment(
               ref,
-              campaignId: widget.campaign.id,
+              campaignId: widget.campaign?.id,
             );
 
             await AppFeedback.showThankYou(
               context,
               title: 'Thank You! 🌿',
-              message: 'Your donation of ₹$amount towards "${widget.campaign.title}" was confirmed!',
+              message: 'Your donation of ₹$amount towards "${widget.recipient}" was confirmed!',
               xpLabel: (retryXp ?? 0) > 0 ? '+$retryXp XP earned!' : null,
             );
             await refreshFuture;
@@ -846,7 +857,7 @@ class _DonationSheetState extends ConsumerState<DonationSheet> {
       // Campaign progress, Home feed activity, User Profile XP, 80G Tax Vault, Badges & Leaderboard
       final refreshFuture = syncAppStateAfterPayment(
         ref,
-        campaignId: widget.campaign.id,
+        campaignId: widget.campaign?.id,
       );
 
       // Show the celebratory Thank You popup.
@@ -854,7 +865,7 @@ class _DonationSheetState extends ConsumerState<DonationSheet> {
       await AppFeedback.showThankYou(
         context,
         title: 'Thank You! 🌿',
-        message: 'Your donation of ₹$amount towards "${widget.campaign.title}" was successful!',
+        message: 'Your donation of ₹$amount towards "${widget.recipient}" was successful!',
         xpLabel: (xpEarned ?? 0) > 0 ? '+$xpEarned XP earned!' : null,
       );
 
@@ -927,14 +938,14 @@ class _DonationSheetState extends ConsumerState<DonationSheet> {
               ),
               const SizedBox(height: 20),
               Text(
-                'Support Campaign',
+                widget.campaign == null ? 'Donate to BlueDot' : 'Support Campaign',
                 style: Theme.of(
                   context,
                 ).textTheme.titleLarge?.copyWith(fontWeight: FontWeight.w700),
               ),
               const SizedBox(height: 4),
               Text(
-                widget.campaign.title,
+                widget.recipient,
                 style: const TextStyle(
                   color: AppColors.textMedium,
                   fontSize: 13,
@@ -998,34 +1009,14 @@ class _DonationSheetState extends ConsumerState<DonationSheet> {
                   ),
                 ),
               ],
-              if (_showPan) ...[
-                const SizedBox(height: 20),
-                Text(
-                  'PAN Number',
-                  style: Theme.of(
-                    context,
-                  ).textTheme.bodyMedium?.copyWith(fontWeight: FontWeight.w600),
-                ),
-                const SizedBox(height: 8),
-                TextField(
-                  controller: _panCtrl,
-                  enabled: !_isSubmitting,
-                  maxLength: 10,
-                  textCapitalization: TextCapitalization.characters,
-                  decoration: const InputDecoration(
-                    hintText: 'ABCDE1234F',
-                    prefixIcon: Icon(Icons.lock_outline_rounded),
-                    helperText: 'Required for 80G tax exemption certificate',
-                    counterText: '',
-                  ),
-                ),
-              ],
+              const SizedBox(height: 20),
+              const CheckoutPanField(),
               const SizedBox(height: 24),
               SizedBox(
                 width: double.infinity,
                 height: 52,
                 child: ElevatedButton(
-                  onPressed: _isSubmitting
+                  onPressed: _isSubmitting || ref.watch(currentUserProvider)?.panVerified != true
                       ? null
                       : () => _handleDonate(policy, selected),
                   child: _isSubmitting
@@ -1038,24 +1029,11 @@ class _DonationSheetState extends ConsumerState<DonationSheet> {
                           ),
                         )
                       : Text(
-                          (_showPan ? 'Proceed to Pay' : 'Donate') +
+                          'Donate' +
                               (selected == -1 ? '' : ' ₹$selected'),
                         ),
                 ),
               ),
-              if (policy.receiptIssuanceEnabled && !_showPan)
-                Center(
-                  child: TextButton(
-                    onPressed: _isSubmitting ? null : () => setState(() => _showPan = true),
-                    child: const Text(
-                      'Unlock 80G Tax Benefit →',
-                      style: TextStyle(
-                        color: AppColors.primaryBlue,
-                        fontSize: 13,
-                      ),
-                    ),
-                  ),
-                ),
             ],
           ),
         ),

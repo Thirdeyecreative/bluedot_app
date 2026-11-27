@@ -11,6 +11,7 @@ import '../../../core/constants/app_colors.dart';
 import '../../../core/widgets/skeletons.dart';
 import '../../../core/widgets/server_settings_modal.dart';
 import '../../action_hub/models/event_model.dart';
+import '../../action_hub/pages/action_hub_page.dart' show GeneralDonationButton;
 import '../models/campaign_model.dart';
 import '../models/banner_model.dart';
 import '../models/blog_model.dart';
@@ -28,7 +29,7 @@ import '../../../core/utils/route_dispatcher.dart';
 /// Features a polished, modern ecological aesthetic with:
 /// - Hero Header with personalized time-based greeting & notification counter
 /// - Prominent Green Lens AI Tree Scanner Card (Hero feature)
-/// - 4-Pillar Tactile Quick Actions (Eco Garden, Leaderboard, Suggest Site, Directory)
+/// - Site suggestions, quick access to Leaderboard and Map View, and local vitals
 /// - Dynamic Promo Carousel
 /// - Upcoming Plantation Drives & Community Events
 /// - Crowdfunding & Active Environmental Campaigns
@@ -138,6 +139,7 @@ class _HomePageState extends ConsumerState<HomePage> {
   Widget build(BuildContext context) {
     final user = ref.watch(currentUserProvider);
     final homeFeedAsync = ref.watch(homeFeedProvider);
+    final campaigns = homeFeedAsync.value?.campaigns ?? const <Campaign>[];
     final blogs = ref.watch(blogsProvider);
 
     return Scaffold(
@@ -335,15 +337,11 @@ class _HomePageState extends ConsumerState<HomePage> {
                       .slideY(begin: 0.04, end: 0, curve: Curves.easeOut),
             ),
 
-            // ── 3. Local Eco Vitals Section (AQI, UV, Thermal & Noise) ────
-            SliverToBoxAdapter(
-              child: const _EcoVitalsSection()
-                  .animate()
-                  .fadeIn(delay: 50.ms, duration: 350.ms)
-                  .slideY(begin: 0.04, end: 0, curve: Curves.easeOut),
-            ),
+            const SliverToBoxAdapter(child: _EcoVitalsSection()),
 
-            // ── 4. Published Home Hero ──────────────────────────
+            const SliverToBoxAdapter(child: _DirectAccessSection()),
+
+            // Published Home hero
             SliverToBoxAdapter(
               child:
                   switch (homeFeedAsync) {
@@ -362,7 +360,7 @@ class _HomePageState extends ConsumerState<HomePage> {
                   .slideY(begin: 0.06, end: 0, curve: Curves.easeOutCubic),
             ),
 
-            // ── 5. Promo Banners Carousel (Graceful Adaptive Layout) ──────
+            // Promo banners
             if (homeFeedAsync.maybeWhen(
               data: (feed) => feed.banners.isNotEmpty,
               orElse: () => false,
@@ -379,22 +377,6 @@ class _HomePageState extends ConsumerState<HomePage> {
                           .slideY(begin: 0.04, end: 0, curve: Curves.easeOut),
                 ),
               ),
-
-            // ── 6. Direct Action / Daily Impact (3-Card Row) ───────────────
-            SliverToBoxAdapter(
-              child: const _DirectActionsRow()
-                  .animate()
-                  .fadeIn(delay: 150.ms, duration: 400.ms)
-                  .slideY(begin: 0.06, end: 0, curve: Curves.easeOutCubic),
-            ),
-
-            // ── 7. Instant Flora Scanner (Field Bio-Intelligence) ──────────
-            SliverToBoxAdapter(
-              child: const _InstantFloraScannerCard()
-                  .animate()
-                  .fadeIn(delay: 200.ms, duration: 400.ms)
-                  .slideY(begin: 0.06, end: 0, curve: Curves.easeOutCubic),
-            ),
 
             // ── 8. Upcoming Events Section ─────────────────────────────────
             SliverToBoxAdapter(
@@ -441,52 +423,31 @@ class _HomePageState extends ConsumerState<HomePage> {
               ),
             ),
 
-            // ── 6. Active Campaigns Section ────────────────────────────────
-            SliverToBoxAdapter(
-              child: _SectionHeader(
-                title: 'Active Campaigns',
-                icon: Icons.volunteer_activism_rounded,
-                actionLabel: 'View all',
-                onAction: () => context.go('/action-hub?tab=0'),
-              ),
-            ),
-            SliverToBoxAdapter(
-              child: homeFeedAsync.when(
-                data: (feed) => feed.campaigns.isEmpty
-                    ? const _EmptySectionCard(
-                        icon: Icons.campaign_outlined,
-                        message:
-                            'No active fundraising campaigns at the moment.',
-                      )
-                    : SizedBox(
-                            height: 216,
-                            child: ListView.builder(
-                              scrollDirection: Axis.horizontal,
-                              physics: const BouncingScrollPhysics(),
-                              padding: const EdgeInsets.symmetric(
-                                horizontal: 16,
-                              ),
-                              itemCount: feed.campaigns.length,
-                              itemBuilder: (_, i) => _HomeCampaignCard(
-                                campaign: feed.campaigns[i],
-                              ),
-                            ),
-                          )
-                          .animate()
-                          .fadeIn(duration: 350.ms)
-                          .slideX(
-                            begin: 0.04,
-                            end: 0,
-                            curve: Curves.easeOutCubic,
-                          ),
-                loading: () => const SkeletonCardList(
-                  count: 2,
-                  height: 220,
-                  padding: EdgeInsets.symmetric(horizontal: 16),
+            if (campaigns.isNotEmpty) ...[
+              SliverToBoxAdapter(
+                child: _SectionHeader(
+                  title: 'Active Campaigns',
+                  icon: Icons.volunteer_activism_rounded,
+                  actionLabel: 'View all',
+                  onAction: () => context.go('/action-hub?tab=0'),
                 ),
-                error: (_, _) => const SizedBox.shrink(),
               ),
-            ),
+              SliverToBoxAdapter(
+                child: SizedBox(
+                  height: 216,
+                  child: ListView.builder(
+                    scrollDirection: Axis.horizontal,
+                    physics: const BouncingScrollPhysics(),
+                    padding: const EdgeInsets.symmetric(horizontal: 16),
+                    itemCount: campaigns.length,
+                    itemBuilder: (_, i) => _HomeCampaignCard(campaign: campaigns[i]),
+                  ),
+                )
+                    .animate()
+                    .fadeIn(duration: 350.ms)
+                    .slideX(begin: 0.04, end: 0, curve: Curves.easeOutCubic),
+              ),
+            ],
 
             // ── 7. Stories & Updates Section ───────────────────────────────
             SliverToBoxAdapter(
@@ -563,13 +524,15 @@ class _GreetingRow extends StatelessWidget {
               children: [
                 Row(
                   children: [
-                    Text(
-                      '$greeting,',
-                      style: const TextStyle(
-                        fontSize: 22,
-                        fontWeight: FontWeight.w700,
-                        color: AppColors.textDark,
-                        letterSpacing: -0.3,
+                    Flexible(
+                      child: Text(
+                        '$greeting,',
+                        style: const TextStyle(
+                          fontSize: 22,
+                          fontWeight: FontWeight.w700,
+                          color: AppColors.textDark,
+                          letterSpacing: -0.3,
+                        ),
                       ),
                     ),
                     const SizedBox(width: 6),
@@ -660,43 +623,13 @@ class _EcoVitalsSection extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final readings = ref.watch(cityAqiProvider);
     final vitals = readings.asData?.value;
-    if (vitals == null) {
-      return Padding(
-        padding: const EdgeInsets.fromLTRB(18, 6, 18, 12),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.stretch,
-          children: [
-            Text(
-              'Local Eco Vitals',
-              style: Theme.of(context).textTheme.titleSmall,
-            ),
-            Row(
-              children: [
-                Expanded(
-                  child: Text(
-                    readings.isLoading
-                        ? 'Loading local readings…'
-                        : 'Local readings are unavailable.',
-                  ),
-                ),
-                if (!readings.isLoading)
-                  TextButton(
-                    onPressed: () => ref.invalidate(cityAqiProvider),
-                    child: const Text('Retry'),
-                  ),
-              ],
-            ),
-            const SizedBox(height: 10),
-            _noiseCard(context),
-          ],
-        ),
-      );
-    }
-
     // Color & icon for AQI
     final Color aqiColor;
     final Color aqiBg;
-    if (vitals.aqi <= 50) {
+    if (vitals == null) {
+      aqiColor = AppColors.textMedium;
+      aqiBg = AppColors.borderLight;
+    } else if (vitals.aqi <= 50) {
       aqiColor = const Color(0xFF16A34A);
       aqiBg = const Color(0xFFDCFCE7);
     } else if (vitals.aqi <= 100) {
@@ -713,7 +646,10 @@ class _EcoVitalsSection extends ConsumerWidget {
     // Color for UV
     final Color uvColor;
     final Color uvBg;
-    if (vitals.uvIndex < 3) {
+    if (vitals == null) {
+      uvColor = AppColors.textMedium;
+      uvBg = AppColors.borderLight;
+    } else if (vitals.uvIndex < 3) {
       uvColor = const Color(0xFF16A34A);
       uvBg = const Color(0xFFDCFCE7);
     } else if (vitals.uvIndex < 6) {
@@ -728,145 +664,80 @@ class _EcoVitalsSection extends ConsumerWidget {
     }
 
     return Padding(
-      padding: const EdgeInsets.fromLTRB(18, 6, 18, 12),
+      padding: const EdgeInsets.symmetric(horizontal: 16),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          // Section Title Row
-          Row(
-            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-            children: [
-              const Row(
-                children: [
-                  Icon(
-                    Icons.sensors_rounded,
-                    size: 18,
-                    color: AppColors.forestGreen,
+          IntrinsicHeight(
+            child: Row(
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              spacing: 4,
+              children: [
+                Expanded(
+                  child: _VitalPill(
+                    label: 'AQI ${vitals?.aqi ?? '—'}',
+                    description: vitals == null ? 'Air quality unavailable' : 'Air quality: ${vitals.aqi}, ${vitals.status}',
+                    icon: Icons.air_rounded,
+                    color: aqiColor,
+                    background: aqiBg,
+                    onTap: vitals == null ? null : () => _showAqiDetail(context, vitals),
                   ),
-                  SizedBox(width: 6),
-                  Text(
-                    'Local Eco Vitals',
-                    style: TextStyle(
-                      fontSize: 15,
-                      fontWeight: FontWeight.w800,
-                      color: AppColors.textDark,
-                      letterSpacing: -0.3,
-                    ),
+                ),
+                Expanded(
+                  child: _VitalPill(
+                    label: 'UV ${vitals?.uvIndex.toStringAsFixed(1) ?? '—'}',
+                    description: 'UV index',
+                    icon: Icons.wb_sunny_rounded,
+                    color: uvColor,
+                    background: uvBg,
+                    onTap: vitals == null ? null : () => _showUvDetail(context, vitals),
                   ),
-                ],
-              ),
-              Container(
-                padding: const EdgeInsets.symmetric(horizontal: 9, vertical: 4),
-                decoration: BoxDecoration(
-                  color: const Color(0xFFEAF3EB),
-                  borderRadius: BorderRadius.circular(12),
-                  border: Border.all(color: const Color(0xFFC7E2CA)),
                 ),
-                child: Row(
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    Container(
-                      width: 6,
-                      height: 6,
-                      decoration: const BoxDecoration(
-                        color: Color(0xFF16A34A),
-                        shape: BoxShape.circle,
-                      ),
-                    ),
-                    const SizedBox(width: 5),
-                    Text(
-                      vitals.city,
-                      style: const TextStyle(
-                        fontSize: 11,
-                        fontWeight: FontWeight.w700,
-                        color: Color(0xFF1B3B22),
-                      ),
-                    ),
-                  ],
+                Expanded(
+                  child: _VitalPill(
+                    label: vitals == null ? '—°C' : '${vitals.temperature.round()}°C',
+                    description: 'Temperature',
+                    icon: Icons.thermostat_rounded,
+                    color: const Color(0xFF0284C7),
+                    background: const Color(0xFFE0F2FE),
+                    onTap: vitals == null ? null : () => _showThermalDetail(context, vitals),
+                  ),
                 ),
-              ),
-            ],
+                Expanded(
+                  child: _VitalPill(
+                    label: 'Noise',
+                    description: 'Measure noise',
+                    icon: Icons.graphic_eq_rounded,
+                    color: const Color(0xFF059669),
+                    background: const Color(0xFFECFDF5),
+                    onTap: () => AcousticMeterSheet.show(context),
+                  ),
+                ),
+              ],
+            ),
           ),
-          const SizedBox(height: 10),
-
-          // 2x2 Vitals Grid
-          Row(
-            children: [
-              // 1. Air Quality (AQI)
-              Expanded(
-                child: _VitalCard(
-                  onTap: () => _showAqiDetail(context, vitals),
-                  icon: Icons.air_rounded,
-                  iconColor: aqiColor,
-                  iconBg: aqiBg,
-                  label: 'Air Quality',
-                  metric: 'AQI ${vitals.aqi}',
-                  badgeText: vitals.status,
-                  badgeColor: aqiColor,
-                  badgeBg: aqiBg,
-                  subtext: vitals.pm25 != null
-                      ? 'PM2.5: ${vitals.pm25!.toStringAsFixed(1)}'
-                      : 'PM2.5 unavailable',
+          if (vitals == null)
+            Row(
+              children: [
+                Expanded(
+                  child: Text(
+                    readings.isLoading
+                        ? 'Loading local readings…'
+                        : 'Local readings are unavailable.',
+                    style: Theme.of(context).textTheme.bodySmall,
+                  ),
                 ),
-              ),
-              const SizedBox(width: 10),
-              // 2. Solar UV Index
-              Expanded(
-                child: _VitalCard(
-                  onTap: () => _showUvDetail(context, vitals),
-                  icon: Icons.wb_sunny_rounded,
-                  iconColor: uvColor,
-                  iconBg: uvBg,
-                  label: 'Solar UV',
-                  metric: 'UV ${vitals.uvIndex.toStringAsFixed(1)}',
-                  badgeText: vitals.uvStatus,
-                  badgeColor: uvColor,
-                  badgeBg: uvBg,
-                  subtext: 'Canopy shade',
-                ),
-              ),
-            ],
-          ),
-          const SizedBox(height: 10),
-          Row(
-            children: [
-              // 3. Thermal Comfort & Humidity
-              Expanded(
-                child: _VitalCard(
-                  onTap: () => _showThermalDetail(context, vitals),
-                  icon: Icons.thermostat_rounded,
-                  iconColor: const Color(0xFF0284C7),
-                  iconBg: const Color(0xFFE0F2FE),
-                  label: 'Comfort',
-                  metric: '${vitals.temperature.round()}°C',
-                  badgeText: 'Feels ${vitals.feelsLike.round()}°',
-                  badgeColor: const Color(0xFF0284C7),
-                  badgeBg: const Color(0xFFE0F2FE),
-                  subtext: '${vitals.humidity}% • ${vitals.comfortStatus}',
-                ),
-              ),
-              const SizedBox(width: 10),
-              // 4. Acoustic Tranquility (Phone Mic Noise Meter)
-              Expanded(child: _noiseCard(context)),
-            ],
-          ),
+                if (!readings.isLoading)
+                  TextButton(
+                    onPressed: () => ref.invalidate(cityAqiProvider),
+                    child: const Text('Retry'),
+                  ),
+              ],
+            ),
         ],
       ),
     );
   }
-
-  Widget _noiseCard(BuildContext context) => _VitalCard(
-    onTap: () => AcousticMeterSheet.show(context),
-    icon: Icons.graphic_eq_rounded,
-    iconColor: const Color(0xFF059669),
-    iconBg: const Color(0xFFECFDF5),
-    label: 'Noise & Calm',
-    metric: 'Decibels',
-    badgeText: 'Sample',
-    badgeColor: const Color(0xFF059669),
-    badgeBg: const Color(0xFFECFDF5),
-    subtext: 'Tap to measure dB',
-  );
 
   void _showAqiDetail(BuildContext context, CityAqiData aqi) {
     showModalBottomSheet(
@@ -896,118 +767,50 @@ class _EcoVitalsSection extends ConsumerWidget {
   }
 }
 
-/// Compact tactile card for each environmental vital.
-class _VitalCard extends StatelessWidget {
-  final VoidCallback onTap;
-  final IconData icon;
-  final Color iconColor;
-  final Color iconBg;
-  final String label;
-  final String metric;
-  final String badgeText;
-  final Color badgeColor;
-  final Color badgeBg;
-  final String subtext;
-
-  const _VitalCard({
-    required this.onTap,
-    required this.icon,
-    required this.iconColor,
-    required this.iconBg,
+class _VitalPill extends StatelessWidget {
+  const _VitalPill({
     required this.label,
-    required this.metric,
-    required this.badgeText,
-    required this.badgeColor,
-    required this.badgeBg,
-    required this.subtext,
+    required this.description,
+    required this.icon,
+    required this.color,
+    required this.background,
+    required this.onTap,
   });
 
+  final String label;
+  final String description;
+  final IconData icon;
+  final Color color;
+  final Color background;
+  final VoidCallback? onTap;
+
   @override
-  Widget build(BuildContext context) {
-    return Material(
-      color: Colors.white,
-      borderRadius: BorderRadius.circular(16),
-      child: InkWell(
-        onTap: onTap,
-        borderRadius: BorderRadius.circular(16),
-        splashColor: iconColor.withOpacity(0.08),
-        child: Container(
-          padding: const EdgeInsets.all(12),
-          decoration: BoxDecoration(
-            color: Colors.white,
-            borderRadius: BorderRadius.circular(16),
-            border: Border.all(color: AppColors.borderLight),
-            boxShadow: [
-              BoxShadow(
-                color: Colors.black.withOpacity(0.02),
-                blurRadius: 8,
-                offset: const Offset(0, 2),
-              ),
-            ],
-          ),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              Row(
-                mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                children: [
-                  Container(
-                    width: 28,
-                    height: 28,
-                    decoration: BoxDecoration(
-                      color: iconBg,
-                      borderRadius: BorderRadius.circular(7),
-                    ),
-                    child: Icon(icon, color: iconColor, size: 16),
-                  ),
-                  Container(
-                    padding:
-                        const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
-                    decoration: BoxDecoration(
-                      color: badgeBg,
-                      borderRadius: BorderRadius.circular(8),
-                    ),
-                    child: Text(
-                      badgeText,
-                      style: TextStyle(
-                        fontSize: 10,
-                        fontWeight: FontWeight.w700,
-                        color: badgeColor,
-                      ),
-                    ),
-                  ),
-                ],
-              ),
-              const SizedBox(height: 8),
-              Text(
-                metric,
-                style: const TextStyle(
-                  fontSize: 14.5,
-                  fontWeight: FontWeight.w800,
-                  color: AppColors.textDark,
-                  letterSpacing: -0.2,
-                ),
-                maxLines: 1,
-                overflow: TextOverflow.ellipsis,
-              ),
-              const SizedBox(height: 2),
-              Text(
-                subtext,
-                style: const TextStyle(
-                  fontSize: 10.5,
-                  color: AppColors.textMedium,
-                  fontWeight: FontWeight.w500,
-                ),
-                maxLines: 1,
-                overflow: TextOverflow.ellipsis,
-              ),
-            ],
-          ),
-        ),
+  Widget build(BuildContext context) => Tooltip(
+    message: description,
+    child: TextButton(
+      onPressed: onTap,
+      style: TextButton.styleFrom(
+        foregroundColor: AppColors.textDark,
+        backgroundColor: background,
+        disabledBackgroundColor: AppColors.borderLight,
+        minimumSize: const Size(0, 34),
+        padding: const EdgeInsets.symmetric(horizontal: 3, vertical: 4),
+        shape: const StadiumBorder(),
+        tapTargetSize: MaterialTapTargetSize.padded,
+        visualDensity: VisualDensity.standard,
+        textStyle: const TextStyle(fontSize: 12, fontWeight: FontWeight.w600),
       ),
-    );
-  }
+      child: Wrap(
+        alignment: WrapAlignment.center,
+        crossAxisAlignment: WrapCrossAlignment.center,
+        spacing: 3,
+        children: [
+          Icon(icon, size: 14, color: onTap == null ? AppColors.textMedium : color),
+          Text(label, textAlign: TextAlign.center),
+        ],
+      ),
+    ),
+  );
 }
 
 // Backward compatibility alias for _CityAqiBar
@@ -1616,148 +1419,165 @@ class _HomeHeroCard extends StatelessWidget {
   }
 }
 
-class _DirectActionsRow extends StatelessWidget {
-  const _DirectActionsRow();
+
+
+class _DirectAccessSection extends StatelessWidget {
+  const _DirectAccessSection();
 
   @override
   Widget build(BuildContext context) {
+    final shortcutStyle = TextButton.styleFrom(
+      foregroundColor: AppColors.forestGreen,
+      minimumSize: const Size(0, kMinInteractiveDimension),
+      padding: const EdgeInsets.symmetric(horizontal: 8),
+      textStyle: const TextStyle(fontSize: 13, fontWeight: FontWeight.w600),
+      shape: const StadiumBorder(),
+    );
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        Padding(
-          padding: const EdgeInsets.fromLTRB(20, 16, 20, 10),
-          child: Row(
-            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-            children: const [
-              Text(
-                'Direct Access',
-                style: TextStyle(
-                  fontSize: 18,
-                  fontWeight: FontWeight.w800,
-                  color: AppColors.textDark,
-                  letterSpacing: -0.3,
-                ),
-              ),
-              Text(
-                'Quick Explore',
-                style: TextStyle(
-                  fontSize: 12.5,
-                  fontWeight: FontWeight.w600,
-                  color: AppColors.textMedium,
-                ),
-              ),
-            ],
+        const Padding(
+          padding: EdgeInsets.fromLTRB(16, 12, 16, 8),
+          child: Text(
+            'Direct Access',
+            style: TextStyle(
+              fontSize: 18,
+              fontWeight: FontWeight.w800,
+              color: AppColors.textDark,
+              letterSpacing: -0.3,
+            ),
+          ),
+        ),
+        _HomeActionPair(
+          first: _FeaturedActionCard(
+            icon: Icons.camera_alt_rounded,
+            iconColor: AppColors.primaryYellow,
+            iconBg: Colors.white12,
+            title: 'Instant Flora Scanner',
+            tag: 'Identify a tree',
+            filled: true,
+            onTap: () => context.push('/scanner'),
+          ),
+          second: _FeaturedActionCard(
+            icon: Icons.add_location_alt_rounded,
+            iconColor: AppColors.forestGreen,
+            iconBg: const Color(0xFFEAF3EB),
+            title: 'Suggest Site',
+            tag: 'Propose a location',
+            onTap: () => context.push('/action-hub/suggest-site'),
           ),
         ),
         Padding(
-          padding: const EdgeInsets.symmetric(horizontal: 16),
-          child: Row(
-            children: [
-              Expanded(
-                child: _DirectActionCard(
-                  icon: Icons.leaderboard_rounded,
-                  iconColor: AppColors.primaryBlue,
-                  iconBg: const Color(0xFFEEF1FD),
-                  title: 'Leaderboard',
-                  tag: 'Rankings',
-                  tagColor: AppColors.primaryBlue,
-                  onTap: () => context.push('/profile/leaderboard'),
+          padding: const EdgeInsets.fromLTRB(16, 8, 16, 0),
+          child: Material(
+            color: Colors.white,
+            shape: const StadiumBorder(
+              side: BorderSide(color: AppColors.borderMedium),
+            ),
+            clipBehavior: Clip.antiAlias,
+            child: Row(
+              children: [
+                Expanded(
+                  child: TextButton.icon(
+                    style: shortcutStyle,
+                    icon: const Icon(Icons.leaderboard_rounded, size: 17),
+                    label: const Text('Leaderboard', textAlign: TextAlign.center),
+                    onPressed: () => context.push('/profile/leaderboard'),
+                  ),
                 ),
-              ),
-              const SizedBox(width: 10),
-              Expanded(
-                child: _DirectActionCard(
-                  icon: Icons.map_rounded,
-                  iconColor: const Color(0xFF386641),
-                  iconBg: const Color(0xFFEAF3EB),
-                  title: 'Map View',
-                  tag: 'Eco Garden',
-                  tagColor: const Color(0xFF386641),
-                  onTap: () => context.push('/map'),
+                const SizedBox(height: 20, child: VerticalDivider(width: 1)),
+                Expanded(
+                  child: TextButton.icon(
+                    style: shortcutStyle,
+                    icon: const Icon(Icons.map_rounded, size: 17),
+                    label: const Text('Map View', textAlign: TextAlign.center),
+                    onPressed: () => context.push('/map'),
+                  ),
                 ),
-              ),
-              const SizedBox(width: 10),
-              Expanded(
-                child: _DirectActionCard(
-                  icon: Icons.add_location_alt_rounded,
-                  iconColor: const Color(0xFFC76D4D),
-                  iconBg: const Color(0xFFFDF0EC),
-                  title: 'Suggest Site',
-                  tag: 'New Land',
-                  tagColor: const Color(0xFFC76D4D),
-                  onTap: () => context.push('/action-hub/suggest-site'),
-                ),
-              ),
-            ],
+              ],
+            ),
           ),
         ),
+        const GeneralDonationButton(),
       ],
     );
   }
 }
 
-class _DirectActionCard extends StatelessWidget {
+class _HomeActionPair extends StatelessWidget {
+  const _HomeActionPair({required this.first, required this.second});
+
+  final Widget first;
+  final Widget second;
+
+  @override
+  Widget build(BuildContext context) => Padding(
+    padding: const EdgeInsets.symmetric(horizontal: 16),
+    child: IntrinsicHeight(
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          Expanded(child: first),
+          const SizedBox(width: 10),
+          Expanded(child: second),
+        ],
+      ),
+    ),
+  );
+}
+
+class _FeaturedActionCard extends StatelessWidget {
   final IconData icon;
   final Color iconColor;
   final Color iconBg;
   final String title;
   final String tag;
-  final Color tagColor;
+  final bool filled;
   final VoidCallback onTap;
 
-  const _DirectActionCard({
+  const _FeaturedActionCard({
     required this.icon,
     required this.iconColor,
     required this.iconBg,
     required this.title,
     required this.tag,
-    required this.tagColor,
+    this.filled = false,
     required this.onTap,
   });
 
   @override
   Widget build(BuildContext context) {
     return Material(
-      color: Colors.white,
-      borderRadius: BorderRadius.circular(18),
+      color: filled ? AppColors.primaryBlue : Colors.white,
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.circular(18),
+        side: filled ? BorderSide.none : const BorderSide(color: AppColors.borderLight),
+      ),
+      clipBehavior: Clip.antiAlias,
       child: InkWell(
         onTap: onTap,
-        borderRadius: BorderRadius.circular(18),
-        splashColor: iconColor.withOpacity(0.08),
-        child: Container(
+        child: Padding(
           padding: const EdgeInsets.symmetric(vertical: 14, horizontal: 8),
-          decoration: BoxDecoration(
-            color: Colors.white,
-            borderRadius: BorderRadius.circular(18),
-            border: Border.all(color: AppColors.borderLight),
-            boxShadow: [
-              BoxShadow(
-                color: Colors.black.withOpacity(0.025),
-                blurRadius: 10,
-                offset: const Offset(0, 3),
-              ),
-            ],
-          ),
           child: Column(
             mainAxisSize: MainAxisSize.min,
             children: [
               Container(
-                width: 46,
-                height: 46,
+                width: 52,
+                height: 52,
                 decoration: BoxDecoration(
                   color: iconBg,
                   shape: BoxShape.circle,
                 ),
-                child: Icon(icon, color: iconColor, size: 23),
+                child: Icon(icon, color: iconColor, size: 27),
               ),
               const SizedBox(height: 10),
               Text(
                 title,
                 textAlign: TextAlign.center,
-                style: const TextStyle(
+                style: TextStyle(
                   fontWeight: FontWeight.w700,
-                  color: AppColors.textDark,
-                  fontSize: 12.5,
+                  color: filled ? Colors.white : AppColors.textDark,
+                  fontSize: 15,
                   height: 1.2,
                 ),
               ),
@@ -1767,8 +1587,8 @@ class _DirectActionCard extends StatelessWidget {
                 textAlign: TextAlign.center,
                 style: TextStyle(
                   fontWeight: FontWeight.w600,
-                  color: tagColor,
-                  fontSize: 11,
+                  color: filled ? Colors.white : iconColor,
+                  fontSize: 12,
                 ),
               ),
             ],
@@ -1777,59 +1597,6 @@ class _DirectActionCard extends StatelessWidget {
       ),
     );
   }
-}
-
-// ─────────────────────────────────────────────────────────────────────────────
-// INSTANT FLORA SCANNER CARD
-// ─────────────────────────────────────────────────────────────────────────────
-
-class _InstantFloraScannerCard extends StatelessWidget {
-  const _InstantFloraScannerCard({super.key});
-
-  @override
-  Widget build(BuildContext context) => Padding(
-    padding: const EdgeInsets.fromLTRB(16, 14, 16, 10),
-    child: Material(
-      color: AppColors.primaryBlue,
-      borderRadius: BorderRadius.circular(24),
-      clipBehavior: Clip.antiAlias,
-      child: InkWell(
-        onTap: () => context.push('/scanner'),
-        child: Padding(
-          padding: const EdgeInsets.all(20),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Row(children: [
-                const Expanded(child: Text('Instant Flora Scanner',
-                  style: TextStyle(color: Colors.white, fontSize: 24, fontWeight: FontWeight.w800))),
-                const SizedBox(width: 12),
-                DecoratedBox(
-                  decoration: BoxDecoration(color: Colors.white12, borderRadius: BorderRadius.circular(16)),
-                  child: const Padding(padding: EdgeInsets.all(12),
-                    child: Icon(Icons.filter_center_focus_rounded, color: AppColors.primaryYellow, size: 32)),
-                ),
-              ]),
-              const SizedBox(height: 10),
-              const Text('Which tree is this? Start with a clear photo of a leaf. Add bark or the whole tree for more detail.',
-                style: TextStyle(color: Colors.white, height: 1.45, fontSize: 15)),
-              const SizedBox(height: 18),
-              DecoratedBox(
-                decoration: BoxDecoration(color: AppColors.primaryYellow, borderRadius: BorderRadius.circular(24)),
-                child: const Padding(
-                  padding: EdgeInsets.symmetric(horizontal: 16, vertical: 11),
-                  child: Wrap(crossAxisAlignment: WrapCrossAlignment.center, spacing: 8, children: [
-                    Icon(Icons.camera_alt_outlined, size: 20, color: AppColors.textDark),
-                    Text('Open scanner', style: TextStyle(color: AppColors.textDark, fontWeight: FontWeight.w700)),
-                  ]),
-                ),
-              ),
-            ],
-          ),
-        ),
-      ),
-    ),
-  );
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -1854,24 +1621,21 @@ class _SectionHeader extends StatelessWidget {
     return Padding(
       padding: const EdgeInsets.fromLTRB(20, 18, 16, 10),
       child: Row(
-        mainAxisAlignment: MainAxisAlignment.spaceBetween,
         children: [
-          Row(
-            children: [
-              if (icon != null) ...[
-                Icon(icon, size: 20, color: AppColors.forestGreen),
-                const SizedBox(width: 8),
-              ],
-              Text(
-                title,
-                style: const TextStyle(
-                  fontSize: 18,
-                  fontWeight: FontWeight.w800,
-                  color: AppColors.textDark,
-                  letterSpacing: -0.4,
-                ),
+          if (icon != null) ...[
+            Icon(icon, size: 20, color: AppColors.forestGreen),
+            const SizedBox(width: 8),
+          ],
+          Expanded(
+            child: Text(
+              title,
+              style: const TextStyle(
+                fontSize: 18,
+                fontWeight: FontWeight.w800,
+                color: AppColors.textDark,
+                letterSpacing: -0.4,
               ),
-            ],
+            ),
           ),
           if (actionLabel != null && onAction != null)
             TextButton(

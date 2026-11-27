@@ -78,7 +78,6 @@ class AuthNotifier extends Notifier<AsyncValue<void>> {
   Future<void> updateProfile({
     required String fullName,
     required String email,
-    required String panNumber,
     required String city,
   }) async {
     state = const AsyncValue.loading();
@@ -86,7 +85,6 @@ class AuthNotifier extends Notifier<AsyncValue<void>> {
       final user = await _repo.updateProfile(
         fullName: fullName,
         email: email,
-        panNumber: panNumber,
         city: city,
       );
       ref.read(currentUserProvider.notifier).set(user);
